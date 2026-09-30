@@ -190,7 +190,7 @@ dialog h3 { margin: 0 0 10px; font-family: var(--font-cond); font-size: 22px; }
 </style>
 </head>
 <body>
-<div id="demo" class="demo-bar" hidden>DEMÓ mód – az adatok csak ebben a böngészőben tárolódnak. Élesítéshez a fájl CONFIG részét kell kitölteni.</div>
+<div id="demo" class="demo-bar" hidden>DEMÓ mód – mintaadatok, csak ebben a böngészőben tárolva. Az éles lapokhoz nyisd meg a címet ?demo nélkül.</div>
 <header class="top">
   <div class="wrap">
     <a class="brand" href="#/"><b>BREMAT <span>·</span> Valk robot</b><small>Heti karbantartási lap</small></a>
@@ -206,13 +206,14 @@ dialog h3 { margin: 0 0 10px; font-family: var(--font-cond); font-size: 22px; }
 
 <script type="module">
 /* ================================================================
-   CONFIG – élesítéskor ezt kell kitölteni.
-   SUPABASE_URL / SUPABASE_KEY: Supabase → Project Settings → API
-   (Project URL és a publishable / anon kulcs). Üresen DEMÓ módban fut.
+   CONFIG
+   Az adatok a Netlify site saját tárolójában vannak (Netlify Blobs),
+   a /api/km függvényen keresztül. A hozzáférési kód a Netlify
+   KM_ACCESS_CODE környezeti változójában van, nem itt.
+   DEMÓ mód: a cím végére ?demo – mintaadatok, csak ebben a böngészőben.
    ================================================================ */
 const CONFIG = {
-  SUPABASE_URL: '',
-  SUPABASE_KEY: '',
+  API_URL: '/api/km',
   ROBOTS: ['Valk robot'],          // több robotnál: ['Valk robot 1', 'Valk robot 2']
   START_DATE: '2026-10-05',        // ettől a héttől számít „hiányzó” egy kitöltetlen hét
   COOLING_WATER_MONTHS: 6,         // hűtővíz-csere gyakorisága (Valk 6.6)
@@ -282,33 +283,38 @@ function toast(msg, bad = false) {
 }
 
 /* ================================================================
-   Adatréteg: Supabase (éles) vagy DEMÓ (böngészőben tárolva).
+   Adatréteg: szerver (/api/km, éles) vagy DEMÓ (böngészőben tárolva).
    Mindkettő ugyanazt tudja: ping, list, get, submit, approve.
    ================================================================ */
-const DEMO = !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY;
+const DEMO = new URLSearchParams(location.search).has('demo');
 
 class AccessError extends Error {}
 
-function createSupabaseAdapter() {
-  let clientP = null;
-  const client = () => clientP ??= import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
-    .then(({ createClient }) => createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, { auth: { persistSession: false } }));
-  async function rpc(fn, args) {
-    const sb = await client();
-    const { data, error } = await sb.rpc(fn, args);
-    if (error) {
-      if (/Hibás hozzáférési kód/.test(error.message || '')) throw new AccessError('Hibás hozzáférési kód');
-      if (/Failed to fetch|NetworkError|Load failed/i.test(error.message || '')) throw new Error('Nincs kapcsolat a szerverrel. Ellenőrizd az internetet, és próbáld újra.');
-      throw new Error(error.message || 'Ismeretlen hiba');
+function createApiAdapter() {
+  async function call(action, payload) {
+    let res;
+    try {
+      res = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action, ...payload }),
+        cache: 'no-store',
+      });
+    } catch {
+      throw new Error('Nincs kapcsolat a szerverrel. Ellenőrizd az internetet, és próbáld újra.');
     }
-    return data;
+    let body = null;
+    try { body = await res.json(); } catch { /* nem JSON válasz */ }
+    if (res.status === 401) throw new AccessError('Hibás hozzáférési kód');
+    if (!res.ok) throw new Error(body?.error || `Szerverhiba (${res.status}). Próbáld újra később.`);
+    return body?.data;
   }
   return {
-    ping: (code) => rpc('km_ping', { p_code: code }),
-    list: (code) => rpc('km_list', { p_code: code }),
-    get: (code, id) => rpc('km_get', { p_code: code, p_id: id }),
-    submit: (code, check) => rpc('km_submit', { p_code: code, p_check: check }),
-    approve: (code, id, name) => rpc('km_approve', { p_code: code, p_id: id, p_name: name }),
+    ping: (code) => call('ping', { code }),
+    list: (code) => call('list', { code }),
+    get: (code, id) => call('get', { code, id }),
+    submit: (code, check) => call('submit', { code, check }),
+    approve: (code, id, name) => call('approve', { code, id, name }),
   };
 }
 
@@ -358,7 +364,7 @@ function createDemoAdapter() {
   const delay = (v) => new Promise((r) => setTimeout(() => r(structuredClone(v)), 120));
   return {
     ping: () => delay(true),
-    list: () => delay(load().map(({ items, ...rest }) => rest).sort((a, b) => b.check_date.localeCompare(a.check_date) || b.created_at.localeCompare(a.created_at))),
+    list: () => delay([...load()].sort((a, b) => b.check_date.localeCompare(a.check_date) || b.created_at.localeCompare(a.created_at))),
     get: (_c, id) => { const r = load().find((x) => x.id === id); if (!r) return Promise.reject(new Error('Nincs ilyen lap')); return delay(r); },
     submit: (_c, c) => {
       const rec = mk({ ...c, gas_flow_lpm: c.gas_flow_lpm === '' || c.gas_flow_lpm == null ? null : Number(c.gas_flow_lpm), cooling_water_changed: c.cooling_water_changed ? c.check_date : null }, null);
@@ -373,7 +379,7 @@ function createDemoAdapter() {
   };
 }
 
-const api = DEMO ? createDemoAdapter() : createSupabaseAdapter();
+const api = DEMO ? createDemoAdapter() : createApiAdapter();
 
 /* ================================================================
    Hozzáférési kód: a linkből (?kod=...) vagy egyszer beírva,
@@ -552,9 +558,11 @@ async function renderOverview() {
 }
 
 function downloadCsv(rows) {
-  const head = ['Év', 'Hét', 'Dátum', 'Robot', 'Ellenőrizte', 'Beavatkozások száma', 'Hűtővíz csere', 'Gázáramlás (l/min)', 'Továbbjelzés', 'Kinek', 'Megjegyzés', 'Felhasznált alkatrész', 'Jóváhagyta', 'Jóváhagyva', 'Beküldve'];
+  const head = ['Év', 'Hét', 'Dátum', 'Robot', 'Ellenőrizte', 'Beavatkozások száma', 'Hűtővíz csere', 'Gázáramlás (l/min)', 'Továbbjelzés', 'Kinek', 'Megjegyzés', 'Felhasznált alkatrész', 'Jóváhagyta', 'Jóváhagyva', 'Beküldve',
+    ...ITEMS.flatMap((it) => [`${it.no}. ${it.title}`, `${it.no}. mit csinált`])];
+  const itemCols = (r) => ITEMS.flatMap((it) => { const x = (r.items || []).find((y) => y.no === it.no) || {}; return [x.status === 'action' ? 'Beavatkozás' : x.status === 'ok' ? 'Rendben' : '', x.note || '']; });
   const cell = (v) => { const s = String(v ?? ''); return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const lines = [head, ...rows.map((r) => [r.iso_year, r.iso_week, r.check_date, r.robot, r.inspector, r.action_count, r.cooling_water_changed || '', r.gas_flow_lpm ?? '', r.escalate ? 'Igen' : 'Nem', r.escalate_to || '', r.remarks || '', r.parts_used || '', r.approved_by || '', r.approved_at ? fmtDT(r.approved_at) : '', fmtDT(r.created_at)])]
+  const lines = [head, ...rows.map((r) => [r.iso_year, r.iso_week, r.check_date, r.robot, r.inspector, r.action_count, r.cooling_water_changed || '', r.gas_flow_lpm ?? '', r.escalate ? 'Igen' : 'Nem', r.escalate_to || '', r.remarks || '', r.parts_used || '', r.approved_by || '', r.approved_at ? fmtDT(r.approved_at) : '', fmtDT(r.created_at), ...itemCols(r)])]
     .map((l) => l.map(cell).join(';')).join('\r\n');
   const blob = new Blob(['﻿' + lines], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');

@@ -1,14 +1,20 @@
 # BREMAT – Valk robot heti karbantartási lap
-# Statikus oldal, nincs build lépés: a public/ mappa megy ki változtatás nélkül.
+# A public/ mappa változtatás nélkül megy ki (nincs build lépés).
+# Az adatkezelés egyetlen Netlify Function (/api/km), az adatok a site saját
+# Netlify Blobs tárolójában vannak – külső adatbázis nincs.
 [build]
   publish = "public"
   command = ""
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
 
 [[headers]]
   for = "/*"
   [headers.values]
     # A hozzáférési kód a linkben is érkezhet (?kod=...): ne szivárogjon ki
-    # a betöltött külső erőforrások (betűtípus, CDN) felé.
+    # a betöltött külső erőforrások (betűtípus) felé.
     Referrer-Policy = "no-referrer"
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
