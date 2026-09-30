@@ -18,6 +18,13 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   `ITEMS` (a 16 tétel: `key`, `group` A/B, `title`, `steps`, `bad`, `src`). Adatréteg: `createApiAdapter()` (éles, `/api/km`) és
   `createDemoAdapter()` (`?demo`, localStorage) azonos interfésszel
   (`ping`, `list`, `get`, `submit`, `approve`) – új funkciót mindkettőbe.
+- `DETAILS` (ugyanott, a tételek után) – tételenként a lenyitható „Bővebben” rész: `more`
+  (címsor + HTML szakaszok) és `figs` (kép, felirat, forrás). Minden állítás mellett forrás
+  (Valk fejezet / napi pont, Panasonic R/V/P); ami nem a kézikönyvből való, az `NK` jelölést
+  kap („Általános gyakorlat – nem a kézikönyvből”). Ezt a szabályt tartsd meg: a felhasználó a
+  gyártó előírását akarja, nem általános tanácsot.
+- `public/img/*.jpg` – a kézikönyv-fotókból vágott, kiegyenesített ábrák (1200 px széles,
+  JPEG 80). A zárt `<details>` miatt csak lenyitáskor töltődnek. Koppintásra nagyító ablak.
 - `netlify/functions/km.mjs` – Netlify Function v2 (`/api/km`, csak POST). Vékony réteg:
   a Blobs tárolót (`km-checks`, `consistency: 'strong'`) adja át a `lib/km-core.mjs`-nek.
 - `lib/km-core.mjs` – a teljes szerveroldali logika, tárolófüggetlen (`memoryStore()` a
@@ -34,6 +41,10 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   R (robotkar) / V (vezérlő).
 - **Rendben** = elvégezte, a leírt rutinmunkán (tisztítás, heti áramátadó-csere) felül nem kellett
   semmi. **Beavatkozás** = ezen felül csere, javítás, utántöltés vagy hiba.
+- **2026. szeptember 30., „Bővebben”:** a szöveget egy külön ellenőrző kör vetette össze a
+  kézikönyv-fotókkal (~170 állítás); a talált eltérések javítva. Kiemelt tanulság: a gáz
+  gyorscsatlakozója a kézikönyv képe szerint **a robotkaron, a huzaladagoló alatt** van
+  (GAS/AIR felirat), nem a robot talpán, ahogy a korábbi papíros útmutató írta.
 - Tudatos eltérések a Valk listától: a vezérlő **belső** kifúvatása kimaradt (lakat + kondenzátor
   kisülés kell hozzá, karbantartói munka); a „change coil inside” állapot szerinti spirálcsere
   lett; a 6 havi hűtővízcsere nem tétel, hanem külön pipa + Áttekintés-kártya.

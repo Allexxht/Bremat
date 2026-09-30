@@ -14,7 +14,8 @@ Netlify oldalnak a saját tárolójában (Netlify Blobs) vannak.
   leállított cellánál (A), utána bekapcsolva (B). Minden tételnél ott van, mit kell csinálni,
   és mi a teendő, ha nincs rendben. Forrás: Valk kézikönyv 6.6 (heti) és 6.5 (napi), Panasonic
   robotkar- és vezérlőkézikönyv. Soronként *Rendben* / *Beavatkozás kellett* gomb;
-  beavatkozásnál kötelező beírni, mit csinált.
+  beavatkozásnál kötelező beírni, mit csinált. Minden tételnél lenyitható **Bővebben** rész:
+  hol találod, hogyan csináld, mire figyelj – a kézikönyv ábráival (koppintásra nagyíthatók).
   Hűtővíz-csere jelölése, mért gázáramlás, megjegyzés, felhasznált alkatrész, továbbjelzés.
   Ha a tablet menet közben újratölt, a félig kitöltött lap megmarad az eszközön.
 - **Áttekintés:** kitöltötték-e az aktuális hetet; mikor esedékes a hűtővíz-csere (6 havonta);
@@ -31,6 +32,7 @@ Netlify oldalnak a saját tárolójában (Netlify Blobs) vannak.
 |---|---|
 | `public/index.html` | Az egész felület egy fájlban (HTML + CSS + JS, nincs build lépés). Az elején van a `CONFIG`. |
 | `netlify/functions/km.mjs` | Netlify Function a `/api/km` címen: ez olvas és ír a tárolóba (Netlify Blobs, `km-checks`). |
+| `public/img/` | A kézikönyvből vágott ábrák a Bővebben részekhez. |
 | `lib/km-core.mjs` | A szerveroldali logika: kódellenőrzés, a beküldött lap teljes újraellenőrzése, jóváhagyás egyszer. Tárolófüggetlen, ezért tesztelhető. |
 | `tests/km-core.test.mjs` | Egységtesztek: `npm test`. |
 | `netlify.toml` | Netlify beállítás: a `public/` mappa, a function, biztonsági fejlécek. |
