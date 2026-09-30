@@ -1,0 +1,15 @@
+# BREMAT – Valk robot heti karbantartási lap
+# Statikus oldal, nincs build lépés: a public/ mappa megy ki változtatás nélkül.
+[build]
+  publish = "public"
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # A hozzáférési kód a linkben is érkezhet (?kod=...): ne szivárogjon ki
+    # a betöltött külső erőforrások (betűtípus, CDN) felé.
+    Referrer-Policy = "no-referrer"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-Robots-Tag = "noindex, nofollow"
