@@ -15,7 +15,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 
 ## Fájlok
 - `public/index.html` – egyfájlos felület (vanilla JS, nincs build). Elején a `CONFIG` és az
-  `ITEMS` (a 16 tétel). Adatréteg: `createApiAdapter()` (éles, `/api/km`) és
+  `ITEMS` (a 16 tétel: `key`, `group` A/B, `title`, `steps`, `bad`, `src`). Adatréteg: `createApiAdapter()` (éles, `/api/km`) és
   `createDemoAdapter()` (`?demo`, localStorage) azonos interfésszel
   (`ping`, `list`, `get`, `submit`, `approve`) – új funkciót mindkettőbe.
 - `netlify/functions/km.mjs` – Netlify Function v2 (`/api/km`, csak POST). Vékony réteg:
@@ -26,8 +26,24 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - `tests/km-core.test.mjs` – `npm test` (Node 22-ben a `node --test tests/` mappát nem fogad
   el, a fájlt kell megadni).
 
+## A heti tételek
+- **2. változat (2026. szeptember 30.)**: a Valk 6.6 heti lista szó szerinti fordítása
+  (1. változat) a felhasználónak zavaros és értelmetlen volt. Most minden tétel egy konkrét,
+  hétfőn elvégezhető feladat: lépések + „Ha nincs rendben”. Sorrend: A = leállított cellánál,
+  B = bekapcsolás után. Forrás minden tételnél (`src`): Valk 6.6 / napi 6.5 A–C, Panasonic
+  R (robotkar) / V (vezérlő).
+- **Rendben** = elvégezte, a leírt rutinmunkán (tisztítás, heti áramátadó-csere) felül nem kellett
+  semmi. **Beavatkozás** = ezen felül csere, javítás, utántöltés vagy hiba.
+- Tudatos eltérések a Valk listától: a vezérlő **belső** kifúvatása kimaradt (lakat + kondenzátor
+  kisülés kell hozzá, karbantartói munka); a „change coil inside” állapot szerinti spirálcsere
+  lett; a 6 havi hűtővízcsere nem tétel, hanem külön pipa + Áttekintés-kártya.
+- **Tételváltoztatás: `FORM_VERSION` + 1 a kliensben ÉS a `lib/km-core.mjs`-ben**, a régi címek a
+  `LEGACY_TITLES`-be. A szerver csak az aktuális változatot fogadja el (409 „Töltsd újra”), a lap
+  eltárolja a `form_version`-t, a régi lapok a saját címeikkel jelennek meg, a CSV-ben az utolsó
+  oszlopba kerülnek. Egy régebbi változatú piszkozatot a kliens eldob.
+
 ## Adatmodell és biztonság
-- Egy lap = egy blob: `check/<uuid>` kulcs, JSON: `check_date`, `iso_year`/`iso_week`
+- Egy lap = egy blob: `check/<uuid>` kulcs, JSON: `form_version`, `check_date`, `iso_year`/`iso_week`
   (szerveren számolva), `robot`, `inspector`, `items` (16 elem: `no`, `status` = `ok`|`action`,
   `note` – Rendben tételnél `null`), `action_count`, `cooling_water_changed` (a lap dátuma vagy
   `null`), `gas_flow_lpm`, `remarks`, `parts_used`, `escalate`/`escalate_to`,

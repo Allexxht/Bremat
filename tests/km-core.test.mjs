@@ -8,7 +8,7 @@ const NOW = new Date('2026-09-30T08:00:00Z');
 const ctx = (store) => ({ store, accessCode: CODE, now: NOW });
 const req = (o) => JSON.stringify(o);
 const items = (fn = () => ({ status: 'ok' })) => Array.from({ length: 16 }, (_, i) => ({ no: i + 1, ...fn(i + 1) }));
-const good = (extra = {}) => ({ check_date: '2026-09-28', robot: 'Valk robot', inspector: ' Kiss Péter ', items: items(), escalate: false, ...extra });
+const good = (extra = {}) => ({ form_version: 2, check_date: '2026-09-28', robot: 'Valk robot', inspector: ' Kiss Péter ', items: items(), escalate: false, ...extra });
 
 async function rejects(p, status, re) {
   await assert.rejects(p, (e) => { assert.equal(e.status, status); if (re) assert.match(e.message, re); return true; });
@@ -47,6 +47,8 @@ test('beküldés: hibás lapok elutasítva', async () => {
   await rejects(sub(good({ gas_flow_lpm: 'sok' })), 400, /szám/);
   await rejects(sub(good({ gas_flow_lpm: 500 })), 400, /0 és 100/);
   await rejects(sub(good({ items: items().reverse() })), 400, /sorrend/);
+  await rejects(sub(good({ form_version: undefined })), 409, /Töltsd újra/);
+  await rejects(sub(good({ form_version: 1 })), 409, /Töltsd újra/);
   assert.equal((await s.listKeys('check/')).length, 0);
 });
 
@@ -62,6 +64,7 @@ test('beküldés, lista, lekérés, jóváhagyás egyszer', async () => {
   assert.equal(r.id, id);
   assert.equal(r.inspector, 'Kiss Péter');
   assert.equal(r.iso_week, 40);
+  assert.equal(r.form_version, 2);
   assert.equal(r.action_count, 1);
   assert.equal(r.cooling_water_changed, '2026-09-28');
   assert.equal(r.gas_flow_lpm, 14.5);

@@ -10,8 +10,11 @@ Netlify oldalnak a saját tárolójában (Netlify Blobs) vannak.
 
 ## Mit tud
 
-- **Új heti lap:** a 16 tétel (Valk kézikönyv 6.6 + Panasonic kiegészítések), soronként
-  *Rendben* / *Beavatkozás kellett* gomb. Beavatkozásnál kötelező beírni, mit csinált.
+- **Új heti lap:** 16 tétel abban a sorrendben, ahogy a cellánál haladni érdemes: előbb
+  leállított cellánál (A), utána bekapcsolva (B). Minden tételnél ott van, mit kell csinálni,
+  és mi a teendő, ha nincs rendben. Forrás: Valk kézikönyv 6.6 (heti) és 6.5 (napi), Panasonic
+  robotkar- és vezérlőkézikönyv. Soronként *Rendben* / *Beavatkozás kellett* gomb;
+  beavatkozásnál kötelező beírni, mit csinált.
   Hűtővíz-csere jelölése, mért gázáramlás, megjegyzés, felhasznált alkatrész, továbbjelzés.
   Ha a tablet menet közben újratölt, a félig kitöltött lap megmarad az eszközön.
 - **Áttekintés:** kitöltötték-e az aktuális hetet; mikor esedékes a hűtővíz-csere (6 havonta);
@@ -59,9 +62,11 @@ tárolva, az éles adatokhoz nem nyúl. Kipróbálásra és betanításra.
    mert a változót csak az új deploy látja.
 3. **Tablet.** Nyisd meg a tableten egyszer a `https://<oldal>.netlify.app/?kod=A-KÓD` linket,
    majd Chrome menü (⋮) → **Add to Home screen**, hogy ikonról induljon.
-4. **Robot és kezdőnap** (ha kell): a `public/index.html` `CONFIG` részében `ROBOTS` (a robot /
-   cella neve, több is lehet) és `START_DATE` (az első hétfő, ettől számít kimaradtnak egy
-   kitöltetlen hét).
+4. **Robot, kezdőnap, helyi értékek** (ha kell): a `public/index.html` `CONFIG` részében
+   `ROBOTS` (a robot / cella neve, több is lehet), `START_DATE` (az első hétfő, ettől számít
+   kimaradtnak egy kitöltetlen hét), és ha megvannak: `GAS_FLOW_LPM` (előírt gázáramlás),
+   `AIR_PRESSURE_BAR` (megszokott levegőnyomás), `COOLANT` (a hűtő folyadéka). Ezeket a lap
+   kiírja a megfelelő tételnél.
 
 ## Ahol az adat van – fontos
 

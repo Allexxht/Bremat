@@ -125,6 +125,15 @@ input:hover, select:hover, textarea:hover { border-color: var(--muted); }
 .item ul { margin: 0 0 8px; padding-left: 18px; color: var(--muted); font-size: 14.5px; }
 .item ul li { margin: 1px 0; }
 .item .body { grid-column: 2; }
+.item .ifbad { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+.item .ifbad b { color: var(--warn-text); }
+.item .src { margin: 8px 0 0; font-size: 12px; color: var(--muted); opacity: .8; }
+.howto { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; font-size: 14.5px; margin-bottom: 6px; }
+.howto p { margin: 0; } .howto p + p { margin-top: 6px; }
+.howto .t-ok { color: var(--ok-text); } .howto .t-action { color: var(--warn-text); }
+.group { margin: 22px 0 10px; padding-left: 12px; border-left: 4px solid var(--hot); }
+.group h3 { margin: 0; font-family: var(--font-cond); font-size: 20px; letter-spacing: .03em; text-transform: uppercase; }
+.group p { margin: 2px 0 0; color: var(--muted); font-size: 14.5px; }
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
 .seg button { min-height: 52px; border-radius: 8px; border: 2px solid var(--line); background: #101316; font-weight: 700; font-size: 16px; cursor: pointer; }
 .seg button:hover { border-color: var(--muted); }
@@ -217,29 +226,123 @@ const CONFIG = {
   ROBOTS: ['Valk robot'],          // több robotnál: ['Valk robot 1', 'Valk robot 2']
   START_DATE: '2026-10-05',        // ettől a héttől számít „hiányzó” egy kitöltetlen hét
   COOLING_WATER_MONTHS: 6,         // hűtővíz-csere gyakorisága (Valk 6.6)
+  // Helyi értékek – ha ki vannak töltve, a lap kiírja őket a tételnél.
+  GAS_FLOW_LPM: '',                // előírt gázáramlás, pl. '14'
+  AIR_PRESSURE_BAR: '',            // a levegőegység megszokott nyomása, pl. '6'
+  COOLANT: '',                     // a hűtő folyadéka (SMC kézikönyv / kanna szerint)
 };
 
 /* ================================================================
-   A 16 heti tétel (Valk kézikönyv 6.6 + Panasonic kiegészítések)
+   A heti tételek – a lap 2. változata (2026. szeptember 30.)
+   Forrás: Valk kézikönyv 6.6 (heti) és 6.5 (napi A–C), Panasonic
+   robotkar (R), vezérlő (V) kézikönyv. Sorrend: ahogy a cellánál
+   haladni érdemes – előbb leállított cellánál, utána bekapcsolva.
+   Ha a tételek változnak: FORM_VERSION + 1, a régi címek a
+   LEGACY_TITLES-be (a régi lapok így is olvashatók maradnak), és a
+   szerveren (lib/km-core.mjs) is FORM_VERSION + 1.
    ================================================================ */
+const FORM_VERSION = 2;
+const opt = (v, pre, post = '') => (v ? `${pre}${v}${post}` : '');
+const GROUPS = {
+  A: { title: 'A · Leállított cellánál', intro: 'A robot áll, Teach mód, vészleállító benyomva. Ahol a tétel kéri, főkapcsoló le.' },
+  B: { title: 'B · Bekapcsolás után', intro: 'Bekapcsolás: I/O vezérlő → szűrődoboz → robotvezérlő. Bekapcsolás előtt nézd meg, hogy senki nincs a robot munkaterében.' },
+};
 const ITEMS = [
-  { no: 1, title: 'Robot és vezérlő', pts: ['Tisztítás – <b>sűrített levegőt soha ne használj</b>', 'Ütközésvédő (safety holder) ellenőrzése', 'Jig ellenőrzése', 'Vezérlő hűtőventilátorának tisztítása', 'Vezérlő tisztítása', '<i>Panasonic:</i> zsírszivárgás a tengelyeken – kifolyt zsír letörlése', 'Köztes vezérlő (intermediate controller) tisztítása'] },
-  { no: 2, title: 'Hegesztő áramforrás (welding trafo)', pts: ['Tisztítás', 'Belső rész kifúvatása', 'Nyomtatott áramköri kártyák (panelek) <b>nem</b> sűrített levegővel', 'Hűtőventilátor tisztítása', '<i>Panasonic:</i> légbeszívó szűrő (filter) tisztítása, csere ha kell', 'Földkábelek ellenőrzése'] },
-  { no: 3, title: 'Hűtőegység (VWK 7/1, SMC)', pts: ['Szivattyú és hűtő kifúvatása; radiátor kifúvatása', 'Hűtőventilátor tisztítása', 'Hűtővízszint ellenőrzése, utántöltés ha szükséges', 'Hűtővíz keringésének ellenőrzése', 'Szivárgás ellenőrzése', 'Vízhűtéses áramkábelnél (contact wire): van-e rézszemcse a hűtővízben – főleg kábelköteg-cserénél, ha a kábel hibás volt', '<b>Hűtővíz csere 6 havonta</b>'] },
-  { no: 4, title: 'Kábelköteg (QE cable assembly)', pts: ['Száraz legyen', 'Nem lehet megtörve', 'Belső spirál (coil) cseréje'] },
-  { no: 5, title: 'Hegesztőpisztoly (torch)', pts: ['Ellenőrzés a kalibráló jigben', 'Áramátadó (current conductor) cseréje', 'O-gyűrűk ellenőrzése, csere ha szükséges', 'Gázcső ellenőrzése, csere ha szükséges'] },
-  { no: 6, title: 'Huzaladagoló (wire feeder)', pts: ['Ellenőrzés, kopás esetén csere (görgők, huzalvezetők)', '<i>Panasonic, hetente:</i> rozsdamentes cső és központi cső bemenete, görgők környéke tiszta – huzalforgács eltávolítva', 'Csövek és görgők a huzalátmérőhöz illenek; a csőfuratok a görgőhorony közepén'] },
-  { no: 7, title: 'Munkaterület', pts: ['Takarítás', 'Alkatrészek letisztítása', 'Hulladékgyűjtők ürítése'] },
-  { no: 8, title: 'Fénysorompók (light barriers)', pts: ['Tükrök tisztítása', 'Sérülés ellenőrzése', 'Szilárdan rögzítve legyen'] },
-  { no: 9, title: 'Kerítések', pts: ['Takarítás', 'Sérülések javítása'] },
-  { no: 10, title: 'Szervizajtók', pts: ['Sérülések javítása', 'Működés ellenőrzése'] },
-  { no: 11, title: 'Készülékek (jigek)', pts: ['Fröcskölék eltávolítása', 'Szorítók ellenőrzése', 'Sérülések ellenőrzése'] },
-  { no: 12, title: 'Füstelszívás (air exhaust)', pts: ['Tisztítás', 'Sérülések ellenőrzése'] },
-  { no: 13, title: 'Sűrítettlevegő-egység (air unit)', pts: ['Levegőcsatlakozások szivárgásának ellenőrzése'] },
-  { no: 14, title: 'Hegesztési fényvédelem', pts: ['Csere, ha sérült'] },
-  { no: 15, title: 'Mechanikus pisztolytisztító (Thielmann)', pts: ['Tisztítás', 'Vágókés (chisel) ellenőrzése, csere ha szükséges', 'Fröccsgátló olaj (spat oil) – utántöltés ha szükséges'] },
-  { no: 16, title: 'Gázegység', pts: ['Gázcsövek szivárgás-ellenőrzése', 'Áramlásmérő szivárgás-ellenőrzése', 'Áramlásmérő beállításának ellenőrzése', 'Gázáramlás mérése a pisztolynál'] },
+  { no: 1, key: 'area', group: 'A', title: 'Munkaterület és szerszámok', src: 'Valk 6.6/7 · napi A5–A6',
+    steps: ['Szedd össze a huzalvégeket, a fröccsöt és a leesett alkatrészeket az állomásokból és a robot körül.',
+      'Ürítsd ki a hulladékgyűjtőket.',
+      'A szerszámok tiszták, épek, és a helyükön vannak.'],
+    bad: 'Hiányzó vagy sérült szerszám: pótold, vagy írd be.' },
+  { no: 2, key: 'arm', group: 'A', title: 'Robotkar', src: 'Valk 6.6/1 · Panasonic R 8.1.1',
+    steps: ['Töröld le a port és a fröccsöt ronggyal. <b>Sűrített levegő és víz tilos</b> – bejut a robotba.',
+      'Nézd végig a tengelyeket: a kifolyt zsírt töröld le. Az UA tengely túlnyomás-szelepénél kevés zsír normális.',
+      'A kábelek körüli gumilapok nem repedtek, nincs laza csavar.'],
+    bad: 'Ha a zsírszivárgás visszatér, repedt a gumilap, vagy laza rész van, aminek nem tudod az okát: jelezd (Panasonic szerviz).' },
+  { no: 3, key: 'torch', group: 'A', title: 'Pisztoly és ütközésvédő', src: 'Valk 6.6/1, 6.6/5 · napi B5',
+    steps: ['Cseréld ki az áramátadót (current conductor) – a Valk szerint hetente, akkor is, ha még jónak látszik. Csere után húzd meg.',
+      'Tisztítsd ki a gázfúvókát; ha deformált, vagy nem jön le róla a fröccs, cseréld.',
+      'Az O-gyűrűk épek (nem repedtek, nem laposak), a gázcső ép és nincs eltömődve.',
+      'A pisztolyon nincs égés- vagy melegedésnyom.',
+      'Az ütközésvédő (safety holder) ép, a pisztoly szilárdan, lötyögés nélkül ül benne, a levegőcsatlakozása ép.'],
+    bad: 'Kopott vagy sérült alkatrész: csere. Lötyögő vagy sérült ütközésvédővel ne indítsd a robotot – jelezd.' },
+  { no: 4, key: 'hose', group: 'A', title: 'Kábelköteg és spirál', src: 'Valk 6.6/4 · napi B4',
+    steps: ['A köteg száraz: a hűtővíz-csatlakozásoknál nincs szivárgás.',
+      'Nincs éles megtörés, a burkolat ép, nincs égés- vagy melegedésnyom.',
+      'A huzal egyenletesen, akadás nélkül fut a spirálban (coil).'],
+    bad: 'Nedves, megtört vagy égett köteg: csere, a hibás köteg javításra a Valk-hoz megy. Ha a huzal akad vagy ugrál: spirálcsere.' },
+  { no: 5, key: 'feeder', group: 'A', title: 'Huzaladagoló', src: 'Valk 6.6/6 · Panasonic R 8.7.1 · napi B2–B3',
+    steps: ['Szedd ki a huzalforgácsot a görgők környékéről, a rozsdamentes cső és a központi cső bemenetéből – ecsettel vagy porszívóval, <b>sűrített levegő tilos</b>.',
+      'A görgők hornya nem kopott, nem repedt; a görgők és a csövek a használt huzalátmérőhöz valók.',
+      'PFA: van elég olaj – ha kevés, töltsd utána (WWPFAOIL).'],
+    bad: 'Kopott vagy repedt görgő: csere. Rossz görgő vagy cső a huzalhoz: sok forgács, eltömődő spirál, instabil ív lesz belőle.' },
+  { no: 6, key: 'cleaner', group: 'A', title: 'Pisztolytisztító (Thielmann)', src: 'Valk 6.6/15 · napi B8',
+    steps: ['Védőszemüvegben takarítsd ki a forgácsot és a fröccsöt a tisztítóból.',
+      'A kaparókés ép, nem kopott.',
+      'Van elég fröccsgátló folyadék.'],
+    bad: 'Kopott kés: csere. Kevés folyadék: utántöltés.' },
+  { no: 7, key: 'jigs', group: 'A', title: 'Készülékek (jigek)', src: 'Valk 6.6/11 · napi A4',
+    steps: ['Szedd le a fröccsöt a befogókról, az ütközőkről és a pozicionáló lapokról.',
+      'Minden szorító rendesen zár és tart; nincs laza, törött vagy hiányzó elem.'],
+    bad: 'Amit nem tudsz megjavítani, jelezd a karbantartásnak – rosszul befogott munkadarabbal nem szabad hegeszteni.' },
+  { no: 8, key: 'controller', group: 'A', title: 'Vezérlő és hegesztőkábelek', src: 'Valk 6.6/1–2 · Panasonic V 7.2 · napi A2',
+    steps: ['Kapcsold le a robotvezérlő főkapcsolóját, és várj, amíg lehűl.',
+      'Tisztítsd ki a vezérlő oldalpaneljein lévő légszűrőket; az eltömődött vagy sérült szűrőt cseréld.',
+      'A vezérlőszekrényeket kívülről töröld le (sűrített levegő tilos).',
+      'A földkábel és a hegesztő áramkábelek csatlakozása szoros; nincs sérülés, égés- vagy melegedésnyom.'],
+    bad: 'Laza, égett vagy sérült kábel: karbantartás – tűzveszély. Ha a „Temperature error” (W1210, W1220) a szűrő tisztítása után is visszajön: Panasonic.' },
+  { no: 9, key: 'fence', group: 'A', title: 'Kerítés, ajtók, fényvédelem, fénysorompók', src: 'Valk 6.6/8–10, 6.6/14 · napi A3',
+    steps: ['A kerítéselemek és a szervizajtó épek, stabilak, nincs rés vagy laza rögzítés. Töröld le őket.',
+      'A hegesztési fényvédő függöny vagy lemez ép: nincs rajta szakadás, égett lyuk, rés.',
+      'A fénysorompók tükreit és lencséit töröld tisztára; ne legyenek elmozdulva vagy meglazulva.'],
+    bad: 'Sérült fényvédő: csere. Sérült kerítés, ajtó vagy fénysorompó: karbantartás.' },
+  { no: 10, key: 'exhaust', group: 'A', title: 'Füstelszívás', src: 'Valk 6.6/12',
+    steps: ['Tisztítsd meg az elszívó nyílását, ernyőjét.',
+      'A csövek és a tömlők épek: nincs rajtuk lyuk, nem szakadtak le.'],
+    bad: 'Sérült cső vagy gyenge elszívás: jelezd a karbantartásnak.' },
+  { no: 11, key: 'air', group: 'A', title: 'Sűrített levegő', src: 'Valk 6.6/13',
+    steps: [`A levegőegység nyomásmérője a megszokott értéket mutatja${opt(CONFIG.AIR_PRESSURE_BAR, ' (', ' bar)')}.`,
+      'Nincs szivárgás (sziszegés) a csatlakozásoknál és a tömlőknél. Gyanús helyen: szappanos víz vagy szivárgáskereső spray.'],
+    bad: 'Szivárgó csatlakozás: meghúzás vagy csere; ha nem megy, karbantartás.' },
+  { no: 12, key: 'cool', group: 'B', title: 'Hűtőegység (VWK 7/1)', src: 'Valk 6.6/3 · napi B6',
+    steps: ['Kikapcsolt hűtőnél fúvasd ki a radiátort és a ventilátort (a hűtőt szabad sűrített levegővel). Védőszemüveg.',
+      `A vízszint a jelölésig ér. Ha kevés, töltsd utána – csak a hűtő saját folyadékával${opt(CONFIG.COOLANT, ' (', ')')}.`,
+      'Bekapcsolva a víz kering, és sehol nem szivárog (hűtő, tömlők, csatlakozások).',
+      'A víz tiszta: nincs benne rézszemcse vagy zavarosság (főleg köteg- vagy kábelcsere után).'],
+    bad: 'Nincs keringés, szivárog, vagy rézszemcse van a vízben: karbantartás. A hűtővizet 6 havonta ki kell cserélni – az Áttekintés mutatja, mikor esedékes.' },
+  { no: 13, key: 'robot', group: 'B', title: 'Robot bekapcsolás után', src: 'Valk napi C1, C8 · Panasonic R 8.1.2, V 7.2',
+    steps: ['A teach pendanton nincs hibaüzenet.',
+      'Kézi mozgatásnál és programfutás közben egyik tengely sem zajos, nem rezeg, nem ránt.',
+      'Alaphelyzetben (S80) az origó-jelölések egybeesnek – közel csak benyomott vészleállítóval menj.',
+      'A szervó kikapcsolásakor a kar nem esik le (fék).',
+      'A vezérlő ventilátorai forognak (bekapcsolás után kb. 25 mp-cel indulnak).'],
+    bad: 'Hibaüzenetnél írd fel a kódot, az alkódot és a teljes szöveget. Zaj, rezgés, leeső kar vagy el nem tűnő hiba: a robot nem használható – Valk szerviz (0031 78-7503811) vagy Panasonic.' },
+  { no: 14, key: 'safety', group: 'B', title: 'Biztonsági eszközök működéspróbája', src: 'Valk 6.6/8, 6.6/10 · napi C2–C3, C6 · 3.2.1',
+    steps: ['Vészleállító: megnyomásra a szervó azonnal kikapcsol.',
+      'Fénysorompók: megszakításra a robot megáll, a szervók kikapcsolnak.',
+      'Szervizajtó: nyitásra a robot megáll, a szervók kikapcsolnak. Zárás: belül a fekete PRE-RESET SERVICE DOOR, kint 10 mp-en belül a fehér RESET SERVICE DOOR gomb.'],
+    bad: 'Ha bármelyik nem állítja meg a robotot, a cella nem használható: ne indítsd, azonnal jelezd.' },
+  { no: 15, key: 'ref', group: 'B', title: 'Pisztolyhelyzet (S11)', src: 'Valk 6.6/5 · napi B7 · 5.8',
+    steps: ['Futtasd az S11 Reference Tool 1 programot: a pisztoly pontosan a kalibráló jig referenciapontjára áll.'],
+    bad: 'Ha eltér: ne hegessz vele, szólj a kalibrálásért felelősnek – a robotot kalibrálni kell (PPS).' },
+  { no: 16, key: 'gas', group: 'B', title: 'Gáz', src: 'Valk 6.6/16',
+    steps: ['A gáztömlők, a csatlakozások és az áramlásmérő nem szivárognak (szappanos víz vagy spray).',
+      `Az áramlásmérő az előírt értékre van állítva${opt(CONFIG.GAS_FLOW_LPM, ' (', ' l/min)')}.`,
+      'Mérd meg az áramlást a gázfúvókánál mérőcsővel, és írd be lent.'],
+    bad: 'Ha a mért érték kevesebb a beállítottnál, szivárgás vagy dugulás van: keresd meg, vagy jelezd.' },
 ];
+const ITEM_BY_KEY = Object.fromEntries(ITEMS.map((it) => [it.key, it]));
+
+// A lap korábbi változatainak tételcímei – a régi lapok megjelenítéséhez.
+const LEGACY_TITLES = {
+  1: ['Robot és vezérlő', 'Hegesztő áramforrás (welding trafo)', 'Hűtőegység (VWK 7/1, SMC)', 'Kábelköteg (QE cable assembly)',
+    'Hegesztőpisztoly (torch)', 'Huzaladagoló (wire feeder)', 'Munkaterület', 'Fénysorompók (light barriers)', 'Kerítések',
+    'Szervizajtók', 'Készülékek (jigek)', 'Füstelszívás (air exhaust)', 'Sűrítettlevegő-egység (air unit)',
+    'Hegesztési fényvédelem', 'Mechanikus pisztolytisztító (Thielmann)', 'Gázegység'],
+};
+const titlesFor = (r) => {
+  const v = r.form_version || 1;
+  return v === FORM_VERSION ? ITEMS.map((it) => it.title) : (LEGACY_TITLES[v] || []);
+};
 
 /* ================================================================
    Segédfüggvények: dátum (mindig Europe/Budapest), szöveg, tárolás
@@ -319,7 +422,7 @@ function createApiAdapter() {
 }
 
 function createDemoAdapter() {
-  const KEY = 'km-demo-v1';
+  const KEY = 'km-demo-v2';
   let mem = null;
   const load = () => {
     if (mem) return mem;
@@ -337,9 +440,10 @@ function createDemoAdapter() {
       const d = addDays(mon, off * 7);
       const items = ITEMS.map((it) => ({ no: it.no, status: 'ok', note: null }));
       let extra = {};
-      if (off === -6) { items[2] = { no: 3, status: 'action', note: 'Hűtővíz utántöltve (kb. 1 l)' }; }
-      if (off === -2) { items[4] = { no: 5, status: 'action', note: 'Áramátadó csere, O-gyűrű csere' }; items[14] = { no: 15, status: 'action', note: 'Vágókés csere' }; extra = { remarks: 'A gázfúvóka belső fala erősen fröccsös volt.', parts_used: '1 db áramátadó, 2 db O-gyűrű, 1 db vágókés' }; }
-      if (off === -1) { items[15] = { no: 16, status: 'action', note: 'Szivárgás a gáztömlő csatlakozásánál, bilincs utánhúzva' }; extra = { remarks: 'A gáztömlő a csatlakozásnál repedezett, cserélni kell.', escalate: true, escalate_to: 'Karbantartás (Szabó)' }; }
+      const act = (key, note) => { const n = ITEM_BY_KEY[key].no; items[n - 1] = { no: n, status: 'action', note }; };
+      if (off === -6) act('cool', 'Hűtőfolyadék utántöltve (kb. 1 l)');
+      if (off === -2) { act('torch', 'Gázfúvóka deformált volt – csere; 2 O-gyűrű csere'); act('cleaner', 'Kaparókés kopott – csere'); extra = { remarks: 'A gázfúvóka belső fala erősen fröccsös volt.', parts_used: '1 db gázfúvóka, 2 db O-gyűrű, 1 db kaparókés' }; }
+      if (off === -1) { act('gas', 'Szivárgás a gáztömlő csatlakozásánál, bilincs utánhúzva'); extra = { remarks: 'A gáztömlő a csatlakozásnál repedezett, cserélni kell.', escalate: true, escalate_to: 'Karbantartás (Szabó)' }; }
       out.push(mk({
         check_date: d, robot: CONFIG.ROBOTS[0], inspector: names[i % 2], items,
         cooling_water_changed: off === -6 ? addMonths(d, -5) : null,
@@ -352,7 +456,7 @@ function createDemoAdapter() {
     const { year, week } = isoWeek(c.check_date);
     return {
       id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2),
-      created_at: new Date().toISOString(), check_date: c.check_date, iso_year: year, iso_week: week,
+      form_version: FORM_VERSION, created_at: new Date().toISOString(), check_date: c.check_date, iso_year: year, iso_week: week,
       robot: c.robot, inspector: c.inspector, items: c.items,
       action_count: c.items.filter((x) => x.status === 'action').length,
       cooling_water_changed: c.cooling_water_changed || null, gas_flow_lpm: c.gas_flow_lpm ?? null,
@@ -558,11 +662,20 @@ async function renderOverview() {
 }
 
 function downloadCsv(rows) {
-  const head = ['Év', 'Hét', 'Dátum', 'Robot', 'Ellenőrizte', 'Beavatkozások száma', 'Hűtővíz csere', 'Gázáramlás (l/min)', 'Továbbjelzés', 'Kinek', 'Megjegyzés', 'Felhasznált alkatrész', 'Jóváhagyta', 'Jóváhagyva', 'Beküldve',
-    ...ITEMS.flatMap((it) => [`${it.no}. ${it.title}`, `${it.no}. mit csinált`])];
-  const itemCols = (r) => ITEMS.flatMap((it) => { const x = (r.items || []).find((y) => y.no === it.no) || {}; return [x.status === 'action' ? 'Beavatkozás' : x.status === 'ok' ? 'Rendben' : '', x.note || '']; });
+  const head = ['Év', 'Hét', 'Dátum', 'Robot', 'Ellenőrizte', 'Beavatkozások száma', 'Hűtővíz csere', 'Gázáramlás (l/min)', 'Továbbjelzés', 'Kinek', 'Megjegyzés', 'Felhasznált alkatrész', 'Jóváhagyta', 'Jóváhagyva', 'Beküldve', 'Lap változat',
+    ...ITEMS.flatMap((it) => [`${it.no}. ${it.title}`, `${it.no}. mit csinált`]), 'Régebbi lapváltozat tételei'];
+  const stTxt = (x) => (x.status === 'action' ? 'Beavatkozás' : x.status === 'ok' ? 'Rendben' : '');
+  // A tételoszlopok a mostani lapváltozathoz tartoznak. Egy régebbi változatú lap
+  // tételei (mások voltak) az utolsó oszlopba kerülnek, címmel együtt.
+  const itemCols = (r) => {
+    const v = r.form_version || 1;
+    const find = (no) => (r.items || []).find((y) => y.no === no) || {};
+    if (v === FORM_VERSION) return [...ITEMS.flatMap((it) => { const x = find(it.no); return [stTxt(x), x.note || '']; }), ''];
+    const old = titlesFor(r).map((t, i) => { const x = find(i + 1); return `${i + 1}. ${t}: ${stTxt(x)}${x.note ? ` – ${x.note}` : ''}`; }).join(' | ');
+    return [...ITEMS.flatMap(() => ['', '']), old];
+  };
   const cell = (v) => { const s = String(v ?? ''); return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const lines = [head, ...rows.map((r) => [r.iso_year, r.iso_week, r.check_date, r.robot, r.inspector, r.action_count, r.cooling_water_changed || '', r.gas_flow_lpm ?? '', r.escalate ? 'Igen' : 'Nem', r.escalate_to || '', r.remarks || '', r.parts_used || '', r.approved_by || '', r.approved_at ? fmtDT(r.approved_at) : '', fmtDT(r.created_at), ...itemCols(r)])]
+  const lines = [head, ...rows.map((r) => [r.iso_year, r.iso_week, r.check_date, r.robot, r.inspector, r.action_count, r.cooling_water_changed || '', r.gas_flow_lpm ?? '', r.escalate ? 'Igen' : 'Nem', r.escalate_to || '', r.remarks || '', r.parts_used || '', r.approved_by || '', r.approved_at ? fmtDT(r.approved_at) : '', fmtDT(r.created_at), r.form_version || 1, ...itemCols(r)])]
     .map((l) => l.map(cell).join(';')).join('\r\n');
   const blob = new Blob(['﻿' + lines], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
@@ -577,10 +690,12 @@ function downloadCsv(rows) {
    ================================================================ */
 const DRAFT_KEY = 'km-draft';
 function newDraft() {
-  return { check_date: today(), robot: CONFIG.ROBOTS[0], inspector: '', items: ITEMS.map((i) => ({ no: i.no, status: null, note: '' })), cooling_water_changed: false, gas_flow_lpm: '', remarks: '', parts_used: '', escalate: null, escalate_to: '' };
+  return { form_version: FORM_VERSION, check_date: today(), robot: CONFIG.ROBOTS[0], inspector: '', items: ITEMS.map((i) => ({ no: i.no, status: null, note: '' })), cooling_water_changed: false, gas_flow_lpm: '', remarks: '', parts_used: '', escalate: null, escalate_to: '' };
 }
 function loadDraft() {
-  try { const d = JSON.parse(store.get(DRAFT_KEY)); if (d && Array.isArray(d.items) && d.items.length === 16) return d; } catch { /* nincs */ }
+  // Egy régebbi lapváltozat piszkozata nem tölthető vissza: a tételek mást jelentenének.
+  try { const d = JSON.parse(store.get(DRAFT_KEY)); if (d && d.form_version === FORM_VERSION && Array.isArray(d.items) && d.items.length === ITEMS.length) return d; } catch { /* nincs */ }
+  store.del(DRAFT_KEY);
   return newDraft();
 }
 
@@ -608,7 +723,7 @@ async function renderForm() {
     <h1>Heti karbantartási lap</h1>
     ${hadDraft ? '<div class="banner info no-print">Egy korábban elkezdett, be nem küldött lapot töltöttem vissza erről az eszközről. <button class="btn ghost" type="button" id="resetDraft" style="margin-left:6px">Új, üres lap</button></div>' : ''}
     <div id="dupWarn"></div>
-    <div class="safety"><b>Mielőtt hozzányúlsz:</b> belépés előtt Teach mód. Karbantartás előtt főkapcsolók 0 + lakat, sűrített levegő elzárva (Valk 6.). A robotot és a paneleket sűrített levegővel tisztítani tilos.</div>
+    <div class="safety"><b>Mielőtt hozzányúlsz:</b> belépés előtt Teach mód, vészleállító benyomva. A robotkart, a huzaladagolót és a vezérlőt sűrített levegővel tisztítani tilos – csak a hűtő radiátorát szabad kifúvatni. Hibás biztonsági eszközzel a cellát használni tilos.</div>
 
     <div class="panel grid-2" id="head">
       <label class="field" data-f="check_date"><span>Dátum · <b id="weekInfo" style="color:var(--hot-text)">${weekInfo()}</b></span><input type="date" id="f_date" value="${esc(d.check_date)}" max="${addDays(today(), 1)}"><span class="err" hidden></span></label>
@@ -619,21 +734,28 @@ async function renderForm() {
     </div>
 
     <h2>Ellenőrzendő tételek</h2>
+    <div class="howto">
+      <p><b class="t-ok">Rendben</b> – elvégezted a tételt, és a leírt rutinmunkán (tisztítás, heti áramátadó-csere) felül nem kellett semmi.</p>
+      <p><b class="t-action">Beavatkozás kellett</b> – ezen felül cseréltél, javítottál, utántöltöttél, vagy hibát találtál. Írd be, mit csináltál; ha neked nem megoldható, lent jelezd tovább.</p>
+    </div>
     <div id="items">
       ${ITEMS.map((it, i) => `
+        ${i === 0 || ITEMS[i - 1].group !== it.group ? `<div class="group"><h3>${esc(GROUPS[it.group].title)}</h3><p>${esc(GROUPS[it.group].intro)}</p></div>` : ''}
         <section class="item" id="item-${it.no}" data-i="${i}" aria-labelledby="t-${it.no}">
           <div class="no" aria-hidden="true">${it.no}</div>
           <div class="body">
-            <h3 id="t-${it.no}">${it.no}. ${esc(it.title)}</h3>
-            <ul>${it.pts.map((p) => `<li>${p}</li>`).join('')}</ul>
+            <h3 id="t-${it.no}">${esc(it.title)}</h3>
+            <ul>${it.steps.map((p) => `<li>${p}</li>`).join('')}</ul>
+            <p class="ifbad"><b>Ha nincs rendben:</b> ${esc(it.bad)}</p>
             <div class="seg" role="group" aria-label="${it.no}. tétel eredménye">
               <button type="button" class="s-ok" data-st="ok" aria-pressed="false">Rendben</button>
               <button type="button" class="s-action" data-st="action" aria-pressed="false">Beavatkozás kellett</button>
             </div>
             <label class="field note" hidden><span>Mit csinált?</span><textarea maxlength="1000" placeholder="pl. vízcsere, fúvókatisztítás, huzalcsere"></textarea></label>
-            ${it.no === 3 ? `<div class="extra"><label class="check"><input type="checkbox" id="f_cool"> Hűtővizet cseréltem ezen a héten</label><span class="small muted">${esc(cool.sub)}</span></div>` : ''}
-            ${it.no === 16 ? `<div class="extra"><label class="field"><span>Mért gázáramlás a pisztolynál (l/min) – nem kötelező</span><input type="number" id="f_gas" inputmode="decimal" min="0" max="100" step="0.1" value="${esc(d.gas_flow_lpm)}"></label></div>` : ''}
+            ${it.key === 'cool' ? `<div class="extra"><label class="check"><input type="checkbox" id="f_cool"> Hűtővizet cseréltem ezen a héten</label><span class="small muted">${esc(cool.sub)}</span></div>` : ''}
+            ${it.key === 'gas' ? `<div class="extra"><label class="field"><span>Mért gázáramlás a pisztolynál (l/min) – nem kötelező</span><input type="number" id="f_gas" inputmode="decimal" min="0" max="100" step="0.1" value="${esc(d.gas_flow_lpm)}"></label></div>` : ''}
             <p class="err" hidden></p>
+            <p class="src">${esc(it.src)}</p>
           </div>
         </section>`).join('')}
     </div>
@@ -673,8 +795,8 @@ async function renderForm() {
   };
   const paintProgress = () => {
     const n = d.items.filter((x) => x.status).length;
-    $('#progTxt').textContent = `${n} / 16 tétel kitöltve`;
-    $('#progBar').style.width = `${(n / 16) * 100}%`;
+    $('#progTxt').textContent = `${n} / ${ITEMS.length} tétel kitöltve`;
+    $('#progBar').style.width = `${(n / ITEMS.length) * 100}%`;
   };
   const paintDup = () => {
     const s = sameWeek();
@@ -728,7 +850,7 @@ async function renderForm() {
       if (!it.status) { setErr(sec, 'Jelöld: Rendben vagy Beavatkozás kellett.'); errs.push(sec); }
       else if (it.status === 'action' && !it.note.trim()) { setErr(sec, 'Írd be, mit csináltál.'); errs.push(sec); }
     });
-    if (d.gas_flow_lpm !== '' && (isNaN(Number(d.gas_flow_lpm)) || Number(d.gas_flow_lpm) < 0 || Number(d.gas_flow_lpm) > 100)) { setErr($('#item-16'), 'A gázáramlás 0 és 100 l/min közötti szám legyen.'); errs.push($('#item-16')); }
+    if (d.gas_flow_lpm !== '' && (isNaN(Number(d.gas_flow_lpm)) || Number(d.gas_flow_lpm) < 0 || Number(d.gas_flow_lpm) > 100)) { const g = $(`#item-${ITEM_BY_KEY.gas.no}`); setErr(g, 'A gázáramlás 0 és 100 l/min közötti szám legyen.'); errs.push(g); }
     if (d.escalate === null) { setErr($('#escBox'), 'Jelöld: Igen vagy Nem.'); errs.push($('#escBox')); }
     else if (d.escalate && !d.escalate_to.trim()) { setErr($('#escTo'), 'Írd be, kinek kell továbbjelezni.'); errs.push($('#escTo')); }
     return errs;
@@ -746,7 +868,7 @@ async function renderForm() {
     dlg.innerHTML = `
       <h3>Beküldöd a lapot?</h3>
       <p><b>${weekInfo()}</b> · ${esc(d.robot)} · ${esc(d.inspector.trim())}</p>
-      <p>${16 - nAct} tétel rendben, <b>${nAct}</b> beavatkozással.${d.cooling_water_changed ? ' Hűtővíz-csere rögzítve.' : ''}${d.escalate ? ` Továbbjelzés: <b>${esc(d.escalate_to.trim())}</b>.` : ''}</p>
+      <p>${ITEMS.length - nAct} tétel rendben, <b>${nAct}</b> beavatkozással.${d.cooling_water_changed ? ' Hűtővíz-csere rögzítve.' : ''}${d.escalate ? ` Továbbjelzés: <b>${esc(d.escalate_to.trim())}</b>.` : ''}</p>
       <p class="small muted">Beküldés után a lap nem módosítható.</p>
       <p class="err" id="dlgErr" hidden></p>
       <div class="actions"><button class="btn" type="button" id="dlgNo">Vissza</button><button class="btn primary" type="button" id="dlgYes">Beküldés</button></div>`;
@@ -755,7 +877,7 @@ async function renderForm() {
     $('#dlgYes').onclick = async () => {
       const yes = $('#dlgYes'); yes.disabled = true; yes.textContent = 'Mentés…';
       const payload = {
-        check_date: d.check_date, robot: d.robot, inspector: d.inspector.trim(),
+        form_version: FORM_VERSION, check_date: d.check_date, robot: d.robot, inspector: d.inspector.trim(),
         items: d.items.map((x) => ({ no: x.no, status: x.status, note: x.status === 'action' ? x.note.trim() : null })),
         cooling_water_changed: !!d.cooling_water_changed,
         gas_flow_lpm: d.gas_flow_lpm === '' ? null : Number(d.gas_flow_lpm),
@@ -790,6 +912,7 @@ async function renderDetail(id) {
   catch (e) { if (!(e instanceof AccessError)) app.innerHTML = `<div class="banner bad">${esc(e.message)}</div><a class="btn" href="#/">Vissza az áttekintéshez</a>`; return; }
 
   const byNo = new Map((r.items || []).map((x) => [x.no, x]));
+  const titles = titlesFor(r);
   app.innerHTML = `
     <h1>Heti karbantartási lap – ${r.iso_year}. ${r.iso_week}. hét</h1>
     <div class="panel kv">
@@ -802,8 +925,8 @@ async function renderDetail(id) {
     <h2>Tételek</h2>
     <div class="table-wrap"><table>
       <thead><tr><th>#</th><th>Tétel</th><th>Eredmény</th><th>Mit csinált</th></tr></thead>
-      <tbody>${ITEMS.map((it) => { const x = byNo.get(it.no) || {}; return `
-        <tr><td><b>${it.no}</b></td><td>${esc(it.title)}</td>
+      <tbody>${titles.map((title, i) => { const no = i + 1; const x = byNo.get(no) || {}; return `
+        <tr><td><b>${no}</b></td><td>${esc(title)}</td>
         <td>${x.status === 'action' ? '<span class="badge warn">Beavatkozás</span>' : x.status === 'ok' ? '<span class="badge ok">Rendben</span>' : '—'}</td>
         <td class="pre">${esc(x.note || '')}</td></tr>`; }).join('')}
       </tbody></table></div>
