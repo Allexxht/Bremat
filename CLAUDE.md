@@ -132,6 +132,17 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - A magyarázatok magyarul szóljanak, de a menü- és beállításneveket angolul írd
   (az eszközök angol felületűek).
 - Közvetlenül a `main`-re megy (a felhasználó így kérte); a Netlify a pusht azonnal kiteszi.
+- **Netlify keret – minden push a `main`-re pénzbe kerül.** A csapat (alexbremat's team) Free
+  csomagon van: 300 kredit/hó, egy éles (production) deploy 15 kredit, és a keret **közös az
+  AndonWork-kel**. 2026. október 1-jén elfogyott: a production deployok szünetelnek („Skipped”),
+  az oldal a régi változattal él tovább (a felhasználó ezt a Netlify Activity listájában látja).
+  Ezért a változásokat **egy pushba gyűjtsd**, ne commitonként pusholj. A Deploy Preview nem
+  fogyaszt kreditet: átmenetileg a #1 PR (`elonezet` branch = `main` + egy üres commit, NEM
+  mergelendő) adja az előnézetet: `https://deploy-preview-1--brematkarbantartas.netlify.app` –
+  ugyanazt a Blobs tárolót használja, mint az éles (site-wide store). Amíg ez él, minden új
+  `main`-t oda is vinni kell (`git checkout elonezet && git merge main && git push`). A keret
+  újraindulása után: a PR-t merge nélkül lezárni, és Netlify → **Deploys** → **Trigger deploy**,
+  mert a kihagyott commitokat a Netlify magától nem építi újra.
 - Módosítás után: `npm test`, majd DEMÓ módban (`?demo`) végigkattintani: új lap üresen beküldve
   (hibák jelennek meg) → kitöltés beavatkozással → újratöltés (piszkozat megmarad) → beküldés →
   jóváhagyás → áttekintés (a hét kitöltve, hűtővíz-kártya frissült) → lap törlése (eltűnik
