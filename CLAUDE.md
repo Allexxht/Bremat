@@ -62,8 +62,9 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   szerviznél). A sín feladatai `nk` (nincs rá gyártói leírás, nincs adattábla, kenőpont).
 - **Pontosítás alatt** (`pending`), amíg nincs fotó/adat: a huzaladagoló fedelének nyitása,
   a gas check helye a teach pendanton, a hűtővíz-csere lépései (SMC kézikönyv).
-- Gáz: nincs gázáramlás-mérőjük – mérőcső kell (be kell szerezni). Irányérték 10–12 l/min
-  (EWM ökölszabály, 10–12 × huzalátmérő), `nk`, amíg nincs hegesztési utasítás szerinti érték.
+- Gáz: van gáztesztelőjük (kézi gázáramlás-mérő), hátul tartják – a hátsó körben veszik
+  magukhoz, elöl a pisztolynál mérnek vele (gas check közben). Irányérték 10–12 l/min (EWM
+  ökölszabály, 10–12 × huzalátmérő), `nk`, amíg nincs hegesztési utasítás szerinti érték.
 
 ## Korábbi változatok
 - **2. változat (2026. szeptember 30.)**: a Valk 6.6 heti lista szó szerinti fordítása
