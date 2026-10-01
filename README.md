@@ -10,16 +10,17 @@ Netlify oldalnak a saját tárolójában (Netlify Blobs) vannak.
 
 ## Mit tud
 
-- **Új heti lap:** 16 tétel abban a sorrendben, ahogy a cellánál haladni érdemes: előbb
-  leállított cellánál (A), utána bekapcsolva (B). Minden tételnél ott van, mit kell csinálni,
-  és mi a teendő, ha nincs rendben. Forrás: Valk kézikönyv 6.6 (heti) és 6.5 (napi), Panasonic
-  robotkar- és vezérlőkézikönyv. Soronként *Rendben* / *Beavatkozás kellett* gomb;
-  beavatkozásnál kötelező beírni, mit csinált. Minden tételnél lenyitható **Bővebben** rész:
-  hol találod, hogyan csináld, mire figyelj – a kézikönyv ábráival (koppintásra nagyíthatók).
-  Hűtővíz-csere jelölése, mért gázáramlás, megjegyzés, felhasznált alkatrész, továbbjelzés.
+- **Új heti lap:** útvonal szerint: elöl, aztán hátul leállított robottal, végül bekapcsolva.
+  Minden feladatnál látszik, hogy csak szemrevételezés vagy beavatkozás, milyen gyakori, mi kell
+  hozzá, és mi a teendő, ha nincs rendben; lenyitható **Bővebben** rész a kézikönyv ábráival.
+  Forrás: Valk kézikönyv 6.6 (heti) és 6.5 (napi), Panasonic robotkar-, vezérlő- és
+  pozicionálókézikönyv. Soronként *Rendben* / *Beavatkozás kellett* / *Nem csináltam meg* –
+  az utóbbi kettőhöz kötelező megjegyzés. A lap tetején: „Mit vigyél magaddal ezen a héten”.
+  A ritkább (havi, éves stb.) feladatok csak akkor jelennek meg, amikor esedékesek.
   Ha a tablet menet közben újratölt, a félig kitöltött lap megmarad az eszközön.
-- **Áttekintés:** kitöltötték-e az aktuális hetet; mikor esedékes a hűtővíz-csere (6 havonta);
-  nyitott továbbjelzések, kimaradt hetek.
+- **Áttekintés:** kitöltötték-e az aktuális hetet; esedékes és lejárt ritkább feladatok;
+  elmaradt feladatok az okkal; nyitott továbbjelzések, kimaradt hetek. Külön fülön az
+  **Ütemezés**: minden ritkább feladat, mikor volt utoljára, mikor esedékes legközelebb.
 - **Archívum:** hetenként minden lap, kimaradt hét pirossal. Keresés, év szerinti szűrés,
   CSV-letöltés (Excelben megnyitható, tételenként külön oszlopokkal).
 - **Lap megtekintése:** teljes tartalom, nyomtatás / mentés PDF-be, műszakvezetői jóváhagyás.
@@ -30,7 +31,8 @@ Netlify oldalnak a saját tárolójában (Netlify Blobs) vannak.
 
 | Fájl | Mi ez |
 |---|---|
-| `public/index.html` | Az egész felület egy fájlban (HTML + CSS + JS, nincs build lépés). Az elején van a `CONFIG`. |
+| `public/index.html` | A felület (HTML + CSS + JS, nincs build lépés). Az elején van a `CONFIG`. |
+| `public/tasks.js` | A feladatok listája (gyakoriság, útvonal, szerszámok, leírások) – ezt a szerver is használja. |
 | `netlify/functions/km.mjs` | Netlify Function a `/api/km` címen: ez olvas és ír a tárolóba (Netlify Blobs, `km-checks`). |
 | `public/img/` | A kézikönyvből vágott ábrák a Bővebben részekhez. |
 | `lib/km-core.mjs` | A szerveroldali logika: kódellenőrzés, a beküldött lap teljes újraellenőrzése, jóváhagyás egyszer. Tárolófüggetlen, ezért tesztelhető. |
@@ -65,10 +67,10 @@ tárolva, az éles adatokhoz nem nyúl. Kipróbálásra és betanításra.
 3. **Tablet.** Nyisd meg a tableten egyszer a `https://<oldal>.netlify.app/?kod=A-KÓD` linket,
    majd Chrome menü (⋮) → **Add to Home screen**, hogy ikonról induljon.
 4. **Robot, kezdőnap, helyi értékek** (ha kell): a `public/index.html` `CONFIG` részében
-   `ROBOTS` (a robot / cella neve, több is lehet), `START_DATE` (az első hétfő, ettől számít
-   kimaradtnak egy kitöltetlen hét), és ha megvannak: `GAS_FLOW_LPM` (előírt gázáramlás),
-   `AIR_PRESSURE_BAR` (megszokott levegőnyomás), `COOLANT` (a hűtő folyadéka). Ezeket a lap
-   kiírja a megfelelő tételnél.
+   `ROBOTS` (a robot / cella neve, több is lehet) és `START_DATE` (az első hétfő, ettől számít
+   kimaradtnak egy kitöltetlen hét). A `public/tasks.js` `LOCAL` részében: huzalátmérő, a gáz
+   irányértéke, a hűtő folyadéka és az üzembe helyezés napja (ettől számolja a ritkább
+   feladatok első esedékességét).
 
 ## Ahol az adat van – fontos
 
