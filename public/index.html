@@ -61,9 +61,13 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .btn.big { min-height: 56px; font-size: 18px; padding: 0 26px; }
 .btn[disabled] { opacity: .55; cursor: not-allowed; }
 .btn.ghost { background: transparent; }
+.btn.danger { background: transparent; border-color: var(--bad); color: var(--bad-text); }
+.btn.danger.fill { background: var(--bad); color: var(--ink-on-color); }
 
 /* Kártyák, panelek */
-main { padding: 20px 0 120px; }
+/* A main egyben .wrap is, és a .wrap padding-je felülírná – ezért main.wrap.
+   Alul annyi hely, hogy a rögzített Beküldés-sáv ne takarja a lap alját. */
+main.wrap { padding-top: 20px; padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
 h1 { font-family: var(--font-cond); font-size: 30px; line-height: 1.1; margin: 4px 0 16px; letter-spacing: .01em; }
 h2 { font-family: var(--font-cond); font-size: 21px; margin: 28px 0 12px; text-transform: uppercase; letter-spacing: .04em; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
@@ -213,7 +217,7 @@ table.mini th, table.mini td { padding: 6px 8px; white-space: normal; }
 .tabs button[aria-selected=true] { color: var(--text); border-bottom-color: var(--hot); }
 @media (max-width: 560px) { .seg3 button { font-size: 14px; } .tabs button { padding: 8px 8px; font-size: 15px; } }
 /* Alsó sáv beküldéshez */
-.submitbar { position: fixed; left: 0; right: 0; bottom: 0; background: #0e1012; border-top: 2px solid var(--line); z-index: 30; }
+.submitbar { position: fixed; left: 0; right: 0; bottom: 0; background: #0e1012; border-top: 2px solid var(--line); z-index: 30; padding-bottom: env(safe-area-inset-bottom, 0px); }
 .submitbar .wrap { display: flex; align-items: center; gap: 12px; min-height: 76px; }
 .progress { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .progress .bar { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; }
@@ -252,7 +256,7 @@ dialog h3 { margin: 0 0 10px; font-family: var(--font-cond); font-size: 22px; }
 @media print {
   :root { --bg:#fff; --panel:#fff; --panel-2:#fff; --line:#000; --text:#000; --muted:#333; --hot-text:#000; color-scheme: light; }
   .top, .submitbar, .no-print, .demo-bar, #toast { display: none !important; }
-  main { padding: 0; }
+  main.wrap { padding-top: 0; padding-bottom: 0; }
   th { background: #fff; color: #000; border-bottom: 1.5px solid #000; }
   .badge { border: 1px solid #000; background: #fff !important; color: #000 !important; }
   .table-wrap { border: none; overflow: visible; }
@@ -418,7 +422,7 @@ function openImage(src, cap, ref) {
 
 /* ================================================================
    Adatréteg: szerver (/api/km, éles) vagy DEMÓ (böngészőben tárolva).
-   Mindkettő ugyanazt tudja: ping, list, get, submit, approve.
+   Mindkettő ugyanazt tudja: ping, list, get, submit, approve, remove.
    ================================================================ */
 const DEMO = new URLSearchParams(location.search).has('demo');
 
@@ -449,6 +453,7 @@ function createApiAdapter() {
     get: (code, id) => call('get', { code, id }),
     submit: (code, check) => call('submit', { code, check }),
     approve: (code, id, name) => call('approve', { code, id, name }),
+    remove: (code, id, name) => call('delete', { code, id, name }),
   };
 }
 
@@ -515,6 +520,12 @@ function createDemoAdapter() {
       if (!r) return Promise.reject(new Error('Nincs ilyen lap'));
       if (r.approved_by) return Promise.reject(new Error('Ezt a lapot már jóváhagyták'));
       r.approved_by = name.trim(); r.approved_at = new Date().toISOString(); save(); return delay(r);
+    },
+    remove: (_c, id, name) => {
+      const all = load(); const i = all.findIndex((x) => x.id === id);
+      if (i < 0) return Promise.reject(new Error('Nincs ilyen lap – lehet, hogy már törölték'));
+      if (!name.trim()) return Promise.reject(new Error('Írd be a nevedet a törléshez'));
+      all.splice(i, 1); save(); return delay(true);
     },
   };
 }
@@ -1095,9 +1106,43 @@ async function renderDetail(id) {
     <div class="actions no-print">
       <a class="btn" href="#/">Vissza az áttekintéshez</a>
       <button class="btn" type="button" id="printBtn">Nyomtatás / PDF</button>
+      <button class="btn danger" type="button" id="delBtn" style="margin-left:auto">Lap törlése</button>
     </div>`;
 
   $('#printBtn').addEventListener('click', () => window.print());
+  $('#delBtn').addEventListener('click', () => {
+    const dlg = $('#dlg');
+    dlg.innerHTML = `
+      <h3>Törlöd ezt a lapot?</h3>
+      <p><b>${r.iso_year}. ${r.iso_week}. hét</b> · ${fmtDate(r.check_date)} · ${esc(r.inspector)}${r.approved_by ? ` · jóváhagyta: ${esc(r.approved_by)}` : ''}</p>
+      <p class="small">A lap eltűnik az archívumból. Az ütemezés is ehhez igazodik: ami csak ezen a lapon volt elvégezve, az újra esedékes lesz.</p>
+      <form id="delForm" class="field" style="gap:12px">
+        <label class="field"><span>Ki törli?</span><input type="text" id="delName" maxlength="120" autocomplete="off" required></label>
+        <p class="err" id="delErr" hidden></p>
+        <div class="actions" style="margin-top:4px"><button class="btn" type="button" id="delNo">Mégse</button><button class="btn danger fill" type="submit" id="delYes">Törlés</button></div>
+      </form>`;
+    dlg.showModal();
+    $('#delName').focus();
+    $('#delNo').onclick = () => dlg.close();
+    $('#delForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const name = $('#delName').value.trim();
+      const er = $('#delErr');
+      if (!name) { er.hidden = false; er.textContent = 'Írd be a nevedet.'; return; }
+      const yes = $('#delYes'); yes.disabled = true; yes.textContent = 'Törlés…';
+      try {
+        await call(() => api.remove(getCode(), r.id, name));
+        formList = null;
+        dlg.close();
+        toast('A lap törölve.');
+        location.hash = '#/';
+      } catch (err) {
+        if (err instanceof AccessError) { dlg.close(); return; }
+        er.hidden = false; er.textContent = `Nem sikerült törölni: ${err.message}`;
+        yes.disabled = false; yes.textContent = 'Újrapróbálom';
+      }
+    };
+  });
   $('#apprForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = $('#apprName').value.trim();

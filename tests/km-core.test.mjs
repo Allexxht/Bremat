@@ -96,7 +96,43 @@ test('beküldés, lista, lekérés, jóváhagyás egyszer', async () => {
 
 test('ismeretlen művelet és hibás kérés', async () => {
   const s = memoryStore();
-  await rejects(handle(req({ action: 'delete', code: CODE }), ctx(s)), 400, /Ismeretlen/);
+  await rejects(handle(req({ action: 'torol', code: CODE }), ctx(s)), 400, /Ismeretlen/);
   await rejects(handle('nem json', ctx(s)), 400);
   await rejects(handle('x'.repeat(70000), ctx(s)), 413);
+});
+
+test('törlés: névvel, a lap átkerül a töröltek közé', async () => {
+  const s = memoryStore();
+  const sub = () => handle(req({ action: 'submit', code: CODE, check: good() }), ctx(s));
+  const id1 = await sub();
+  const id2 = await sub();
+  const del = (o) => handle(req({ action: 'delete', code: CODE, ...o }), ctx(s));
+  await rejects(del({ id: id1, name: '  ' }), 400, /nevedet/);
+  await rejects(del({ id: '../x', name: 'Nagy Béla' }), 404);
+  await rejects(handle(req({ action: 'delete', code: 'rossz', id: id1, name: 'X' }), ctx(s)), 401);
+  assert.equal(await del({ id: id1, name: ' Nagy Béla ' }), true);
+
+  const list = await handle(req({ action: 'list', code: CODE }), ctx(s));
+  assert.deepEqual(list.map((r) => r.id), [id2], 'a törölt lap nincs a listában');
+  await rejects(handle(req({ action: 'get', code: CODE, id: id1 }), ctx(s)), 404);
+  await rejects(del({ id: id1, name: 'Nagy Béla' }), 404, /már törölték/);
+  await rejects(handle(req({ action: 'approve', code: CODE, id: id1, name: 'X' }), ctx(s)), 404);
+
+  const trash = await s.listKeys('deleted/');
+  assert.deepEqual(trash, [`deleted/${id1}`]);
+  const kept = await s.get(trash[0]);
+  assert.equal(kept.id, id1);
+  assert.equal(kept.deleted_by, 'Nagy Béla');
+  assert.equal(kept.deleted_at, NOW.toISOString());
+  assert.equal(kept.inspector, 'Kiss Péter', 'a teljes lap megmarad a másolatban');
+});
+
+test('törlés: félbemaradt korábbi törlés után is lefut', async () => {
+  const s = memoryStore();
+  const id = await handle(req({ action: 'submit', code: CODE, check: good() }), ctx(s));
+  // mintha egy korábbi törlésnél a másolat elkészült volna, de a törlés nem
+  await s.setIfNew(`deleted/${id}`, { id, deleted_by: 'Előző' });
+  assert.equal(await handle(req({ action: 'delete', code: CODE, id, name: 'Nagy Béla' }), ctx(s)), true);
+  assert.deepEqual(await s.listKeys('check/'), []);
+  assert.equal((await s.get(`deleted/${id}`)).deleted_by, 'Előző', 'a meglévő másolat nem íródik felül');
 });

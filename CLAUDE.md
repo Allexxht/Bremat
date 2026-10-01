@@ -29,7 +29,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - `public/index.html` – egyfájlos felület (vanilla JS, nincs build), a feladatokat a
   `tasks.js`-ből importálja. Elején a `CONFIG` (API, robotok, START_DATE). Adatréteg:
   `createApiAdapter()` (éles, `/api/km`) és `createDemoAdapter()` (`?demo`, localStorage)
-  azonos interfésszel (`ping`, `list`, `get`, `submit`, `approve`) – új funkciót mindkettőbe.
+  azonos interfésszel (`ping`, `list`, `get`, `submit`, `approve`, `remove`) – új funkciót mindkettőbe.
 - `public/img/*.jpg` – a kézikönyv-fotókból vágott, kiegyenesített ábrák (1200 px széles,
   JPEG 80). A zárt `<details>` miatt csak lenyitáskor töltődnek. Koppintásra nagyító ablak.
 - `netlify/functions/km.mjs` – Netlify Function v2 (`/api/km`, csak POST). Vékony réteg:
@@ -60,6 +60,16 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - „Mit vigyél magaddal”: a lapon lévő feladatok `tools` mezőiből, egyszer.
 - Kivéve: füstelszívás (nem férnek hozzá, a szűrő a Valk dolga – csak megjegyzés az éves
   szerviznél). A sín feladatai `nk` (nincs rá gyártói leírás, nincs adattábla, kenőpont).
+- **Ami a cellában nincs, az a lapon sem szerepel** (2026. október 1.): hegesztési fényvédő
+  függöny nincs (a Valk 6.6/14 kimaradt, a feladat neve „Fénykapuk és kerítés”), ipari porszívó
+  nincs (seprű, lapát, ecset). A PFA-olaj (WWPFAOIL, Valk napi B3) sem heti teendő: a
+  felhasználó szerint a gépet évente kenik – az a „Huzaladagoló zsírzása” (csigahajtás, Alvania
+  S2), ami más dolog, mint a PFA olaja. Ha kiderül, hogy van PFA olajtartállyal, ritkább
+  szemrevételezésként visszajöhet.
+- **O-gyűrűk** (Valk 6.6/5 „check O rings if necessary”, 6.8, 6.10): a pisztoly és a gyorscserélő
+  csatlakozófelületén, csak levett pisztolynál látszanak – ezért nincs heti tétel rájuk; a
+  „Bővebben” rész (mi ez, hol van, mikor nézd meg) a pisztolynál és az áramátadónál, a 6.10
+  fotójával (`torch-orings.jpg`).
 - **Pontosítás alatt** (`pending`), amíg nincs fotó/adat: a huzaladagoló fedelének nyitása,
   a gas check helye a teach pendanton, a hűtővíz-csere lépései (SMC kézikönyv).
 - Gáz: van gáztesztelőjük (kézi gázáramlás-mérő), hátul tartják – a hátsó körben veszik
@@ -87,6 +97,10 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   változatú lapok tételei sorszámmal (`no`) vannak, azok címei a `LEGACY_TITLES`-ben. A CSV-ben
   a régi lapok tételei az utolsó oszlopba kerülnek. Egy régebbi változatú piszkozatot a kliens
   eldob. Egy feladat kulcsát ne nevezd át (az esedékesség a kulcs szerinti előzményből jön).
+  **Csak szövegváltozásnál** (cím, lépés, eszköz, „Bővebben”) nem kell a változatot emelni: a
+  kulcsok és a heti feladatok köre ugyanaz, a régi lapokon a beküldéskori cím marad, az újakra
+  a szerver a katalógus mostani címét írja. Emelni akkor kell, ha a heti kulcsok köre vagy az
+  ellenőrzés szabálya változik.
 
 ## Adatmodell és biztonság
 - Egy lap = egy blob: `check/<uuid>` kulcs, JSON: `form_version`, `check_date`, `iso_year`/`iso_week`
@@ -99,8 +113,14 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   kulcs, a Beavatkozáshoz és az elmaradáshoz van megjegyzés. Hogy egy ritkább feladat épp
   esedékes-e, azt nem a szerver dönti el (a kliens teszi a lapra).
 - Beküldés `onlyIfNew`, jóváhagyás `onlyIfMatch` (etag) – így két eszköz egyszerre sem tud
-  kétszer jóváhagyni. Beküldött lap nem módosítható és nem törölhető – ez szándékos
-  (ellenőrzési napló), törlés művelet nincs.
+  kétszer jóváhagyni. Beküldött lap nem módosítható.
+- **Törlés** (2026. október 1. óta, a felhasználó kérésére; korábban szándékosan nem volt):
+  a lap oldalán „Lap törlése”, a törlő nevével (`delete` művelet). A lap nem vész el
+  nyomtalanul: előbb `deleted/<id>` kulcsra másolódik `deleted_by`/`deleted_at`-tel
+  (`onlyIfNew`, egy félbemaradt korábbi törlés másolata is jó), csak utána törlődik a
+  `check/<id>`. A `list` csak a `check/` alatt keres, így a törölt lap az archívumból és az
+  esedékesség-számításból is kiesik. Visszaállítás felülete nincs: tévedésnél a Netlify →
+  **Blobs** → `km-checks` alatt a `deleted/` kulcsból kell kézzel visszamásolni.
 - Hozzáférési kód: `KM_ACCESS_CODE` Netlify env var, normalizálva (csak betű/szám, nagybetűsítve)
   legalább 12 karakter, különben a function 500-at ad. A kliens localStorage-ban tárolja
   (`km-kod`), `?kod=` linkből átveszi és kiveszi a címsorból. `Referrer-Policy: no-referrer`.
@@ -113,6 +133,8 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Közvetlenül a `main`-re megy (a felhasználó így kérte); a Netlify a pusht azonnal kiteszi.
 - Módosítás után: `npm test`, majd DEMÓ módban (`?demo`) végigkattintani: új lap üresen beküldve
   (hibák jelennek meg) → kitöltés beavatkozással → újratöltés (piszkozat megmarad) → beküldés →
-  jóváhagyás → áttekintés (a hét kitöltve, hűtővíz-kártya frissült). Telefon-szélességen is.
+  jóváhagyás → áttekintés (a hét kitöltve, hűtővíz-kártya frissült) → lap törlése (eltűnik
+  az archívumból). Telefon-szélességen is, és a lap alja (Továbbjelzés) a Beküldés-sáv fölé
+  görgethető legyen.
 - Szerveroldali változásnál a valódi functiont is érdemes helyben futtatni a
   `@netlify/blobs` `BlobsServer`-ével (a `NETLIFY_BLOBS_CONTEXT` env varral irányítva rá).
