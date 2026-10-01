@@ -115,7 +115,8 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Beküldés `onlyIfNew`, jóváhagyás `onlyIfMatch` (etag) – így két eszköz egyszerre sem tud
   kétszer jóváhagyni. Beküldött lap nem módosítható.
 - **Törlés** (2026. október 1. óta, a felhasználó kérésére; korábban szándékosan nem volt):
-  a lap oldalán „Lap törlése”, a törlő nevével (`delete` művelet). A lap nem vész el
+  a lap oldalán „Lap törlése”, és az Archívum minden sorának végén „Törlés” (a táblázat jobb
+  szélére tapadó oszlop, hogy tableten is látsszon), a törlő nevével (`delete` művelet). A lap nem vész el
   nyomtalanul: előbb `deleted/<id>` kulcsra másolódik `deleted_by`/`deleted_at`-tel
   (`onlyIfNew`, egy félbemaradt korábbi törlés másolata is jó), csak utána törlődik a
   `check/<id>`. A `list` csak a `check/` alatt keres, így a törölt lap az archívumból és az

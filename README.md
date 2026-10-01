@@ -24,7 +24,7 @@ Netlify oldalnak a saját tárolójában (Netlify Blobs) vannak.
 - **Archívum:** hetenként minden lap, kimaradt hét pirossal. Keresés, év szerinti szűrés,
   CSV-letöltés (Excelben megnyitható, tételenként külön oszlopokkal).
 - **Lap megtekintése:** teljes tartalom, nyomtatás / mentés PDF-be, műszakvezetői jóváhagyás.
-- **Lap törlése:** a lap oldalán, a törlő nevével. A lap eltűnik az archívumból és az
+- **Lap törlése:** az Archívumban a sor végén, vagy a lap oldalán, a törlő nevével. A lap eltűnik az archívumból és az
   ütemezésből, de nem vész el nyomtalanul: a tárolóban a `deleted/` alá kerül (Netlify → a site →
   **Blobs** → `km-checks`), onnan tévedés esetén előkereshető.
 - **Nem szerkeszthető:** beküldés után a lapot nem lehet módosítani.

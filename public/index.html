@@ -63,6 +63,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .btn.ghost { background: transparent; }
 .btn.danger { background: transparent; border-color: var(--bad); color: var(--bad-text); }
 .btn.danger.fill { background: var(--bad); color: var(--ink-on-color); }
+.btn.sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
 
 /* Kártyák, panelek */
 /* A main egyben .wrap is, és a .wrap padding-je felülírná – ezért main.wrap.
@@ -103,6 +104,9 @@ td { padding: 10px; border-top: 1px solid var(--line); vertical-align: top; }
 tr.missing td { background: rgba(229,72,77,.07); }
 tr.link { cursor: pointer; }
 tr.link:hover td { background: var(--panel-2); }
+/* Az archívum Törlés oszlopa keskeny képernyőn is mindig látszik (a táblázat jobb szélén marad). */
+th.del, td.del { position: sticky; right: 0; text-align: right; box-shadow: -10px 0 10px -10px rgba(0,0,0,.8); }
+td.del { background: var(--bg); }
 
 /* Szűrők */
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 12px; }
@@ -684,7 +688,7 @@ async function renderOverview() {
       return `<tr class="${w.status === 'missing' ? 'missing' : ''}">
         <td><b>${w.week}.</b> hét</td><td>${fmtShort(w.monday)}</td>
         <td>${w.status === 'missing' ? '<span class="badge bad">Hiányzik</span>' : '<span class="badge warn">Esedékes</span>'}</td>
-        <td colspan="4" class="muted">${w.status === 'missing' ? 'Erre a hétre nincs kitöltött lap.' : '<a href="#/uj">Kitöltés most</a>'}</td></tr>`;
+        <td colspan="5" class="muted">${w.status === 'missing' ? 'Erre a hétre nincs kitöltött lap.' : '<a href="#/uj">Kitöltés most</a>'}</td></tr>`;
     }
     return w.rows.filter(matches).map((r) => `
       <tr class="link" data-href="#/lap/${esc(r.id)}" tabindex="0">
@@ -694,6 +698,7 @@ async function renderOverview() {
         <td>${r.action_count ? `<span class="badge warn">${r.action_count} beav.</span> ` : ''}${r.skip_count ? `<span class="badge bad">${r.skip_count} elmaradt</span>` : ''}${!r.action_count && !r.skip_count ? '<span class="muted">—</span>' : ''}</td>
         <td>${r.escalate ? `<span class="badge bad">Igen</span> <span class="small">${esc(r.escalate_to)}</span>` : '<span class="muted">Nem</span>'}</td>
         <td>${r.approved_by ? esc(r.approved_by) : '<span class="badge neutral">Nincs</span>'}</td>
+        <td class="del no-print"><button class="btn danger sm" type="button" data-del="${esc(r.id)}">Törlés</button></td>
       </tr>`).join('');
   }).join('');
 
@@ -705,11 +710,11 @@ async function renderOverview() {
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Hét</th><th>Dátum</th><th>Állapot</th><th>Ellenőrizte</th><th>Beavatkozás / elmaradt</th><th>Továbbjelzés</th><th>Jóváhagyta</th></tr></thead>
-        <tbody>${rowsHtml || '<tr><td colspan="7" class="muted">Nincs találat.</td></tr>'}</tbody>
+        <thead><tr><th>Hét</th><th>Dátum</th><th>Állapot</th><th>Ellenőrizte</th><th>Beavatkozás / elmaradt</th><th>Továbbjelzés</th><th>Jóváhagyta</th><th class="del no-print"></th></tr></thead>
+        <tbody>${rowsHtml || '<tr><td colspan="8" class="muted">Nincs találat.</td></tr>'}</tbody>
       </table>
     </div>
-    <p class="small muted">Egy sorra kattintva megnyílik a teljes lap. „Hiányzik” = lejárt hét kitöltött lap nélkül (${fmtDate(CONFIG.START_DATE)} óta figyelve, vagy a legelső laptól, ha az korábbi).</p>`;
+    <p class="small muted">Egy sorra kattintva megnyílik a teljes lap; a sor végén a „Törlés” gombbal törölhető. „Hiányzik” = lejárt hét kitöltött lap nélkül (${fmtDate(CONFIG.START_DATE)} óta figyelve, vagy a legelső laptól, ha az korábbi).</p>`;
 
   const scheduleHtml = `
     <p class="small muted" style="margin-top:0">A heti feladatok minden lapon szerepelnek. Ezek a ritkábbak: a kitöltendő lapra csak akkor kerülnek fel, amikor esedékesek. Ami még nem volt kész, azt az üzembe helyezéstől (${fmtDate(LOCAL.COMMISSIONING_DATE)}) számolja.</p>
@@ -743,6 +748,14 @@ async function renderOverview() {
     const go = () => { location.hash = tr.dataset.href; };
     tr.addEventListener('click', go);
     tr.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  });
+  $$('[data-del]', app).forEach((b) => {
+    b.addEventListener('keydown', (e) => e.stopPropagation());
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const r = list.find((x) => x.id === b.dataset.del);
+      if (r) confirmDelete(r, () => renderOverview());
+    });
   });
   $$('[data-tab]', app).forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); view.tab = b.dataset.tab; renderOverview(); }));
   $('#robotSel')?.addEventListener('change', (e) => { view.robot = e.target.value; renderOverview(); });
@@ -1050,6 +1063,43 @@ async function renderForm(reuse = false) {
 }
 
 /* ================================================================
+   Lap törlése – megerősítés a törlő nevével (a lap oldaláról és az archívumból)
+   ================================================================ */
+function confirmDelete(r, done) {
+  const dlg = $('#dlg');
+  dlg.innerHTML = `
+    <h3>Törlöd ezt a lapot?</h3>
+    <p><b>${r.iso_year}. ${r.iso_week}. hét</b> · ${fmtDate(r.check_date)} · ${esc(r.inspector)}${r.approved_by ? ` · jóváhagyta: ${esc(r.approved_by)}` : ''}</p>
+    <p class="small">A lap eltűnik az archívumból. Az ütemezés is ehhez igazodik: ami csak ezen a lapon volt elvégezve, az újra esedékes lesz.</p>
+    <form id="delForm" class="field" style="gap:12px">
+      <label class="field"><span>Ki törli?</span><input type="text" id="delName" maxlength="120" autocomplete="off" required></label>
+      <p class="err" id="delErr" hidden></p>
+      <div class="actions" style="margin-top:4px"><button class="btn" type="button" id="delNo">Mégse</button><button class="btn danger fill" type="submit" id="delYes">Törlés</button></div>
+    </form>`;
+  dlg.showModal();
+  $('#delName').focus();
+  $('#delNo').onclick = () => dlg.close();
+  $('#delForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const name = $('#delName').value.trim();
+    const er = $('#delErr');
+    if (!name) { er.hidden = false; er.textContent = 'Írd be a nevedet.'; return; }
+    const yes = $('#delYes'); yes.disabled = true; yes.textContent = 'Törlés…';
+    try {
+      await call(() => api.remove(getCode(), r.id, name));
+      formList = null;
+      dlg.close();
+      toast('A lap törölve.');
+      done();
+    } catch (err) {
+      if (err instanceof AccessError) { dlg.close(); return; }
+      er.hidden = false; er.textContent = `Nem sikerült törölni: ${err.message}`;
+      yes.disabled = false; yes.textContent = 'Újrapróbálom';
+    }
+  };
+}
+
+/* ================================================================
    Egy lap megtekintése, jóváhagyás, nyomtatás
    ================================================================ */
 async function renderDetail(id) {
@@ -1110,39 +1160,7 @@ async function renderDetail(id) {
     </div>`;
 
   $('#printBtn').addEventListener('click', () => window.print());
-  $('#delBtn').addEventListener('click', () => {
-    const dlg = $('#dlg');
-    dlg.innerHTML = `
-      <h3>Törlöd ezt a lapot?</h3>
-      <p><b>${r.iso_year}. ${r.iso_week}. hét</b> · ${fmtDate(r.check_date)} · ${esc(r.inspector)}${r.approved_by ? ` · jóváhagyta: ${esc(r.approved_by)}` : ''}</p>
-      <p class="small">A lap eltűnik az archívumból. Az ütemezés is ehhez igazodik: ami csak ezen a lapon volt elvégezve, az újra esedékes lesz.</p>
-      <form id="delForm" class="field" style="gap:12px">
-        <label class="field"><span>Ki törli?</span><input type="text" id="delName" maxlength="120" autocomplete="off" required></label>
-        <p class="err" id="delErr" hidden></p>
-        <div class="actions" style="margin-top:4px"><button class="btn" type="button" id="delNo">Mégse</button><button class="btn danger fill" type="submit" id="delYes">Törlés</button></div>
-      </form>`;
-    dlg.showModal();
-    $('#delName').focus();
-    $('#delNo').onclick = () => dlg.close();
-    $('#delForm').onsubmit = async (e) => {
-      e.preventDefault();
-      const name = $('#delName').value.trim();
-      const er = $('#delErr');
-      if (!name) { er.hidden = false; er.textContent = 'Írd be a nevedet.'; return; }
-      const yes = $('#delYes'); yes.disabled = true; yes.textContent = 'Törlés…';
-      try {
-        await call(() => api.remove(getCode(), r.id, name));
-        formList = null;
-        dlg.close();
-        toast('A lap törölve.');
-        location.hash = '#/';
-      } catch (err) {
-        if (err instanceof AccessError) { dlg.close(); return; }
-        er.hidden = false; er.textContent = `Nem sikerült törölni: ${err.message}`;
-        yes.disabled = false; yes.textContent = 'Újrapróbálom';
-      }
-    };
-  });
+  $('#delBtn').addEventListener('click', () => confirmDelete(r, () => { location.hash = '#/'; }));
   $('#apprForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = $('#apprName').value.trim();
