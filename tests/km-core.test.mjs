@@ -1,7 +1,7 @@
 // Egységtesztek a szerveroldali logikához:  node --test tests/km-core.test.mjs  (vagy: npm test)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { handle, memoryStore, isoWeek, normalizeCode } from '../lib/km-core.mjs';
+import { handle, memoryStore, isoWeek, normalizeCode, mondayOfIsoWeek } from '../lib/km-core.mjs';
 import { WEEKLY_KEYS, FORM_VERSION } from '../public/tasks.js';
 
 const CODE = 'ABCDE-12345-FGHIJ-67890';
@@ -135,4 +135,46 @@ test('törlés: félbemaradt korábbi törlés után is lefut', async () => {
   assert.equal(await handle(req({ action: 'delete', code: CODE, id, name: 'Nagy Béla' }), ctx(s)), true);
   assert.deepEqual(await s.listKeys('check/'), []);
   assert.equal((await s.get(`deleted/${id}`)).deleted_by, 'Előző', 'a meglévő másolat nem íródik felül');
+});
+
+test('ISO hét hétfője', () => {
+  assert.equal(mondayOfIsoWeek(2026, 40), '2026-09-28');
+  assert.equal(mondayOfIsoWeek(2026, 1), '2025-12-29');
+  assert.equal(mondayOfIsoWeek(2026, 53), '2026-12-28');
+  assert.equal(mondayOfIsoWeek(2025, 53), null, '2025-ben nincs 53. hét');
+  assert.equal(mondayOfIsoWeek(2026, 0), null);
+  assert.equal(mondayOfIsoWeek('2026', 40), null);
+});
+
+test('„Nem üzemelt” hét: jelölés, lista, visszavonás', async () => {
+  const s = memoryStore();
+  const mark = (o) => handle(req({ action: 'idle_mark', code: CODE, idle: { robot: 'Valk robot', iso_year: 2026, iso_week: 39, marked_by: ' Gál Alex ', ...o } }), ctx(s));
+  const list = () => handle(req({ action: 'idle_list', code: CODE }), ctx(s));
+
+  await rejects(mark({ marked_by: ' ' }), 400, /nevedet/);
+  await rejects(mark({ iso_week: 41 }), 400, /Jövőbeli/);
+  await rejects(mark({ iso_year: 2025, iso_week: 30 }), 400, /régebbi/);
+  await rejects(mark({ iso_week: 54 }), 400, /Érvénytelen/);
+  await rejects(mark({ robot: '' }), 400, /robot/);
+  await rejects(handle(req({ action: 'idle_mark', code: 'rossz', idle: {} }), ctx(s)), 401);
+
+  const rec = await mark({ reason: ' Alkatrészre vár ' });
+  assert.equal(rec.marked_by, 'Gál Alex');
+  assert.equal(rec.reason, 'Alkatrészre vár');
+  assert.equal(rec.created_at, NOW.toISOString());
+  await rejects(mark(), 409, /már megjelölték/);
+  assert.equal((await mark({ iso_week: 40 })).reason, null, 'az aktuális hét is jelölhető, ok nélkül is');
+  assert.deepEqual((await list()).map((r) => r.iso_week), [40, 39]);
+  assert.deepEqual(await handle(req({ action: 'list', code: CODE }), ctx(s)), [], 'a jelölés nem lap');
+
+  // Kitöltött lappal rendelkező hét nem jelölhető.
+  await handle(req({ action: 'submit', code: CODE, check: good({ check_date: '2026-09-16' }) }), ctx(s));
+  await rejects(mark({ iso_week: 38 }), 409, /kitöltött lap/);
+  assert.equal((await mark({ iso_week: 38, robot: 'Másik robot' })).robot, 'Másik robot', 'robotonként külön');
+
+  const un = (o) => handle(req({ action: 'idle_unmark', code: CODE, robot: 'Valk robot', iso_year: 2026, iso_week: 39, ...o }), ctx(s));
+  await rejects(un({ iso_week: 'x' }), 400);
+  assert.equal(await un(), true);
+  assert.deepEqual((await list()).map((r) => `${r.iso_week} ${r.robot}`), ['40 Valk robot', '38 Másik robot']);
+  assert.equal((await mark({ marked_by: 'Újra' })).marked_by, 'Újra', 'visszavonás után újra jelölhető');
 });

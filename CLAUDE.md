@@ -29,7 +29,8 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - `public/index.html` – egyfájlos felület (vanilla JS, nincs build), a feladatokat a
   `tasks.js`-ből importálja. Elején a `CONFIG` (API, robotok, START_DATE). Adatréteg:
   `createApiAdapter()` (éles, `/api/km`) és `createDemoAdapter()` (`?demo`, localStorage)
-  azonos interfésszel (`ping`, `list`, `get`, `submit`, `approve`, `remove`) – új funkciót mindkettőbe.
+  azonos interfésszel (`ping`, `list`, `get`, `submit`, `approve`, `remove`, `idleList`,
+  `idleMark`, `idleUnmark`) – új funkciót mindkettőbe.
 - `public/img/*.jpg` – a kézikönyv-fotókból vágott, kiegyenesített ábrák (1200 px széles,
   JPEG 80). A zárt `<details>` miatt csak lenyitáskor töltődnek. Koppintásra nagyító ablak.
 - `netlify/functions/km.mjs` – Netlify Function v2 (`/api/km`, csak POST). Vékony réteg:
@@ -125,6 +126,16 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Hozzáférési kód: `KM_ACCESS_CODE` Netlify env var, normalizálva (csak betű/szám, nagybetűsítve)
   legalább 12 karakter, különben a function 500-at ad. A kliens localStorage-ban tárolja
   (`km-kod`), `?kod=` linkből átveszi és kiveszi a címsorból. `Referrer-Policy: no-referrer`.
+- **„Nem üzemelt” hét** (2026. október 19., a felhasználó kérésére): ha a robot egész héten
+  nem ment, a lap nélküli hét (hiányzó vagy az aktuális) az Archívum sorának végén a „Nem
+  üzemelt” gombbal (az aktuális hétnél a kártyán is) megjelölhető, opcionális okkal és a jelölő
+  nevével. Külön blob: `idle/<év>-<hét>-<sha256(robot) 16 hex>` (`robot`, `iso_year`,
+  `iso_week`, `reason`, `marked_by`, `created_at`), `onlyIfNew` – egy hétre egy jelölés.
+  Műveletek: `idle_list`, `idle_mark` (nem jövőbeli, max. ~1 éves hét; nem jelölhető, ha arra
+  a hétre már van lap), `idle_unmark` (visszavonás, nyom nélkül törli – csak egy jelölés).
+  A jelölt hét nem számít kimaradtnak; ha utólag mégis kitöltenek rá lapot, a lap számít
+  (a kitöltésnél figyelmeztetés). A ritkább feladatok esedékessége ettől **nem** változik,
+  továbbra is naptár szerint számol.
 - A `list` minden lapot teljes tartalommal ad vissza (hetente egy lap, évente ~52 blob –
   sok év után is kicsi). Ha valaha lassú lenne, akkor jöhet egy összesítő index-blob.
 
@@ -139,7 +150,8 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   2026. október 1-jén elfogyott – ezt az oldalt le kell választani a repóról (**Stop builds**),
   hogy ne fogyassza az AndonWork keretét. Nyitott kérdések az átköltözéskor (2026. október 1.,
   ellenőrizd a felhasználóval): (1) a belépés az új oldalon az első próbánál „Hibás
-  hozzáférési kód”-ot adott – valószínűleg elgépelés volt; (2) az új oldal **Private** volt
+  hozzáférési kód”-ot adott – **megoldva** (2026. október 19.: a felhasználó be van lépve, a lapok
+  látszanak); (2) az új oldal **Private** volt
   (Netlify-sáv), a tablethez **Make public** kell; (3) a régi oldal **Stop builds**; (4) a #1 PR
   (`elonezet` branch, ideiglenes előnézet a régi oldalon) lezárandó merge nélkül, a branch
   törölhető. A változásokat továbbra is egy pushba gyűjtsd (minden push a `main`-re egy éles

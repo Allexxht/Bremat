@@ -102,11 +102,13 @@ table { width: 100%; border-collapse: collapse; font-size: 15px; }
 th { text-align: left; background: #0e1012; color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; padding: 10px; white-space: nowrap; }
 td { padding: 10px; border-top: 1px solid var(--line); vertical-align: top; }
 tr.missing td { background: rgba(229,72,77,.07); }
+tr.idle td { background: rgba(177,184,192,.05); }
 tr.link { cursor: pointer; }
 tr.link:hover td { background: var(--panel-2); }
 /* Az archívum Törlés oszlopa keskeny képernyőn is mindig látszik (a táblázat jobb szélén marad). */
 th.del, td.del { position: sticky; right: 0; text-align: right; box-shadow: -10px 0 10px -10px rgba(0,0,0,.8); }
-td.del { background: var(--bg); }
+td.del, tr.missing td.del, tr.idle td.del { background: var(--bg); }
+td.del .btn { white-space: nowrap; }
 
 /* Szűrők */
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 12px; }
@@ -426,7 +428,8 @@ function openImage(src, cap, ref) {
 
 /* ================================================================
    Adatréteg: szerver (/api/km, éles) vagy DEMÓ (böngészőben tárolva).
-   Mindkettő ugyanazt tudja: ping, list, get, submit, approve, remove.
+   Mindkettő ugyanazt tudja: ping, list, get, submit, approve, remove,
+   és a „Nem üzemelt” hetek: idleList, idleMark, idleUnmark.
    ================================================================ */
 const DEMO = new URLSearchParams(location.search).has('demo');
 
@@ -458,6 +461,9 @@ function createApiAdapter() {
     submit: (code, check) => call('submit', { code, check }),
     approve: (code, id, name) => call('approve', { code, id, name }),
     remove: (code, id, name) => call('delete', { code, id, name }),
+    idleList: (code) => call('idle_list', { code }),
+    idleMark: (code, idle) => call('idle_mark', { code, idle }),
+    idleUnmark: (code, w) => call('idle_unmark', { code, robot: w.robot, iso_year: w.iso_year, iso_week: w.iso_week }),
   };
 }
 
@@ -472,6 +478,10 @@ function createDemoAdapter() {
     return mem;
   };
   const save = () => { store.set(KEY, JSON.stringify(mem)); };
+  const IDLE_KEY = 'km-demo-idle';
+  let idle = null;
+  const loadIdle = () => { if (!idle) { try { idle = JSON.parse(store.get(IDLE_KEY)) || []; } catch { idle = []; } } return idle; };
+  const sameW = (a, b) => a.robot === b.robot && a.iso_year === b.iso_year && a.iso_week === b.iso_week;
   // A szerverhez hasonlóan: cím a katalógusból, Rendben tételnél nincs megjegyzés.
   const norm = (items) => items.map((x) => ({ key: x.key, title: TASK_BY_KEY[x.key].title, status: x.status, note: x.status === 'ok' ? null : (x.note || '').trim() }));
   function seed() {
@@ -531,6 +541,15 @@ function createDemoAdapter() {
       if (!name.trim()) return Promise.reject(new Error('Írd be a nevedet a törléshez'));
       all.splice(i, 1); save(); return delay(true);
     },
+    idleList: () => delay([...loadIdle()].sort((a, b) => b.iso_year - a.iso_year || b.iso_week - a.iso_week)),
+    idleMark: (_c, m) => {
+      if (!(m.marked_by || '').trim()) return Promise.reject(new Error('Írd be a nevedet'));
+      if (load().some((r) => sameW(r, m))) return Promise.reject(new Error('Erre a hétre már van kitöltött lap'));
+      if (loadIdle().some((x) => sameW(x, m))) return Promise.reject(new Error('Ezt a hetet már megjelölték'));
+      const rec = { robot: m.robot, iso_year: m.iso_year, iso_week: m.iso_week, reason: (m.reason || '').trim() || null, marked_by: m.marked_by.trim(), created_at: new Date().toISOString() };
+      idle.push(rec); store.set(IDLE_KEY, JSON.stringify(idle)); return delay(rec);
+    },
+    idleUnmark: (_c, w) => { idle = loadIdle().filter((x) => !sameW(x, w)); store.set(IDLE_KEY, JSON.stringify(idle)); return delay(true); },
   };
 }
 
@@ -592,7 +611,7 @@ function renderGate(msg = '') {
    ================================================================ */
 const view = { robot: CONFIG.ROBOTS[0], year: null, q: '', tab: 'archive' };
 
-function buildWeeks(list, robot) {
+function buildWeeks(list, robot, idle = []) {
   const t = today();
   const cur = isoWeek(t);
   const recs = list.filter((r) => r.robot === robot);
@@ -604,13 +623,16 @@ function buildWeeks(list, robot) {
   if (start > mondayOf(t)) start = mondayOf(t);
   const byWeek = new Map();
   recs.forEach((r) => { const k = weekKey(r.iso_year, r.iso_week); (byWeek.get(k) || byWeek.set(k, []).get(k)).push(r); });
+  const idleBy = new Map(idle.filter((x) => x.robot === robot).map((x) => [weekKey(x.iso_year, x.iso_week), x]));
   const weeks = [];
   for (let m = mondayOf(t); m >= start; m = addDays(m, -7)) {
     const { year, week } = isoWeek(m);
     const k = weekKey(year, week);
     const rows = byWeek.get(k) || [];
     const isCur = year === cur.year && week === cur.week;
-    weeks.push({ key: k, year, week, monday: m, rows, status: rows.length ? 'done' : isCur ? 'due' : 'missing' });
+    // Ha mégis van lap, az számít; a „Nem üzemelt” jelölés csak lap nélküli hetet ment fel.
+    const idleMark = rows.length ? null : idleBy.get(k) || null;
+    weeks.push({ key: k, year, week, monday: m, rows, idle: idleMark, status: rows.length ? 'done' : idleMark ? 'idle' : isCur ? 'due' : 'missing' });
   }
   return weeks;
 }
@@ -632,13 +654,13 @@ async function renderOverview() {
   $('#nav').hidden = false;
   const app = $('#app');
   app.innerHTML = '<p class="muted">Betöltés…</p>';
-  let list;
-  try { list = await call(() => api.list(getCode())); }
+  let list, idle;
+  try { [list, idle] = await call(() => Promise.all([api.list(getCode()), api.idleList(getCode())])); }
   catch (e) { if (!(e instanceof AccessError)) app.innerHTML = `<div class="banner bad">Nem sikerült betölteni: ${esc(e.message)}</div>`; return; }
 
   const robot = view.robot;
   const cur = isoWeek(today());
-  const weeks = buildWeeks(list, robot);
+  const weeks = buildWeeks(list, robot, idle);
   const thisWeek = weeks[0];
   const recs = list.filter((r) => r.robot === robot);
   const hist = historyOf(list, robot);
@@ -658,9 +680,14 @@ async function renderOverview() {
     ? `<div class="card ok"><span class="lbl">Ez a hét · ${cur.year}. ${cur.week}. hét</span><span class="val">Kitöltve</span>
          <span class="small muted">${esc(thisWeek.rows[0].inspector)} · ${fmtDate(thisWeek.rows[0].check_date)}</span>
          <a href="#/lap/${esc(thisWeek.rows[0].id)}">Megnyitás</a></div>`
+    : thisWeek.status === 'idle'
+    ? `<div class="card neutral"><span class="lbl">Ez a hét · ${cur.year}. ${cur.week}. hét</span><span class="val">A robot nem üzemelt</span>
+         <span class="small muted">${esc(idleText(thisWeek.idle))}</span>
+         <a href="#" data-unidle="${esc(thisWeek.key)}">Visszavonás</a></div>`
     : `<div class="card warn"><span class="lbl">Ez a hét · ${cur.year}. ${cur.week}. hét</span><span class="val">Még nincs kitöltve</span>
          <span class="small muted">Esedékes: hétfő, ${fmtDate(thisWeek.monday)}</span>
-         <a class="btn primary" href="#/uj" style="margin-top:6px">Kitöltés most</a></div>`;
+         <a class="btn primary" href="#/uj" style="margin-top:6px">Kitöltés most</a>
+         <a href="#" data-idle="${esc(thisWeek.key)}">A robot ezen a héten nem üzemel</a></div>`;
   const periodicCard = `<div class="card ${overdue.length ? 'bad' : dueNow.length ? 'warn' : 'ok'}"><span class="lbl">Ritkább feladatok</span>
       <span class="val">${overdue.length ? `${overdue.length} lejárt` : dueNow.length ? `${dueNow.length} esedékes ezen a héten` : 'Nincs esedékes'}</span>
       <span class="small muted">${nextUp ? `Következő: ${esc(nextUp.t.title)} – ${fmtDate(nextUp.info.due)}` : ''}</span>
@@ -685,10 +712,18 @@ async function renderOverview() {
   const rowsHtml = weeks.filter((w) => w.year === view.year).map((w) => {
     if (!w.rows.length) {
       if (q) return '';
+      if (w.status === 'idle') {
+        return `<tr class="idle">
+          <td><b>${w.week}.</b> hét</td><td>${fmtShort(w.monday)}</td>
+          <td><span class="badge neutral">Nem üzemelt</span></td>
+          <td colspan="4" class="muted">${esc(idleText(w.idle))}</td>
+          <td class="del no-print"><button class="btn sm" type="button" data-unidle="${esc(w.key)}">Visszavonás</button></td></tr>`;
+      }
       return `<tr class="${w.status === 'missing' ? 'missing' : ''}">
         <td><b>${w.week}.</b> hét</td><td>${fmtShort(w.monday)}</td>
         <td>${w.status === 'missing' ? '<span class="badge bad">Hiányzik</span>' : '<span class="badge warn">Esedékes</span>'}</td>
-        <td colspan="5" class="muted">${w.status === 'missing' ? 'Erre a hétre nincs kitöltött lap.' : '<a href="#/uj">Kitöltés most</a>'}</td></tr>`;
+        <td colspan="4" class="muted">${w.status === 'missing' ? 'Erre a hétre nincs kitöltött lap.' : '<a href="#/uj">Kitöltés most</a>'}</td>
+        <td class="del no-print"><button class="btn sm" type="button" data-idle="${esc(w.key)}">Nem üzemelt</button></td></tr>`;
     }
     return w.rows.filter(matches).map((r) => `
       <tr class="link" data-href="#/lap/${esc(r.id)}" tabindex="0">
@@ -714,7 +749,7 @@ async function renderOverview() {
         <tbody>${rowsHtml || '<tr><td colspan="8" class="muted">Nincs találat.</td></tr>'}</tbody>
       </table>
     </div>
-    <p class="small muted">Egy sorra kattintva megnyílik a teljes lap; a sor végén a „Törlés” gombbal törölhető. „Hiányzik” = lejárt hét kitöltött lap nélkül (${fmtDate(CONFIG.START_DATE)} óta figyelve, vagy a legelső laptól, ha az korábbi).</p>`;
+    <p class="small muted">Egy sorra kattintva megnyílik a teljes lap; a sor végén a „Törlés” gombbal törölhető. Ha a robot egész héten nem ment, a lap nélküli hét sorában a „Nem üzemelt” gombbal jelölhető – ez a hét nem számít kimaradtnak. „Hiányzik” = lejárt hét kitöltött lap nélkül (${fmtDate(CONFIG.START_DATE)} óta figyelve, vagy a legelső laptól, ha az korábbi).</p>`;
 
   const scheduleHtml = `
     <p class="small muted" style="margin-top:0">A heti feladatok minden lapon szerepelnek. Ezek a ritkábbak: a kitöltendő lapra csak akkor kerülnek fel, amikor esedékesek. Ami még nem volt kész, azt az üzembe helyezéstől (${fmtDate(LOCAL.COMMISSIONING_DATE)}) számolja.</p>
@@ -757,6 +792,17 @@ async function renderOverview() {
       if (r) confirmDelete(r, () => renderOverview());
     });
   });
+  const weekOf = (k) => weeks.find((w) => w.key === k);
+  $$('[data-idle]', app).forEach((b) => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    const w = weekOf(b.dataset.idle);
+    if (w) confirmIdle(w, robot, () => renderOverview());
+  }));
+  $$('[data-unidle]', app).forEach((b) => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    const w = weekOf(b.dataset.unidle);
+    if (w) confirmUnidle(w, () => renderOverview());
+  }));
   $$('[data-tab]', app).forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); view.tab = b.dataset.tab; renderOverview(); }));
   $('#robotSel')?.addEventListener('change', (e) => { view.robot = e.target.value; renderOverview(); });
   $('#yearSel')?.addEventListener('change', (e) => { view.year = Number(e.target.value); renderOverview(); });
@@ -810,14 +856,15 @@ function loadDraft() {
 }
 
 let formList = null; // a lapok listája a kitöltés idejére (dátumváltáskor nem töltjük újra)
+let formIdle = [];   // a „Nem üzemelt” jelölések ugyanígy
 
 async function renderForm(reuse = false) {
   $('#nav').hidden = false;
   const app = $('#app');
   if (!reuse || !formList) {
     app.innerHTML = '<p class="muted">Betöltés…</p>';
-    formList = [];
-    try { formList = await call(() => api.list(getCode())); }
+    formList = []; formIdle = [];
+    try { [formList, formIdle] = await call(() => Promise.all([api.list(getCode()), api.idleList(getCode()).catch(() => [])])); }
     catch (e) { if (e instanceof AccessError) return; /* lista nélkül is kitölthető, csak az esedékesség pontatlan */ }
   }
   const list = formList;
@@ -959,7 +1006,10 @@ async function renderForm(reuse = false) {
   const paintDup = () => {
     const s = sameWeek();
     $('#weekInfo').textContent = weekInfo();
-    $('#dupWarn').innerHTML = s.length ? `<div class="banner warn">Erre a hétre (${weekInfo()}) már van kitöltött lap: ${s.map((r) => `<a href="#/lap/${esc(r.id)}">${esc(r.inspector)}, ${fmtDate(r.check_date)}</a>`).join(', ')}. Csak akkor tölts ki újat, ha tényleg kell.</div>` : '';
+    const w = isoWeek(d.check_date || today());
+    const idle = formIdle.find((x) => x.robot === d.robot && x.iso_year === w.year && x.iso_week === w.week);
+    $('#dupWarn').innerHTML = s.length ? `<div class="banner warn">Erre a hétre (${weekInfo()}) már van kitöltött lap: ${s.map((r) => `<a href="#/lap/${esc(r.id)}">${esc(r.inspector)}, ${fmtDate(r.check_date)}</a>`).join(', ')}. Csak akkor tölts ki újat, ha tényleg kell.</div>`
+      : idle ? `<div class="banner warn">Erre a hétre (${weekInfo()}) „Nem üzemelt” jelölés van (${esc(idleText(idle))}). Ha mégis kitöltöd, a lap számít.</div>` : '';
   };
   const clearErr = (el) => { if (!el) return; el.classList.remove('has-err'); const e = $('.err', el); if (e) { e.hidden = true; e.textContent = ''; } };
   const setErr = (el, msg) => { el.classList.add('has-err'); const e = $('.err', el); if (e) { e.hidden = false; e.textContent = msg; } };
@@ -1095,6 +1145,76 @@ function confirmDelete(r, done) {
       if (err instanceof AccessError) { dlg.close(); return; }
       er.hidden = false; er.textContent = `Nem sikerült törölni: ${err.message}`;
       yes.disabled = false; yes.textContent = 'Újrapróbálom';
+    }
+  };
+}
+
+/* ================================================================
+   „Nem üzemelt” hét – a robot nem ment, ezért nem volt ellenőrzés.
+   A hét nem számít kimaradtnak; visszavonható. A ritkább feladatok
+   esedékessége ettől nem változik (naptár szerint számol).
+   ================================================================ */
+const idleText = (x) => `${x.reason || 'Nem volt ellenőrzés'} – ${x.marked_by}, ${fmtDT(x.created_at)}`;
+const weekRange = (w) => `${fmtShort(w.monday)} – ${fmtShort(addDays(w.monday, 6))}`;
+
+function confirmIdle(w, robot, done) {
+  const dlg = $('#dlg');
+  dlg.innerHTML = `
+    <h3>Nem üzemelt a robot ezen a héten?</h3>
+    <p><b>${w.year}. ${w.week}. hét</b> · ${weekRange(w)}</p>
+    <p class="small">A hét lap nélkül marad, de nem számít kimaradtnak. Ha mégis ment a robot, a jelölés visszavonható, vagy a lap utólag is kitölthető.</p>
+    <form id="idleForm" class="field" style="gap:12px">
+      <label class="field"><span>Miért? (nem kötelező)</span><input type="text" id="idleReason" maxlength="300" autocomplete="off" placeholder="pl. nem volt gyártás, szabadság, javításra vár"></label>
+      <label class="field"><span>Ki jelöli?</span><input type="text" id="idleName" maxlength="120" autocomplete="off" required></label>
+      <p class="err" id="idleErr" hidden></p>
+      <div class="actions" style="margin-top:4px"><button class="btn" type="button" id="idleNo">Mégse</button><button class="btn primary" type="submit" id="idleYes">Megjelölöm</button></div>
+    </form>`;
+  dlg.showModal();
+  $('#idleReason').focus();
+  $('#idleNo').onclick = () => dlg.close();
+  $('#idleForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const name = $('#idleName').value.trim();
+    const er = $('#idleErr');
+    if (!name) { er.hidden = false; er.textContent = 'Írd be a nevedet.'; return; }
+    const yes = $('#idleYes'); yes.disabled = true; yes.textContent = 'Mentés…';
+    try {
+      await call(() => api.idleMark(getCode(), { robot, iso_year: w.year, iso_week: w.week, reason: $('#idleReason').value.trim(), marked_by: name }));
+      formList = null;
+      dlg.close();
+      toast(`${w.week}. hét: a robot nem üzemelt.`);
+      done();
+    } catch (err) {
+      if (err instanceof AccessError) { dlg.close(); return; }
+      er.hidden = false; er.textContent = `Nem sikerült: ${err.message}`;
+      yes.disabled = false; yes.textContent = 'Újrapróbálom';
+    }
+  };
+}
+
+function confirmUnidle(w, done) {
+  const dlg = $('#dlg');
+  dlg.innerHTML = `
+    <h3>Visszavonod a „Nem üzemelt” jelölést?</h3>
+    <p><b>${w.year}. ${w.week}. hét</b> · ${weekRange(w)}</p>
+    <p class="small muted">${esc(idleText(w.idle))}</p>
+    <p class="small">Utána a hét újra kitöltendő (vagy hiányzó) lesz.</p>
+    <p class="err" id="unidleErr" hidden></p>
+    <div class="actions"><button class="btn" type="button" id="unidleNo">Mégse</button><button class="btn primary" type="button" id="unidleYes">Visszavonom</button></div>`;
+  dlg.showModal();
+  $('#unidleNo').onclick = () => dlg.close();
+  $('#unidleYes').onclick = async () => {
+    const yes = $('#unidleYes'); yes.disabled = true;
+    try {
+      await call(() => api.idleUnmark(getCode(), w.idle));
+      formList = null;
+      dlg.close();
+      toast('A jelölés visszavonva.');
+      done();
+    } catch (err) {
+      if (err instanceof AccessError) { dlg.close(); return; }
+      const er = $('#unidleErr'); er.hidden = false; er.textContent = `Nem sikerült: ${err.message}`;
+      yes.disabled = false;
     }
   };
 }
