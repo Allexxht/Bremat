@@ -175,10 +175,10 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   heti lap, Új heti lap, Saját oldalak, Beállítások), a cím alatt **két sziget**: Munkanapló
   és Valk heti lap, mindegyiken értesítés-jelvény. Ikonok: Lucide (`unpkg.com/lucide@0.460.0`).
   Betűk: Sora (cím) + Manrope.
-- **Háttér:** canvas, animált „selyemszalagok” (a felhasználó egy sötét, hajlított
+- **Háttér:** WebGL shader (2026. november 4. óta; előtte 2D canvas – pixeles, szögletes volt), animált „selyemszalagok” (a felhasználó egy sötét, hajlított
   szalagos képet küldött mintának). **Alapból világos** (gyöngyház, halvány kék/kékeszöld/
   rózsás) – a felhasználó kérése: egyik oldal se legyen sötét, mert az üzemben nem látszik.
-  A Beállításokban sötétre váltható (`kozpont-tema` = `sotet`). Fél felbontás, ~30 kép/mp,
+  A Beállításokban sötétre váltható (`kozpont-tema` = `sotet`). Teljes felbontás (max. 2× DPR), 4 mintás élsimítás (`fwidth`), 60 kép/mp, WebGL nélkül sima háttérszín,
   rejtett lapnál áll, `prefers-reduced-motion`-nál álló kép.
 - **Munkanapló sziget:** a heti „Kész: …” bejegyzések száma (a Teendőimből jönnek) + a
   **Teendőim állapota** (`/api/naplo` `todo_status`): hátralévő, folyamatban (névvel, élő
