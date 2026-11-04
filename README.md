@@ -34,7 +34,9 @@ Netlify oldalnak a saját tárolójában (Netlify Blobs) vannak.
 
 | Fájl | Mi ez |
 |---|---|
-| `public/index.html` | A felület (HTML + CSS + JS, nincs build lépés). Az elején van a `CONFIG`. |
+| `public/index.html` | **BREMAT Központ** – a kezdőlap: menü, Munkanapló és Valk lap fül, projektek. |
+| `public/valk/index.html` | A heti lap felülete (HTML + CSS + JS, nincs build lépés), a `/valk/` címen. Az elején van a `CONFIG`. |
+| `netlify/functions/kozpont.mjs`, `lib/kozpont-core.mjs`, `lib/projektek.mjs` | A Központ szerveroldala (`/api/kozpont`): a projektkörök listája, csak kóddal. |
 | `public/tasks.js` | A feladatok listája (gyakoriság, útvonal, szerszámok, leírások) – ezt a szerver is használja. |
 | `netlify/functions/km.mjs` | Netlify Function a `/api/km` címen: ez olvas és ír a tárolóba (Netlify Blobs, `km-checks`). |
 | `public/img/` | A kézikönyvből vágott ábrák a Bővebben részekhez. |

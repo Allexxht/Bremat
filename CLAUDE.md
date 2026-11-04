@@ -26,8 +26,10 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   napi pont, Panasonic R/V/P); ami nem a kézikönyvből való, az `NK` jelölést kap („Általános
   gyakorlat – nem a kézikönyvből”). Ezt a szabályt tartsd meg: a felhasználó a gyártó
   előírását akarja, nem általános tanácsot.
-- `public/index.html` – egyfájlos felület (vanilla JS, nincs build), a feladatokat a
-  `tasks.js`-ből importálja. Elején a `CONFIG` (API, robotok, START_DATE). Adatréteg:
+- `public/valk/index.html` – a heti lap (2026. november 4. óta a `/valk/` címen; előtte a
+  gyökérben volt, a régi `/#/uj`, `/#/lap/<id>` linkeket a Központ átirányítja). Egyfájlos
+  felület (vanilla JS, nincs build), a feladatokat a `/tasks.js`-ből importálja (abszolút
+  út, a képek is: `/img/...`). Elején a `CONFIG` (API, robotok, START_DATE). Adatréteg:
   `createApiAdapter()` (éles, `/api/km`) és `createDemoAdapter()` (`?demo`, localStorage)
   azonos interfésszel (`ping`, `list`, `get`, `submit`, `approve`, `remove`, `idleList`,
   `idleMark`, `idleUnmark`) – új funkciót mindkettőbe.
@@ -40,6 +42,9 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   ISO hét és „ma” Europe/Budapest szerint.
 - `tests/km-core.test.mjs` – `npm test` (Node 22-ben a `node --test tests/` mappát nem fogad
   el, a fájlokat kell megadni; a `package.json` mindkét tesztfájlt felsorolja).
+- **Központ** (2026. november 4.): `public/index.html` (a bremat-stuff kezdőlapja),
+  `netlify/functions/kozpont.mjs` (`/api/kozpont`), `lib/kozpont-core.mjs`, `lib/projektek.mjs`,
+  `tests/kozpont-core.test.mjs`. Lásd lent a „Központ” részt.
 - **Munkanapló** (2026. november 4., a felhasználó kérésére): `public/naplo/index.html`,
   `netlify/functions/naplo.mjs` (`/api/naplo`), `lib/naplo-core.mjs`, `tests/naplo-core.test.mjs`.
   Lásd lent a „Munkanapló” részt.
@@ -163,6 +168,25 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Kinézet: ugyanaz a sötét stílus, de **kékeszöld** kiemelés (a heti lap piros-fekete, 2026. november 4. óta; előtte narancs), hogy ne
   lehessen összetéveszteni.
 
+## Központ (2026. november 4.)
+- A felhasználó kérése: egy hely, ahol minden megvan. Felül cím, bal oldalt lenyitható menü
+  (Kezdőlap, Projektek, Munkanapló, Valk heti lap, Új heti lap, Saját oldalak, Beállítások),
+  középen két fül: **Munkanapló** (a hét napjai a mai napig, gyors beírás a mai napra) és
+  **Valk lap** (e heti állapot, jóváhagyásra vár, nyitott továbbjelzés, legutóbbi 6 lap). A
+  választott fül eszközönként megmarad (`kozpont-ful`).
+- A Központ **nem tárol semmit**: a meglévő függvényeket hívja (`/api/naplo` `range`/`create`,
+  `/api/km` `list`/`idle_list`). Saját függvénye csak a `ping` és a `projects` (a projektkörök
+  listája, `lib/projektek.mjs`) – a lista **csak kóddal** jön, a nyilvános HTML-ben nincs benne.
+  A személyes oldalak (Jarvis, mellékjövedelem…) nem kerülnek ide: azok a privát Claude-oldalon
+  vannak (Műhelyindex, https://claude.ai/artifact/PFjAFQubRT1fs7gy63H4aR), a menü „Saját
+  oldalak” linkje oda visz (a címet is a szerver adja).
+- Új Claude-oldal a projektek közé: egy sor a `lib/projektek.mjs` megfelelő `items` listájába.
+- Kód: a Központ a `km-kod`-ot használja (KM_ACCESS_CODE). Ha a napló külön kódot kap, a Napló
+  fül nem léptet ki, csak a teljes napló belépésére küld.
+- A GitHub-repó **nyilvános** – a `lib/projektek.mjs` címei ott látszanak. Javasolt: a repót
+  priváttá tenni (a Netlify ugyanúgy deployol).
+- A Valk lap és a napló fejlécében „Központ” gomb vezet vissza.
+
 ## Munkamódszer
 - A magyarázatok magyarul szóljanak, de a menü- és beállításneveket angolul írd
   (az eszközök angol felületűek).
@@ -180,7 +204,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   (`elonezet` branch, ideiglenes előnézet a régi oldalon) lezárandó merge nélkül, a branch
   törölhető. A változásokat továbbra is egy pushba gyűjtsd (minden push a `main`-re egy éles
   deploy).
-- Módosítás után: `npm test`, majd DEMÓ módban (`?demo`) végigkattintani: új lap üresen beküldve
+- Módosítás után: `npm test`, majd DEMÓ módban (`/valk/?demo`, `/naplo/?demo`, `/?demo`) végigkattintani: új lap üresen beküldve
   (hibák jelennek meg) → kitöltés beavatkozással → újratöltés (piszkozat megmarad) → beküldés →
   jóváhagyás → áttekintés (a hét kitöltve, hűtővíz-kártya frissült) → lap törlése (eltűnik
   az archívumból). Telefon-szélességen is, és a lap alja (Továbbjelzés) a Beküldés-sáv fölé

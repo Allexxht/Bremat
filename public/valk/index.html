@@ -1,0 +1,1324 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Valk robot – heti karbantartás</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* ================================================================
+   Színek – minden szín token. Sötét, ipari: fekete + Valk-piros (a Munkanapló kékeszöld, hogy ne keveredjen).
+   ================================================================ */
+:root {
+  --bg: #0e0e0f;
+  --panel: #19191b;
+  --panel-2: #242427;
+  --line: #3a3a3e;
+  --text: #eef0f2;
+  --muted: #b1b8c0;
+  --hot: #d50f25;          /* Valk-piros kitöltés */
+  --hot-ink: #ffffff;      /* szöveg piroson */
+  --hot-text: #ff6670;     /* piros szöveg / fókusz sötét háttéren */
+  --ok: #34a862;
+  --ok-text: #74dc9a;
+  --warn: #e9a92b;
+  --warn-text: #f6cb6a;
+  --bad: #e5484d;
+  --bad-text: #ff9296;
+  --ink-on-color: #0f1210;
+  --radius: 10px;
+  --font: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-cond: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.45; }
+a { color: var(--hot-text); }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--hot-text); outline-offset: 2px; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+
+/* Fejléc */
+.top { background: #000000; border-bottom: 3px solid var(--hot); position: sticky; top: 0; z-index: 20; }
+.top .wrap { display: flex; align-items: center; gap: 14px; min-height: 60px; flex-wrap: wrap; padding-top: 6px; padding-bottom: 6px; }
+.brand { display: flex; flex-direction: column; line-height: 1.1; text-decoration: none; color: var(--text); margin-right: auto; }
+.brand b { font-family: var(--font-cond); font-size: 22px; letter-spacing: .06em; text-transform: uppercase; }
+.brand b span { color: var(--hot); }
+.brand small { color: var(--muted); font-size: 13px; }
+.nav { display: flex; gap: 8px; }
+
+/* Gombok */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--panel-2); color: var(--text); font-weight: 600; text-decoration: none; cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--hot); border-color: var(--hot); color: var(--hot-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.big { min-height: 56px; font-size: 18px; padding: 0 26px; }
+.btn[disabled] { opacity: .55; cursor: not-allowed; }
+.btn.ghost { background: transparent; }
+.btn.danger { background: transparent; border-color: var(--bad); color: var(--bad-text); }
+.btn.danger.fill { background: var(--bad); color: var(--ink-on-color); }
+.btn.sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
+
+/* Kártyák, panelek */
+/* A main egyben .wrap is, és a .wrap padding-je felülírná – ezért main.wrap.
+   Alul annyi hely, hogy a rögzített Beküldés-sáv ne takarja a lap alját. */
+main.wrap { padding-top: 20px; padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+h1 { font-family: var(--font-cond); font-size: 30px; line-height: 1.1; margin: 4px 0 16px; letter-spacing: .01em; }
+h2 { font-family: var(--font-cond); font-size: 21px; margin: 28px 0 12px; text-transform: uppercase; letter-spacing: .04em; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-left-width: 6px; border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.card .lbl { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.card .val { font-size: 20px; font-weight: 700; }
+.card.ok { border-left-color: var(--ok); } .card.ok .val { color: var(--ok-text); }
+.card.warn { border-left-color: var(--warn); } .card.warn .val { color: var(--warn-text); }
+.card.bad { border-left-color: var(--bad); } .card.bad .val { color: var(--bad-text); }
+.card.neutral { border-left-color: var(--line); }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+
+.banner { border-radius: var(--radius); padding: 12px 14px; margin: 0 0 14px; border: 1.5px solid; }
+.banner.info { border-color: var(--hot); background: rgba(213,15,37,.08); }
+.banner.warn { border-color: var(--warn); background: rgba(233,169,43,.08); }
+.banner.bad { border-color: var(--bad); background: rgba(229,72,77,.1); }
+.demo-bar { background: var(--warn); color: var(--ink-on-color); text-align: center; font-weight: 600; font-size: 14px; padding: 6px 12px; }
+
+/* Jelvények */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.badge.ok { background: var(--ok); color: var(--ink-on-color); }
+.badge.warn { background: var(--warn); color: var(--ink-on-color); }
+.badge.bad { background: var(--bad); color: var(--ink-on-color); }
+.badge.neutral { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+
+/* Táblázat */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th { text-align: left; background: #000000; color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; padding: 10px; white-space: nowrap; }
+td { padding: 10px; border-top: 1px solid var(--line); vertical-align: top; }
+tr.missing td { background: rgba(229,72,77,.07); }
+tr.idle td { background: rgba(177,184,192,.05); }
+tr.link { cursor: pointer; }
+tr.link:hover td { background: var(--panel-2); }
+/* Az archívum Törlés oszlopa keskeny képernyőn is mindig látszik (a táblázat jobb szélén marad). */
+th.del, td.del { position: sticky; right: 0; text-align: right; box-shadow: -10px 0 10px -10px rgba(0,0,0,.8); }
+td.del, tr.missing td.del, tr.idle td.del { background: var(--bg); }
+td.del .btn { white-space: nowrap; }
+
+/* Szűrők */
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 12px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > span, .field > label { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+input[type=text], input[type=date], input[type=number], input[type=search], input[type=password], select, textarea {
+  background: #101316; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 46px; width: 100%;
+}
+textarea { min-height: 84px; resize: vertical; }
+input:hover, select:hover, textarea:hover { border-color: var(--muted); }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.err { color: var(--bad-text); font-weight: 600; font-size: 14px; }
+.has-err input, .has-err textarea, .has-err select { border-color: var(--bad); }
+
+/* Űrlap – tételek */
+.item { background: var(--panel); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 14px; display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 4px 12px; }
+.item + .item { margin-top: 10px; }
+.item, .field, .panel { scroll-margin-top: 90px; scroll-margin-bottom: 100px; }
+.item.st-ok { border-color: var(--ok); }
+.item.st-action { border-color: var(--warn); }
+.item.has-err { border-color: var(--bad); }
+.item .no { width: 40px; height: 40px; border-radius: 8px; background: #000000; color: var(--hot-text); font-family: var(--font-cond); font-size: 22px; display: flex; align-items: center; justify-content: center; }
+.item h3 { margin: 6px 0 4px; font-size: 18px; }
+.item ul { margin: 0 0 8px; padding-left: 18px; color: var(--muted); font-size: 14.5px; }
+.item ul li { margin: 1px 0; }
+.item .body { grid-column: 2; }
+.item .ifbad { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+.item .ifbad b { color: var(--warn-text); }
+.item .src { margin: 8px 0 0; font-size: 12px; color: var(--muted); opacity: .8; }
+.howto { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; font-size: 14.5px; margin-bottom: 6px; }
+.howto p { margin: 0; } .howto p + p { margin-top: 6px; }
+.howto .t-ok { color: var(--ok-text); } .howto .t-action { color: var(--warn-text); }
+/* Bővebben – lenyitható rész */
+.more { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 8px; background: #15181c; }
+.more > summary { list-style: none; cursor: pointer; min-height: 48px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--hot-text); }
+.more > summary::-webkit-details-marker { display: none; }
+.more > summary::before { content: ''; width: 9px; height: 9px; border-right: 2.5px solid currentColor; border-bottom: 2.5px solid currentColor; transform: rotate(-45deg); transition: transform .15s; flex: none; margin-right: 2px; }
+.more[open] > summary::before { transform: rotate(45deg); }
+@media (prefers-reduced-motion: reduce) { .more > summary::before { transition: none; } }
+.more > summary .cnt { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.more-body { padding: 2px 14px 14px; border-top: 1px solid var(--line); font-size: 15px; }
+.more-body section { margin-top: 12px; }
+.more-body h4 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.more-body p { margin: 0; } .more-body p + p { margin-top: 6px; }
+.more-body ol, .more-body ul { margin: 2px 0 0; padding-left: 22px; color: var(--text); font-size: 15px; }
+.more-body li { margin: 3px 0; }
+.more-body .small { color: var(--muted); margin-top: 6px; }
+.nk { display: inline-block; font-size: 12px; font-weight: 600; color: var(--warn-text); border: 1px dashed var(--warn); border-radius: 6px; padding: 1px 8px; margin-bottom: 4px; }
+.mini-wrap { margin-top: 10px; overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+table.mini { font-size: 13.5px; }
+table.mini th, table.mini td { padding: 6px 8px; white-space: normal; }
+.figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 14px; }
+.figs figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.fig { padding: 0; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: zoom-in; overflow: hidden; display: block; width: 100%; }
+.fig img { display: block; width: 100%; height: auto; max-height: 340px; object-fit: contain; background: #fff; }
+.figs figcaption, .imgbar { font-size: 13.5px; color: var(--muted); }
+.ref { white-space: nowrap; opacity: .8; }
+.ref::before { content: '· '; }
+.imgdlg { width: min(1100px, calc(100vw - 16px)); max-width: none; padding: 12px; }
+.imgbar { display: flex; align-items: center; gap: 12px; justify-content: space-between; margin-bottom: 8px; }
+.imgwrap { overflow: auto; max-height: calc(100vh - 150px); background: #fff; border-radius: 6px; }
+.imgwrap img { display: block; width: 220%; max-width: none; height: auto; cursor: zoom-out; }
+.imgwrap img.fit { width: 100%; cursor: zoom-in; }
+.group { margin: 22px 0 10px; padding-left: 12px; border-left: 4px solid var(--hot); }
+.group h3 { margin: 0; font-family: var(--font-cond); font-size: 20px; letter-spacing: .03em; text-transform: uppercase; }
+.group p { margin: 2px 0 0; color: var(--muted); font-size: 14.5px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.seg button { min-height: 52px; border-radius: 8px; border: 2px solid var(--line); background: #101316; font-weight: 700; font-size: 16px; cursor: pointer; }
+.seg button:hover { border-color: var(--muted); }
+.seg button[aria-pressed=true].s-ok { background: var(--ok); border-color: var(--ok); color: var(--ink-on-color); }
+.seg button[aria-pressed=true].s-action { background: var(--warn); border-color: var(--warn); color: var(--ink-on-color); }
+.seg button[aria-pressed=true].s-yes { background: var(--warn); border-color: var(--warn); color: var(--ink-on-color); }
+.seg button[aria-pressed=true].s-no { background: var(--ok); border-color: var(--ok); color: var(--ink-on-color); }
+.note { margin-top: 10px; }
+.extra { margin-top: 10px; padding: 10px 12px; background: #101316; border: 1px dashed var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+.check { display: flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; }
+.check input { width: 24px; height: 24px; accent-color: var(--hot); }
+
+.safety { border: 1.5px solid var(--hot); border-radius: var(--radius); padding: 12px 14px; background: rgba(213,15,37,.07); font-size: 14.5px; margin-bottom: 14px; }
+.safety b { color: var(--hot-text); }
+
+/* Feladat-címkék, háromállású választó, elmaradt / esedékes jelzések */
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 2px; }
+.tag { font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; border: 1.5px solid var(--line); color: var(--muted); white-space: nowrap; }
+.tag.t-look { color: #9cc7ff; border-color: #4f78a8; }
+.tag.t-do { color: var(--hot-text); border-color: var(--hot); }
+.tag.t-who { color: var(--text); border-style: dashed; }
+.tag.t-warn { color: var(--warn-text); border-color: var(--warn); }
+.tag.t-bad { color: var(--bad-text); border-color: var(--bad); }
+.tag.t-nk { color: var(--warn-text); border-style: dashed; border-color: var(--warn); }
+.kindhead { margin: 16px 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; }
+.kindhead span { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted); }
+.kindhead.k-look { color: #9cc7ff; } .kindhead.k-do { color: var(--hot-text); }
+.item.kind-look .no { color: #9cc7ff; }
+.item.st-skip { border-color: var(--bad); }
+.seg.seg3 { grid-template-columns: 1fr 1fr 1fr; }
+.seg button[aria-pressed=true].s-skip { background: var(--bad); border-color: var(--bad); color: var(--ink-on-color); }
+.seg3 button { font-size: 15px; line-height: 1.15; padding: 4px 6px; }
+.prevskip { margin: 0 0 8px; padding: 6px 10px; border-left: 4px solid var(--bad); background: rgba(229,72,77,.08); font-size: 14px; }
+.pending { margin: 0 0 8px; padding: 6px 10px; border: 1.5px dashed var(--warn); border-radius: 6px; font-size: 14px; color: var(--warn-text); }
+.pending b { color: var(--warn-text); }
+.tools { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+.tools b { color: var(--text); }
+.bring { margin-top: 12px; }
+.bring h3 { margin: 0 0 6px; font-size: 17px; }
+.bring ul { margin: 0; padding-left: 20px; columns: 2 220px; font-size: 14.5px; }
+.howto .t-skip { color: var(--bad-text); }
+.openlist { display: flex; flex-direction: column; gap: 10px; }
+.openrow { display: flex; gap: 10px; align-items: flex-start; }
+.tabs { display: flex; gap: 6px; margin: 28px 0 12px; border-bottom: 2px solid var(--line); flex-wrap: wrap; }
+.tabs button { background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; padding: 10px 14px; font-weight: 700; font-size: 16px; color: var(--muted); cursor: pointer; min-height: 44px; }
+.tabs button[aria-selected=true] { color: var(--text); border-bottom-color: var(--hot); }
+@media (max-width: 560px) { .seg3 button { font-size: 14px; } .tabs button { padding: 8px 8px; font-size: 15px; } }
+/* Alsó sáv beküldéshez */
+.submitbar { position: fixed; left: 0; right: 0; bottom: 0; background: #000000; border-top: 2px solid var(--line); z-index: 30; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.submitbar .wrap { display: flex; align-items: center; gap: 12px; min-height: 76px; }
+.progress { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.progress .bar { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; }
+.progress .bar i { display: block; height: 100%; background: var(--hot); width: 0; transition: width .2s; }
+@media (prefers-reduced-motion: reduce) { .progress .bar i { transition: none; } }
+
+/* Lap megtekintése */
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 18px; }
+.kv div span { display: block; font-size: 12.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.kv div b { font-size: 17px; }
+.pre { white-space: pre-wrap; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+
+/* Belépés */
+.gate { max-width: 420px; margin: 8vh auto 0; }
+
+/* Párbeszédablak és toast */
+dialog { background: var(--panel); color: var(--text); border: 1.5px solid var(--line); border-radius: 12px; padding: 20px; max-width: min(480px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgba(0,0,0,.6); }
+dialog h3 { margin: 0 0 10px; font-family: var(--font-cond); font-size: 22px; }
+#toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--ok); color: var(--ink-on-color); font-weight: 700; padding: 12px 18px; border-radius: 10px; z-index: 50; display: none; max-width: calc(100vw - 32px); }
+#toast.bad { background: var(--bad); }
+
+@media (max-width: 560px) {
+  .top { position: static; }
+  h1 { font-size: 25px; }
+  .item { grid-template-columns: minmax(0,1fr); }
+  .item .no { width: 34px; height: 34px; font-size: 19px; }
+  .item .body { grid-column: 1; }
+  .submitbar .wrap { min-height: 70px; }
+  .btn.big { font-size: 17px; padding: 0 18px; }
+  .hide-sm { display: none; }
+}
+
+/* Nyomtatás: fehér lap, fekete szöveg */
+@media print {
+  :root { --bg:#fff; --panel:#fff; --panel-2:#fff; --line:#000; --text:#000; --muted:#333; --hot-text:#000; color-scheme: light; }
+  .top, .submitbar, .no-print, .demo-bar, #toast { display: none !important; }
+  main.wrap { padding-top: 0; padding-bottom: 0; }
+  th { background: #fff; color: #000; border-bottom: 1.5px solid #000; }
+  .badge { border: 1px solid #000; background: #fff !important; color: #000 !important; }
+  .table-wrap { border: none; overflow: visible; }
+  td, th { border-top: 1px solid #000; }
+  tr { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div id="demo" class="demo-bar" hidden>DEMÓ mód – mintaadatok, csak ebben a böngészőben tárolva. Az éles lapokhoz nyisd meg a címet ?demo nélkül.</div>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#/"><b>BREMAT <span>·</span> Valk robot</b><small>Heti karbantartási lap</small></a>
+    <nav class="nav" id="nav" hidden>
+      <a class="btn ghost" href="/" title="BREMAT Központ">Központ</a>
+      <a class="btn ghost" href="#/">Áttekintés</a>
+      <a class="btn primary" href="#/uj">Új heti lap</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="app" aria-live="polite"></main>
+<div id="toast" role="status"></div>
+<dialog id="dlg"></dialog>
+<dialog id="imgdlg" class="imgdlg"></dialog>
+
+<script type="module">
+/* ================================================================
+   A feladatok a közös katalógusból jönnek (public/tasks.js) – ugyanezt
+   tölti be a szerver is az ellenőrzéshez.
+   ================================================================ */
+import { FORM_VERSION, LOCAL, ROUTES, KINDS, WHO, WHO_SHORT, TASKS, TASK_BY_KEY, isWeekly, LEGACY_TITLES } from '/tasks.js';
+
+/* ================================================================
+   CONFIG
+   Az adatok a Netlify site saját tárolójában vannak (Netlify Blobs),
+   a /api/km függvényen keresztül. A hozzáférési kód a Netlify
+   KM_ACCESS_CODE környezeti változójában van, nem itt.
+   DEMÓ mód: a cím végére ?demo – mintaadatok, csak ebben a böngészőben.
+   A feladatok, a gáz irányértéke és az üzembe helyezés napja: tasks.js.
+   ================================================================ */
+const CONFIG = {
+  API_URL: '/api/km',
+  ROBOTS: ['Valk robot'],          // több robotnál: ['Valk robot 1', 'Valk robot 2']
+  START_DATE: '2026-10-05',        // ettől a héttől számít „hiányzó” egy kitöltetlen hét
+};
+
+/* ================================================================
+   Segédfüggvények: dátum (mindig Europe/Budapest), szöveg, tárolás
+   ================================================================ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch { /* nincs tárolás */ } },
+};
+const ymdFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest', year: 'numeric', month: '2-digit', day: '2-digit' });
+const today = () => ymdFmt.format(new Date());
+const toDate = (ymd) => new Date(ymd + 'T00:00:00Z');
+const fromDate = (d) => d.toISOString().slice(0, 10);
+const addDays = (ymd, n) => { const d = toDate(ymd); d.setUTCDate(d.getUTCDate() + n); return fromDate(d); };
+const addMonths = (ymd, n) => { const d = toDate(ymd); const day = d.getUTCDate(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + n); const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate(); d.setUTCDate(Math.min(day, last)); return fromDate(d); };
+const mondayOf = (ymd) => { const d = toDate(ymd); return addDays(ymd, -((d.getUTCDay() + 6) % 7)); };
+function isoWeek(ymd) {
+  const d = toDate(ymd);
+  d.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7));
+  const year = d.getUTCFullYear();
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const week = 1 + Math.round(((d - jan4) / 86400000 - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7);
+  return { year, week };
+}
+const huDate = new Intl.DateTimeFormat('hu-HU', { timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' });
+const huShort = new Intl.DateTimeFormat('hu-HU', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+const huDateTime = new Intl.DateTimeFormat('hu-HU', { timeZone: 'Europe/Budapest', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+const fmtDate = (ymd) => ymd ? huDate.format(toDate(ymd)) : '—';
+const fmtShort = (ymd) => huShort.format(toDate(ymd));
+const fmtDT = (ts) => ts ? huDateTime.format(new Date(ts)) : '—';
+const weekKey = (y, w) => `${y}/${String(w).padStart(2, '0')}`;
+const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 86400000);
+
+function toast(msg, bad = false) {
+  const t = $('#toast');
+  t.textContent = msg; t.className = bad ? 'bad' : ''; t.style.display = 'block';
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, bad ? 6000 : 3000);
+}
+
+/* ================================================================
+   Esedékesség
+   A heti feladatok minden lapon ott vannak. A ritkábbak akkor kerülnek
+   a lapra, ha esedékesek: utolsó elvégzés (vagy, ha még nem volt, az
+   üzembe helyezés napja) + az időköz. Ami elmaradt („Nem csináltam
+   meg”), az nem számít elvégzésnek, tehát a következő héten is ott lesz.
+   ================================================================ */
+const STATUS_TXT = { ok: 'Rendben', action: 'Beavatkozás', skip: 'Nem csinálta meg' };
+const STATUS_BADGE = { ok: 'ok', action: 'warn', skip: 'bad' };
+const isDone = (x) => x && (x.status === 'ok' || x.status === 'action');
+const nextDue = (t, from) => (t.freq.m ? addMonths(from, t.freq.m) : addDays(from, t.freq.d));
+
+// A 3. változattól a tételek kulccsal vannak tárolva; a régebbi lapok tételei mások voltak.
+function historyOf(list, robot) {
+  const recs = list.filter((r) => r.robot === robot && (r.form_version || 1) >= 3)
+    .sort((a, b) => a.check_date.localeCompare(b.check_date) || a.created_at.localeCompare(b.created_at));
+  const lastDone = {}; const lastSeen = {};
+  recs.forEach((r) => (r.items || []).forEach((x) => {
+    if (!x.key) return;
+    lastSeen[x.key] = { ...x, date: r.check_date, id: r.id };
+    if (isDone(x)) lastDone[x.key] = r.check_date;
+  }));
+  // A hűtővíz-csere a régi lapokon külön mező volt.
+  list.filter((r) => r.robot === robot && r.cooling_water_changed).forEach((r) => {
+    if (!lastDone['hutoviz-csere'] || r.cooling_water_changed > lastDone['hutoviz-csere']) lastDone['hutoviz-csere'] = r.cooling_water_changed;
+  });
+  return { lastDone, lastSeen };
+}
+function dueInfo(t, hist, weekMonday) {
+  const last = hist.lastDone[t.key] || null;
+  const due = nextDue(t, last || LOCAL.COMMISSIONING_DATE);
+  return { last, due, onLap: due <= addDays(weekMonday, 6), overdue: due < weekMonday };
+}
+// Az adott hét lapja, útvonal szerinti sorrendben (a katalógus sorrendje).
+function tasksForWeek(dateYmd, hist) {
+  const mon = mondayOf(dateYmd);
+  return TASKS.map((t) => ({ t, info: isWeekly(t) ? null : dueInfo(t, hist, mon) }))
+    .filter(({ t, info }) => !info || info.onLap);
+}
+// Ami legutóbb „Nem csináltam meg” lett, és azóta sem volt meg.
+const openSkips = (hist) => TASKS.map((t) => ({ t, x: hist.lastSeen[t.key] })).filter(({ x }) => x && x.status === 'skip');
+
+// A régi (1–2. változatú) lapok tételcímei sorszám szerint.
+const legacyTitles = (r) => LEGACY_TITLES[r.form_version || 1] || [];
+
+/* ================================================================
+   Bővebben – lenyitható rész és képnagyító
+   ================================================================ */
+function moreHtml(t) {
+  const n = t.figs.length;
+  if (!t.more.length && !n) return '';
+  return `<details class="more">
+    <summary><span>Bővebben: hol, hogyan, mire figyelj</span>${n ? `<span class="cnt">${n} kép</span>` : ''}</summary>
+    <div class="more-body">
+      ${t.more.map(([h, b]) => `<section><h4>${esc(h)}</h4>${b}</section>`).join('')}
+      ${n ? `<div class="figs">${t.figs.map(([f, cap, src]) => `
+        <figure><button type="button" class="fig" data-src="/img/${f}" data-cap="${esc(cap)}" data-ref="${esc(src)}" aria-label="Kép nagyítása: ${esc(cap)}">
+          <img src="/img/${f}" loading="lazy" alt="${esc(cap)}"></button>
+          <figcaption>${esc(cap)} <span class="ref">${esc(src)}</span></figcaption></figure>`).join('')}</div>` : ''}
+    </div>
+  </details>`;
+}
+
+// Kép nagyítása: koppintásra teljes szélességben, még egy koppintásra nagyobban (görgethető).
+function openImage(src, cap, ref) {
+  const dlg = $('#imgdlg');
+  dlg.innerHTML = `
+    <div class="imgbar"><span>${esc(cap)} <span class="ref">${esc(ref)}</span></span><button class="btn" type="button" id="imgClose">Bezárás</button></div>
+    <div class="imgwrap"><img src="${esc(src)}" alt="${esc(cap)}" class="fit"></div>
+    <p class="small muted" style="margin:6px 0 0">Koppints a képre a nagyításhoz.</p>`;
+  const img = $('img', dlg);
+  img.addEventListener('click', () => img.classList.toggle('fit'));
+  $('#imgClose').onclick = () => dlg.close();
+  dlg.onclick = (e) => { if (e.target === dlg) dlg.close(); };
+  dlg.showModal();
+}
+
+/* ================================================================
+   Adatréteg: szerver (/api/km, éles) vagy DEMÓ (böngészőben tárolva).
+   Mindkettő ugyanazt tudja: ping, list, get, submit, approve, remove,
+   és a „Nem üzemelt” hetek: idleList, idleMark, idleUnmark.
+   ================================================================ */
+const DEMO = new URLSearchParams(location.search).has('demo');
+
+class AccessError extends Error {}
+
+function createApiAdapter() {
+  async function call(action, payload) {
+    let res;
+    try {
+      res = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action, ...payload }),
+        cache: 'no-store',
+      });
+    } catch {
+      throw new Error('Nincs kapcsolat a szerverrel. Ellenőrizd az internetet, és próbáld újra.');
+    }
+    let body = null;
+    try { body = await res.json(); } catch { /* nem JSON válasz */ }
+    if (res.status === 401) throw new AccessError('Hibás hozzáférési kód');
+    if (!res.ok) throw new Error(body?.error || `Szerverhiba (${res.status}). Próbáld újra később.`);
+    return body?.data;
+  }
+  return {
+    ping: (code) => call('ping', { code }),
+    list: (code) => call('list', { code }),
+    get: (code, id) => call('get', { code, id }),
+    submit: (code, check) => call('submit', { code, check }),
+    approve: (code, id, name) => call('approve', { code, id, name }),
+    remove: (code, id, name) => call('delete', { code, id, name }),
+    idleList: (code) => call('idle_list', { code }),
+    idleMark: (code, idle) => call('idle_mark', { code, idle }),
+    idleUnmark: (code, w) => call('idle_unmark', { code, robot: w.robot, iso_year: w.iso_year, iso_week: w.iso_week }),
+  };
+}
+
+function createDemoAdapter() {
+  const KEY = 'km-demo-v3';
+  let mem = null;
+  const load = () => {
+    if (mem) return mem;
+    const raw = store.get(KEY);
+    mem = raw ? JSON.parse(raw) : seed();
+    save();
+    return mem;
+  };
+  const save = () => { store.set(KEY, JSON.stringify(mem)); };
+  const IDLE_KEY = 'km-demo-idle';
+  let idle = null;
+  const loadIdle = () => { if (!idle) { try { idle = JSON.parse(store.get(IDLE_KEY)) || []; } catch { idle = []; } } return idle; };
+  const sameW = (a, b) => a.robot === b.robot && a.iso_year === b.iso_year && a.iso_week === b.iso_week;
+  // A szerverhez hasonlóan: cím a katalógusból, Rendben tételnél nincs megjegyzés.
+  const norm = (items) => items.map((x) => ({ key: x.key, title: TASK_BY_KEY[x.key].title, status: x.status, note: x.status === 'ok' ? null : (x.note || '').trim() }));
+  function seed() {
+    const mon = mondayOf(today());
+    const names = ['Kovács Gábor', 'Tóth Ádám'];
+    const out = [];
+    [-6, -5, -3, -2, -1].forEach((off, i) => {
+      const d = addDays(mon, off * 7);
+      const hist = historyOf(out, CONFIG.ROBOTS[0]);
+      const items = tasksForWeek(d, hist).map(({ t }) => ({ key: t.key, status: 'ok' }));
+      if (off === -6 || off === -3) items.push({ key: 'szuro', status: 'ok' });
+      const set = (key, status, note) => { const x = items.find((y) => y.key === key); if (x) { x.status = status; x.note = note; } else items.push({ key, status, note }); };
+      let extra = {};
+      if (off === -6) set('huto-nez', 'action', 'Hűtőfolyadék utántöltve (kb. 1 l)');
+      if (off === -2) { set('aramatado', 'action', 'Gázfúvóka deformált volt – csere; 2 O-gyűrű csere'); set('tisztito', 'action', 'Kaparókés kopott – csere'); extra = { remarks: 'A gázfúvóka belső fala erősen fröccsös volt.', parts_used: '1 db gázfúvóka, 2 db O-gyűrű, 1 db kaparókés' }; }
+      if (off === -1) { set('gaz-szivarog', 'action', 'Szivárgás a gáztömlő csatlakozásánál, bilincs utánhúzva'); set('jig-tisztit', 'skip', 'Sürgős gyártás miatt nem volt rá idő'); extra = { remarks: 'A gáztömlő a csatlakozásnál repedezett, cserélni kell.', escalate: true, escalate_to: 'Karbantartás (Szabó)' }; }
+      out.push(mk({
+        check_date: d, robot: CONFIG.ROBOTS[0], inspector: names[i % 2], items: norm(items),
+        gas_flow_lpm: 10 + (i % 3), escalate: false, ...extra,
+      }, off < -2 ? { by: 'Nagy Béla', at: addDays(d, 1) + 'T09:12:00Z' } : null));
+    });
+    return out;
+  }
+  function mk(c, appr) {
+    const { year, week } = isoWeek(c.check_date);
+    return {
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2),
+      form_version: FORM_VERSION, created_at: new Date().toISOString(), check_date: c.check_date, iso_year: year, iso_week: week,
+      robot: c.robot, inspector: c.inspector, items: c.items,
+      action_count: c.items.filter((x) => x.status === 'action').length,
+      skip_count: c.items.filter((x) => x.status === 'skip').length,
+      cooling_water_changed: c.items.some((x) => x.key === 'hutoviz-csere' && x.status !== 'skip') ? c.check_date : null,
+      gas_flow_lpm: c.gas_flow_lpm ?? null,
+      remarks: c.remarks || null, parts_used: c.parts_used || null, escalate: !!c.escalate,
+      escalate_to: c.escalate ? c.escalate_to : null,
+      approved_by: appr ? appr.by : null, approved_at: appr ? appr.at : null,
+    };
+  }
+  const delay = (v) => new Promise((r) => setTimeout(() => r(structuredClone(v)), 120));
+  return {
+    ping: () => delay(true),
+    list: () => delay([...load()].sort((a, b) => b.check_date.localeCompare(a.check_date) || b.created_at.localeCompare(a.created_at))),
+    get: (_c, id) => { const r = load().find((x) => x.id === id); if (!r) return Promise.reject(new Error('Nincs ilyen lap')); return delay(r); },
+    submit: (_c, c) => {
+      const rec = mk({ ...c, items: norm(c.items), gas_flow_lpm: c.gas_flow_lpm === '' || c.gas_flow_lpm == null ? null : Number(c.gas_flow_lpm) }, null);
+      load().push(rec); save(); return delay(rec.id);
+    },
+    approve: (_c, id, name) => {
+      const r = load().find((x) => x.id === id);
+      if (!r) return Promise.reject(new Error('Nincs ilyen lap'));
+      if (r.approved_by) return Promise.reject(new Error('Ezt a lapot már jóváhagyták'));
+      r.approved_by = name.trim(); r.approved_at = new Date().toISOString(); save(); return delay(r);
+    },
+    remove: (_c, id, name) => {
+      const all = load(); const i = all.findIndex((x) => x.id === id);
+      if (i < 0) return Promise.reject(new Error('Nincs ilyen lap – lehet, hogy már törölték'));
+      if (!name.trim()) return Promise.reject(new Error('Írd be a nevedet a törléshez'));
+      all.splice(i, 1); save(); return delay(true);
+    },
+    idleList: () => delay([...loadIdle()].sort((a, b) => b.iso_year - a.iso_year || b.iso_week - a.iso_week)),
+    idleMark: (_c, m) => {
+      if (!(m.marked_by || '').trim()) return Promise.reject(new Error('Írd be a nevedet'));
+      if (load().some((r) => sameW(r, m))) return Promise.reject(new Error('Erre a hétre már van kitöltött lap'));
+      if (loadIdle().some((x) => sameW(x, m))) return Promise.reject(new Error('Ezt a hetet már megjelölték'));
+      const rec = { robot: m.robot, iso_year: m.iso_year, iso_week: m.iso_week, reason: (m.reason || '').trim() || null, marked_by: m.marked_by.trim(), created_at: new Date().toISOString() };
+      idle.push(rec); store.set(IDLE_KEY, JSON.stringify(idle)); return delay(rec);
+    },
+    idleUnmark: (_c, w) => { idle = loadIdle().filter((x) => !sameW(x, w)); store.set(IDLE_KEY, JSON.stringify(idle)); return delay(true); },
+  };
+}
+
+const api = DEMO ? createDemoAdapter() : createApiAdapter();
+
+/* ================================================================
+   Hozzáférési kód: a linkből (?kod=...) vagy egyszer beírva,
+   utána ezen az eszközön megjegyezve.
+   ================================================================ */
+function codeFromUrl() {
+  const u = new URL(location.href);
+  const k = u.searchParams.get('kod');
+  if (k) {
+    store.set('km-kod', k.trim());
+    u.searchParams.delete('kod');
+    history.replaceState(null, '', u.pathname + (u.search || '') + u.hash);
+  }
+}
+const getCode = () => store.get('km-kod') || '';
+
+async function call(fn) {
+  try { return await fn(); }
+  catch (e) {
+    if (e instanceof AccessError) { store.del('km-kod'); renderGate('A hozzáférési kód nem érvényes. Kérd el az újat.'); throw e; }
+    throw e;
+  }
+}
+
+function renderGate(msg = '') {
+  $('#nav').hidden = true;
+  $('#app').innerHTML = `
+    <div class="gate panel">
+      <h1>Belépés</h1>
+      <p class="muted">Írd be a hozzáférési kódot. Ezen az eszközön megjegyzi, legközelebb nem kell újra beírni.</p>
+      ${msg ? `<p class="err">${esc(msg)}</p>` : ''}
+      <form id="gateForm" class="field" style="gap:12px">
+        <label for="gateCode">Hozzáférési kód</label>
+        <input id="gateCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" required placeholder="XXXXX-XXXXX-XXXXX-XXXXX">
+        <button class="btn primary big" type="submit">Belépés</button>
+      </form>
+    </div>`;
+  $('#gateCode').focus();
+  $('#gateForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const code = $('#gateCode').value.trim();
+    const b = ev.submitter; if (b) b.disabled = true;
+    try {
+      await api.ping(code);
+      store.set('km-kod', code);
+      route();
+    } catch (e) {
+      renderGate(e instanceof AccessError ? 'Hibás hozzáférési kód.' : e.message);
+    }
+  });
+}
+
+/* ================================================================
+   Áttekintés: kártyák, elmaradt feladatok, archívum, ütemezés
+   ================================================================ */
+const view = { robot: CONFIG.ROBOTS[0], year: null, q: '', tab: 'archive' };
+
+function buildWeeks(list, robot, idle = []) {
+  const t = today();
+  const cur = isoWeek(t);
+  const recs = list.filter((r) => r.robot === robot);
+  const firstRec = recs.map((r) => r.check_date).sort()[0];
+  // A figyelés a START_DATE hetétől indul (vagy a legelső laptól, ha az korábbi),
+  // de az aktuális hét mindig szerepel – akkor is, ha a mai nap a START_DATE előtt van.
+  let start = mondayOf(CONFIG.START_DATE);
+  if (firstRec && firstRec < start) start = mondayOf(firstRec);
+  if (start > mondayOf(t)) start = mondayOf(t);
+  const byWeek = new Map();
+  recs.forEach((r) => { const k = weekKey(r.iso_year, r.iso_week); (byWeek.get(k) || byWeek.set(k, []).get(k)).push(r); });
+  const idleBy = new Map(idle.filter((x) => x.robot === robot).map((x) => [weekKey(x.iso_year, x.iso_week), x]));
+  const weeks = [];
+  for (let m = mondayOf(t); m >= start; m = addDays(m, -7)) {
+    const { year, week } = isoWeek(m);
+    const k = weekKey(year, week);
+    const rows = byWeek.get(k) || [];
+    const isCur = year === cur.year && week === cur.week;
+    // Ha mégis van lap, az számít; a „Nem üzemelt” jelölés csak lap nélküli hetet ment fel.
+    const idleMark = rows.length ? null : idleBy.get(k) || null;
+    weeks.push({ key: k, year, week, monday: m, rows, idle: idleMark, status: rows.length ? 'done' : idleMark ? 'idle' : isCur ? 'due' : 'missing' });
+  }
+  return weeks;
+}
+
+// A ritkább feladatok állapota a mai hét szerint.
+function scheduleRows(hist) {
+  const mon = mondayOf(today());
+  return TASKS.filter((t) => !isWeekly(t)).map((t) => {
+    const info = dueInfo(t, hist, mon);
+    const left = daysBetween(today(), info.due);
+    const st = info.overdue ? { cls: 'bad', txt: 'Lejárt' }
+      : info.onLap ? { cls: 'warn', txt: 'Ezen a héten' }
+      : { cls: left <= 31 ? 'neutral' : 'ok', txt: `${left} nap múlva` };
+    return { t, info, st };
+  }).sort((a, b) => a.info.due.localeCompare(b.info.due));
+}
+
+async function renderOverview() {
+  $('#nav').hidden = false;
+  const app = $('#app');
+  app.innerHTML = '<p class="muted">Betöltés…</p>';
+  let list, idle;
+  try { [list, idle] = await call(() => Promise.all([api.list(getCode()), api.idleList(getCode())])); }
+  catch (e) { if (!(e instanceof AccessError)) app.innerHTML = `<div class="banner bad">Nem sikerült betölteni: ${esc(e.message)}</div>`; return; }
+
+  const robot = view.robot;
+  const cur = isoWeek(today());
+  const weeks = buildWeeks(list, robot, idle);
+  const thisWeek = weeks[0];
+  const recs = list.filter((r) => r.robot === robot);
+  const hist = historyOf(list, robot);
+  const sched = scheduleRows(hist);
+  const skips = openSkips(hist);
+  const overdue = sched.filter((s) => s.info.overdue);
+  const dueNow = sched.filter((s) => s.info.onLap);
+  const nextUp = sched.find((s) => !s.info.onLap);
+  const openEsc = recs.filter((r) => r.escalate && !r.approved_by);
+  const unapproved = recs.filter((r) => !r.approved_by);
+  const missing = weeks.filter((w) => w.status === 'missing');
+
+  const years = [...new Set(weeks.map((w) => w.year))].sort((a, b) => b - a);
+  if (!view.year || !years.includes(view.year)) view.year = years[0] ?? cur.year;
+
+  const weekCard = thisWeek.status === 'done'
+    ? `<div class="card ok"><span class="lbl">Ez a hét · ${cur.year}. ${cur.week}. hét</span><span class="val">Kitöltve</span>
+         <span class="small muted">${esc(thisWeek.rows[0].inspector)} · ${fmtDate(thisWeek.rows[0].check_date)}</span>
+         <a href="#/lap/${esc(thisWeek.rows[0].id)}">Megnyitás</a></div>`
+    : thisWeek.status === 'idle'
+    ? `<div class="card neutral"><span class="lbl">Ez a hét · ${cur.year}. ${cur.week}. hét</span><span class="val">A robot nem üzemelt</span>
+         <span class="small muted">${esc(idleText(thisWeek.idle))}</span>
+         <a href="#" data-unidle="${esc(thisWeek.key)}">Visszavonás</a></div>`
+    : `<div class="card warn"><span class="lbl">Ez a hét · ${cur.year}. ${cur.week}. hét</span><span class="val">Még nincs kitöltve</span>
+         <span class="small muted">Esedékes: hétfő, ${fmtDate(thisWeek.monday)}</span>
+         <a class="btn primary" href="#/uj" style="margin-top:6px">Kitöltés most</a>
+         <a href="#" data-idle="${esc(thisWeek.key)}">A robot ezen a héten nem üzemel</a></div>`;
+  const periodicCard = `<div class="card ${overdue.length ? 'bad' : dueNow.length ? 'warn' : 'ok'}"><span class="lbl">Ritkább feladatok</span>
+      <span class="val">${overdue.length ? `${overdue.length} lejárt` : dueNow.length ? `${dueNow.length} esedékes ezen a héten` : 'Nincs esedékes'}</span>
+      <span class="small muted">${nextUp ? `Következő: ${esc(nextUp.t.title)} – ${fmtDate(nextUp.info.due)}` : ''}</span>
+      <a href="#" data-tab="schedule">Ütemezés megnyitása</a></div>`;
+  const todoBits = [skips.length && `${skips.length} elmaradt feladat`, openEsc.length && `${openEsc.length} nyitott továbbjelzés`, missing.length && `${missing.length} kimaradt hét`].filter(Boolean);
+  const todoCard = `<div class="card ${skips.length || openEsc.length ? 'bad' : missing.length ? 'warn' : 'ok'}"><span class="lbl">Teendők</span>
+      <span class="val">${todoBits[0] || 'Nincs nyitott teendő'}</span>
+      <span class="small muted">${[...todoBits.slice(1), `Jóváhagyásra vár: ${unapproved.length}`].join(' · ')}</span></div>`;
+
+  const skipPanel = skips.length || overdue.length ? `
+    <h2>Elmaradt feladatok</h2>
+    <div class="panel openlist">
+      ${skips.map(({ t, x }) => `<div class="openrow"><span class="badge bad">Elmaradt</span>
+         <div><b>${esc(t.title)}</b><span class="small muted"> · ${fmtDate(x.date)} · <a href="#/lap/${esc(x.id)}">lap</a></span><br><span class="small">Ok: ${esc(x.note)}</span></div></div>`).join('')}
+      ${overdue.filter((s) => !skips.some((k) => k.t.key === s.t.key)).map((s) => `<div class="openrow"><span class="badge bad">Lejárt</span>
+         <div><b>${esc(s.t.title)}</b><span class="small muted"> · esedékes volt: ${fmtDate(s.info.due)}</span></div></div>`).join('')}
+      <p class="small muted" style="margin:6px 0 0">Ezek a következő lapon is ott lesznek, amíg meg nem csinálja valaki.</p>
+    </div>` : '';
+
+  const q = view.q.trim().toLowerCase();
+  const matches = (r) => !q || [r.inspector, r.remarks, r.parts_used, r.escalate_to, r.approved_by, ...(r.items || []).map((x) => x.note)].some((v) => (v || '').toLowerCase().includes(q));
+  const rowsHtml = weeks.filter((w) => w.year === view.year).map((w) => {
+    if (!w.rows.length) {
+      if (q) return '';
+      if (w.status === 'idle') {
+        return `<tr class="idle">
+          <td><b>${w.week}.</b> hét</td><td>${fmtShort(w.monday)}</td>
+          <td><span class="badge neutral">Nem üzemelt</span></td>
+          <td colspan="4" class="muted">${esc(idleText(w.idle))}</td>
+          <td class="del no-print"><button class="btn sm" type="button" data-unidle="${esc(w.key)}">Visszavonás</button></td></tr>`;
+      }
+      return `<tr class="${w.status === 'missing' ? 'missing' : ''}">
+        <td><b>${w.week}.</b> hét</td><td>${fmtShort(w.monday)}</td>
+        <td>${w.status === 'missing' ? '<span class="badge bad">Hiányzik</span>' : '<span class="badge warn">Esedékes</span>'}</td>
+        <td colspan="4" class="muted">${w.status === 'missing' ? 'Erre a hétre nincs kitöltött lap.' : '<a href="#/uj">Kitöltés most</a>'}</td>
+        <td class="del no-print"><button class="btn sm" type="button" data-idle="${esc(w.key)}">Nem üzemelt</button></td></tr>`;
+    }
+    return w.rows.filter(matches).map((r) => `
+      <tr class="link" data-href="#/lap/${esc(r.id)}" tabindex="0">
+        <td><b>${w.week}.</b> hét</td><td>${fmtDate(r.check_date)}</td>
+        <td><span class="badge ok">Kitöltve</span></td>
+        <td>${esc(r.inspector)}</td>
+        <td>${r.action_count ? `<span class="badge warn">${r.action_count} beav.</span> ` : ''}${r.skip_count ? `<span class="badge bad">${r.skip_count} elmaradt</span>` : ''}${!r.action_count && !r.skip_count ? '<span class="muted">—</span>' : ''}</td>
+        <td>${r.escalate ? `<span class="badge bad">Igen</span> <span class="small">${esc(r.escalate_to)}</span>` : '<span class="muted">Nem</span>'}</td>
+        <td>${r.approved_by ? esc(r.approved_by) : '<span class="badge neutral">Nincs</span>'}</td>
+        <td class="del no-print"><button class="btn danger sm" type="button" data-del="${esc(r.id)}">Törlés</button></td>
+      </tr>`).join('');
+  }).join('');
+
+  const archiveHtml = `
+    <div class="toolbar no-print">
+      <label class="field" style="width:130px"><span>Év</span><select id="yearSel">${years.map((y) => `<option ${y === view.year ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
+      <label class="field" style="flex:1;min-width:200px"><span>Keresés</span><input id="q" type="search" placeholder="Név, megjegyzés, alkatrész…" value="${esc(view.q)}"></label>
+      <button class="btn" id="csv" type="button">Letöltés (CSV)</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Hét</th><th>Dátum</th><th>Állapot</th><th>Ellenőrizte</th><th>Beavatkozás / elmaradt</th><th>Továbbjelzés</th><th>Jóváhagyta</th><th class="del no-print"></th></tr></thead>
+        <tbody>${rowsHtml || '<tr><td colspan="8" class="muted">Nincs találat.</td></tr>'}</tbody>
+      </table>
+    </div>
+    <p class="small muted">Egy sorra kattintva megnyílik a teljes lap; a sor végén a „Törlés” gombbal törölhető. Ha a robot egész héten nem ment, a lap nélküli hét sorában a „Nem üzemelt” gombbal jelölhető – ez a hét nem számít kimaradtnak. „Hiányzik” = lejárt hét kitöltött lap nélkül (${fmtDate(CONFIG.START_DATE)} óta figyelve, vagy a legelső laptól, ha az korábbi).</p>`;
+
+  const scheduleHtml = `
+    <p class="small muted" style="margin-top:0">A heti feladatok minden lapon szerepelnek. Ezek a ritkábbak: a kitöltendő lapra csak akkor kerülnek fel, amikor esedékesek. Ami még nem volt kész, azt az üzembe helyezéstől (${fmtDate(LOCAL.COMMISSIONING_DATE)}) számolja.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Feladat</th><th>Gyakoriság</th><th>Ki végzi</th><th>Utoljára</th><th>Következő</th><th>Állapot</th></tr></thead>
+        <tbody>${sched.map(({ t, info, st }) => `
+          <tr><td><b>${esc(t.title)}</b>${t.freqNote ? `<br><span class="small muted">${esc(t.freqNote)}</span>` : ''}</td>
+            <td>${esc(t.freq.label)}</td>
+            <td>${esc(WHO_SHORT[t.who || 'kezelo'])}</td>
+            <td>${info.last ? fmtDate(info.last) : '<span class="muted">még nem</span>'}</td>
+            <td>${fmtDate(info.due)}</td>
+            <td><span class="badge ${st.cls}">${esc(st.txt)}</span></td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <p class="small muted">A füstelszívó szűrőjét a Valk cseréli – az időközt tőlük kell megkérdezni. A több éves szervizek időközei üzemórában is megvannak (amelyik előbb eljön); nálatok a napi kb. 4 óra használat mellett a naptár jön el előbb.</p>`;
+
+  app.innerHTML = `
+    <h1>Áttekintés</h1>
+    ${CONFIG.ROBOTS.length > 1 ? `<div class="toolbar"><label class="field"><span>Robot / cella</span><select id="robotSel">${CONFIG.ROBOTS.map((r) => `<option ${r === robot ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label></div>` : ''}
+    <div class="cards">${weekCard}${periodicCard}${todoCard}</div>
+    ${skipPanel}
+    <div class="tabs no-print" role="tablist">
+      <button type="button" role="tab" data-tab="archive" aria-selected="${view.tab === 'archive'}">Archívum</button>
+      <button type="button" role="tab" data-tab="schedule" aria-selected="${view.tab === 'schedule'}">Ütemezés – ritkább feladatok${overdue.length ? ` <span class="badge bad">${overdue.length}</span>` : ''}</button>
+    </div>
+    <div id="tabBody">${view.tab === 'schedule' ? scheduleHtml : archiveHtml}</div>`;
+
+  $$('tr.link', app).forEach((tr) => {
+    const go = () => { location.hash = tr.dataset.href; };
+    tr.addEventListener('click', go);
+    tr.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  });
+  $$('[data-del]', app).forEach((b) => {
+    b.addEventListener('keydown', (e) => e.stopPropagation());
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const r = list.find((x) => x.id === b.dataset.del);
+      if (r) confirmDelete(r, () => renderOverview());
+    });
+  });
+  const weekOf = (k) => weeks.find((w) => w.key === k);
+  $$('[data-idle]', app).forEach((b) => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    const w = weekOf(b.dataset.idle);
+    if (w) confirmIdle(w, robot, () => renderOverview());
+  }));
+  $$('[data-unidle]', app).forEach((b) => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    const w = weekOf(b.dataset.unidle);
+    if (w) confirmUnidle(w, () => renderOverview());
+  }));
+  $$('[data-tab]', app).forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); view.tab = b.dataset.tab; renderOverview(); }));
+  $('#robotSel')?.addEventListener('change', (e) => { view.robot = e.target.value; renderOverview(); });
+  $('#yearSel')?.addEventListener('change', (e) => { view.year = Number(e.target.value); renderOverview(); });
+  let qt; $('#q')?.addEventListener('input', (e) => { clearTimeout(qt); qt = setTimeout(() => { view.q = e.target.value; const pos = e.target.selectionStart; renderOverview().then(() => { const i = $('#q'); i.focus(); i.setSelectionRange(pos, pos); }); }, 250); });
+  $('#csv')?.addEventListener('click', () => downloadCsv(recs.filter(matches)));
+}
+
+function downloadCsv(rows) {
+  const head = ['Év', 'Hét', 'Dátum', 'Robot', 'Ellenőrizte', 'Beavatkozások száma', 'Elmaradt feladatok száma', 'Hűtővíz csere', 'Gázáramlás (l/min)', 'Továbbjelzés', 'Kinek', 'Megjegyzés', 'Felhasznált alkatrész', 'Jóváhagyta', 'Jóváhagyva', 'Beküldve', 'Lap változat',
+    ...TASKS.flatMap((t) => [t.title, `${t.title} – megjegyzés`]), 'Régebbi lapváltozat tételei'];
+  // A feladatoszlopok a mostani katalógushoz tartoznak; ami azon a héten nem volt a lapon, üres.
+  // Egy régebbi változatú lap tételei (mások voltak) az utolsó oszlopba kerülnek, címmel együtt.
+  const itemCols = (r) => {
+    const v = r.form_version || 1;
+    if (v >= 3) {
+      const by = Object.fromEntries((r.items || []).map((x) => [x.key, x]));
+      return [...TASKS.flatMap((t) => { const x = by[t.key]; return x ? [STATUS_TXT[x.status] || '', x.note || ''] : ['', '']; }), ''];
+    }
+    const find = (no) => (r.items || []).find((y) => y.no === no) || {};
+    const old = legacyTitles(r).map((t, i) => { const x = find(i + 1); return `${i + 1}. ${t}: ${STATUS_TXT[x.status] || ''}${x.note ? ` – ${x.note}` : ''}`; }).join(' | ');
+    return [...TASKS.flatMap(() => ['', '']), old];
+  };
+  const cell = (v) => { const s = String(v ?? ''); return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const lines = [head, ...rows.map((r) => [r.iso_year, r.iso_week, r.check_date, r.robot, r.inspector, r.action_count, r.skip_count || 0, r.cooling_water_changed || '', r.gas_flow_lpm ?? '', r.escalate ? 'Igen' : 'Nem', r.escalate_to || '', r.remarks || '', r.parts_used || '', r.approved_by || '', r.approved_at ? fmtDT(r.approved_at) : '', fmtDT(r.created_at), r.form_version || 1, ...itemCols(r)])]
+    .map((l) => l.map(cell).join(';')).join('\r\n');
+  const blob = new Blob(['﻿' + lines], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `valk-karbantartas-${today()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ================================================================
+   Új heti lap
+   ================================================================ */
+const DRAFT_KEY = 'km-draft';
+const NOTE_LBL = { action: 'Mit csináltál, mit találtál?', skip: 'Miért maradt el?' };
+const NOTE_PH = { action: 'pl. vízcsere, fúvókacsere, utánhúzás', skip: 'pl. nem volt idő, nem volt alkatrész' };
+function newDraft() {
+  return { form_version: FORM_VERSION, check_date: today(), robot: CONFIG.ROBOTS[0], inspector: '', items: {}, gas_flow_lpm: '', remarks: '', parts_used: '', escalate: null, escalate_to: '' };
+}
+function loadDraft() {
+  // Egy régebbi lapváltozat piszkozata nem tölthető vissza: a tételek mást jelentenének.
+  try {
+    const d = JSON.parse(store.get(DRAFT_KEY));
+    if (d && d.form_version === FORM_VERSION && d.items && !Array.isArray(d.items)) return { draft: d, restored: true };
+  } catch { /* nincs */ }
+  store.del(DRAFT_KEY);
+  return { draft: newDraft(), restored: false };
+}
+
+let formList = null; // a lapok listája a kitöltés idejére (dátumváltáskor nem töltjük újra)
+let formIdle = [];   // a „Nem üzemelt” jelölések ugyanígy
+
+async function renderForm(reuse = false) {
+  $('#nav').hidden = false;
+  const app = $('#app');
+  if (!reuse || !formList) {
+    app.innerHTML = '<p class="muted">Betöltés…</p>';
+    formList = []; formIdle = [];
+    try { [formList, formIdle] = await call(() => Promise.all([api.list(getCode()), api.idleList(getCode()).catch(() => [])])); }
+    catch (e) { if (e instanceof AccessError) return; /* lista nélkül is kitölthető, csak az esedékesség pontatlan */ }
+  }
+  const list = formList;
+  const { draft: d, restored } = loadDraft();
+  const saveDraft = () => { store.set(DRAFT_KEY, JSON.stringify(d)); };
+  const names = [...new Set(list.map((r) => r.inspector))].sort((a, b) => a.localeCompare(b, 'hu'));
+  const hist = historyOf(list, d.robot);
+  const lap = tasksForWeek(d.check_date || today(), hist);
+  lap.forEach(({ t }) => { if (!d.items[t.key]) d.items[t.key] = { status: null, note: '' }; });
+  const state = (t) => d.items[t.key];
+
+  const weekInfo = () => { const w = isoWeek(d.check_date || today()); return `${w.year}. ${w.week}. hét`; };
+  const sameWeek = () => {
+    const w = isoWeek(d.check_date || today());
+    return list.filter((r) => r.robot === d.robot && r.iso_year === w.year && r.iso_week === w.week);
+  };
+
+  // Mit vigyél magaddal: a lapon lévő feladatok eszközei, egyszer.
+  const tools = [...new Set(lap.flatMap(({ t }) => t.tools))];
+  const periodicOnLap = lap.filter(({ info }) => info);
+
+  let n = 0;
+  const itemHtml = ({ t, info }) => {
+    n += 1;
+    const prev = hist.lastSeen[t.key];
+    const prevSkip = prev && prev.status === 'skip';
+    return `
+      <section class="item kind-${t.kind}" id="item-${esc(t.key)}" data-key="${esc(t.key)}" aria-labelledby="t-${esc(t.key)}">
+        <div class="no" aria-hidden="true">${n}</div>
+        <div class="body">
+          <div class="tags">
+            <span class="tag t-${t.kind}">${KINDS[t.kind].label}</span>
+            <span class="tag">${esc(t.freq.label)}</span>
+            ${t.who ? `<span class="tag t-who">${esc(WHO[t.who])}</span>` : ''}
+            ${info ? (info.overdue ? `<span class="tag t-bad">Lejárt: ${fmtDate(info.due)}</span>` : `<span class="tag t-warn">Esedékes: ${fmtDate(info.due)}</span>`) : ''}
+            ${t.nk ? '<span class="tag t-nk">Általános gyakorlat</span>' : ''}
+          </div>
+          <h3 id="t-${esc(t.key)}">${esc(t.title)}</h3>
+          ${prevSkip ? `<p class="prevskip"><b>Legutóbb elmaradt</b> (${fmtDate(prev.date)}): ${esc(prev.note)}</p>` : ''}
+          ${t.pending ? `<p class="pending"><b>Pontosítás alatt:</b> ${esc(t.pending)}</p>` : ''}
+          <ul>${t.steps.map((s) => `<li>${s}</li>`).join('')}</ul>
+          ${t.tools.length ? `<p class="tools"><b>Kell hozzá:</b> ${t.tools.map(esc).join(' · ')}</p>` : ''}
+          <p class="ifbad"><b>Ha nincs rendben:</b> ${esc(t.bad)}</p>
+          ${t.freqNote ? `<p class="small muted" style="margin:0 0 10px">${esc(t.freqNote)}</p>` : ''}
+          ${moreHtml(t)}
+          <div class="seg seg3" role="group" aria-label="${esc(t.title)} – eredmény">
+            <button type="button" class="s-ok" data-st="ok" aria-pressed="false">Rendben</button>
+            <button type="button" class="s-action" data-st="action" aria-pressed="false">Beavatkozás kellett</button>
+            <button type="button" class="s-skip" data-st="skip" aria-pressed="false">Nem csináltam meg</button>
+          </div>
+          <label class="field note" hidden><span class="note-lbl"></span><textarea maxlength="1000"></textarea></label>
+          ${t.extra === 'gas' ? `<div class="extra"><label class="field"><span>Mért gázáramlás a pisztolynál (l/min) – irányérték: ${esc(LOCAL.GAS_FLOW_TARGET)}</span><input type="number" id="f_gas" inputmode="decimal" min="0" max="100" step="0.1" value="${esc(d.gas_flow_lpm)}"></label></div>` : ''}
+          <p class="err" hidden></p>
+          <p class="src">${esc(t.src)}</p>
+        </div>
+      </section>`;
+  };
+
+  const routeHtml = Object.keys(ROUTES).map((rk) => {
+    const inRoute = lap.filter(({ t }) => t.route === rk);
+    if (!inRoute.length) return '';
+    const kinds = rk === 'E' ? [null] : ['look', 'do'];
+    return `<div class="group"><h3>${esc(ROUTES[rk].title)}</h3><p>${esc(ROUTES[rk].intro)}</p></div>
+      ${kinds.map((k) => {
+        const xs = k ? inRoute.filter(({ t }) => t.kind === k) : inRoute;
+        if (!xs.length) return '';
+        return `${k ? `<h4 class="kindhead k-${k}">${KINDS[k].label} <span>– ${KINDS[k].hint}</span></h4>` : ''}${xs.map(itemHtml).join('')}`;
+      }).join('')}`;
+  }).join('');
+
+  app.innerHTML = `
+    <h1>Heti karbantartási lap</h1>
+    ${!reuse && restored && Object.values(d.items).some((x) => x.status) ? '<div class="banner info no-print">Egy korábban elkezdett, be nem küldött lapot töltöttem vissza erről az eszközről. <button class="btn ghost" type="button" id="resetDraft" style="margin-left:6px">Új, üres lap</button></div>' : ''}
+    <div id="dupWarn"></div>
+    <div class="safety"><b>Mielőtt hozzányúlsz:</b> belépés előtt Teach mód, vészleállító benyomva. A robotkart, a huzaladagolót, a vezérlőt és a sínt sűrített levegővel tisztítani tilos – csak a hűtő radiátorát szabad kifúvatni. Hibás biztonsági eszközzel a cellát használni tilos.</div>
+
+    <div class="panel grid-2" id="head">
+      <label class="field" data-f="check_date"><span>Dátum · <b id="weekInfo" style="color:var(--hot-text)">${weekInfo()}</b></span><input type="date" id="f_date" value="${esc(d.check_date)}" max="${addDays(today(), 1)}"><span class="err" hidden></span></label>
+      <label class="field" data-f="robot"><span>Robot / cella</span>
+        ${CONFIG.ROBOTS.length > 1 ? `<select id="f_robot">${CONFIG.ROBOTS.map((r) => `<option ${r === d.robot ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>` : `<input type="text" id="f_robot" value="${esc(d.robot)}" readonly>`}
+        <span class="err" hidden></span></label>
+      <label class="field" data-f="inspector"><span>Ellenőrzést végző neve</span><input type="text" id="f_inspector" list="names" autocomplete="off" value="${esc(d.inspector)}" maxlength="120"><datalist id="names">${names.map((x) => `<option value="${esc(x)}">`).join('')}</datalist><span class="err" hidden></span></label>
+    </div>
+
+    <div class="panel bring">
+      <h3>Mit vigyél magaddal ezen a héten</h3>
+      <ul>${tools.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+      ${periodicOnLap.length ? `<p class="small" style="margin:8px 0 0"><b>Ezen a héten esedékes ritkább feladat:</b> ${periodicOnLap.map(({ t, info }) => `${esc(t.title)}${info.overdue ? ' (lejárt)' : ''}`).join(', ')}.</p>` : ''}
+    </div>
+
+    <h2>Feladatok</h2>
+    <div class="howto">
+      <p><b>Szemrevételezés</b> – csak megnézed vagy kipróbálod. <b>Beavatkozás</b> – tenned is kell valamit. A sorrend az útvonalat követi: elöl, hátul, aztán bekapcsolva.</p>
+      <p><b class="t-ok">Rendben</b> – elvégezted, és a leírt rutinon (tisztítás, heti áramátadó-csere) felül nem kellett semmi.
+         <b class="t-action">Beavatkozás kellett</b> – ezen felül cseréltél, javítottál, utántöltöttél, vagy hibát találtál.
+         <b class="t-skip">Nem csináltam meg</b> – írd be, miért; a következő lapon újra ott lesz.</p>
+    </div>
+    <div id="items">${routeHtml}</div>
+
+    <h2>Összegzés</h2>
+    <div class="panel" style="display:flex;flex-direction:column;gap:14px">
+      <label class="field"><span>Észlelt hiba / megjegyzés</span><textarea id="f_remarks" maxlength="4000" rows="4">${esc(d.remarks)}</textarea></label>
+      <label class="field"><span>Alkatrész vagy anyag felhasználva</span><textarea id="f_parts" maxlength="2000" rows="2">${esc(d.parts_used)}</textarea></label>
+      <div class="field" id="escBox" data-f="escalate"><span>Továbbjelzés szükséges?</span>
+        <div class="seg" role="group" aria-label="Továbbjelzés szükséges?">
+          <button type="button" class="s-yes" data-esc="true" aria-pressed="false">Igen</button>
+          <button type="button" class="s-no" data-esc="false" aria-pressed="false">Nem</button>
+        </div>
+        <p class="err" hidden></p>
+      </div>
+      <label class="field" id="escTo" data-f="escalate_to" hidden><span>Kinek?</span><input type="text" id="f_escto" maxlength="200" value="${esc(d.escalate_to)}"><span class="err" hidden></span></label>
+      <p class="small muted" style="margin:0">A műszakvezető a beküldött lapot a megnyitása után hagyja jóvá. Beküldés után a lap nem módosítható.</p>
+    </div>
+
+    <div class="submitbar no-print"><div class="wrap">
+      <div class="progress"><span id="progTxt" class="small"></span><div class="bar"><i id="progBar"></i></div></div>
+      <button class="btn primary big" id="submitBtn" type="button">Beküldés</button>
+    </div></div>`;
+
+  // --- állapot → felület
+  const secOf = (key) => document.getElementById(`item-${key}`);
+  const paintItem = (t) => {
+    const it = state(t); const sec = secOf(t.key);
+    ['ok', 'action', 'skip'].forEach((s) => sec.classList.toggle(`st-${s}`, it.status === s));
+    $$('.seg button', sec).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.st === it.status)));
+    const note = $('.note', sec); note.hidden = !(it.status === 'action' || it.status === 'skip');
+    if (!note.hidden) { $('.note-lbl', note).textContent = NOTE_LBL[it.status]; $('textarea', note).placeholder = NOTE_PH[it.status]; }
+    const ta = $('textarea', note); if (ta.value !== it.note) ta.value = it.note || '';
+  };
+  const paintEsc = () => {
+    $$('#escBox .seg button').forEach((b) => b.setAttribute('aria-pressed', String(String(d.escalate) === b.dataset.esc)));
+    $('#escTo').hidden = d.escalate !== true;
+  };
+  const paintProgress = () => {
+    const k = lap.filter(({ t }) => state(t).status).length;
+    $('#progTxt').textContent = `${k} / ${lap.length} feladat kitöltve`;
+    $('#progBar').style.width = `${(k / lap.length) * 100}%`;
+  };
+  const paintDup = () => {
+    const s = sameWeek();
+    $('#weekInfo').textContent = weekInfo();
+    const w = isoWeek(d.check_date || today());
+    const idle = formIdle.find((x) => x.robot === d.robot && x.iso_year === w.year && x.iso_week === w.week);
+    $('#dupWarn').innerHTML = s.length ? `<div class="banner warn">Erre a hétre (${weekInfo()}) már van kitöltött lap: ${s.map((r) => `<a href="#/lap/${esc(r.id)}">${esc(r.inspector)}, ${fmtDate(r.check_date)}</a>`).join(', ')}. Csak akkor tölts ki újat, ha tényleg kell.</div>`
+      : idle ? `<div class="banner warn">Erre a hétre (${weekInfo()}) „Nem üzemelt” jelölés van (${esc(idleText(idle))}). Ha mégis kitöltöd, a lap számít.</div>` : '';
+  };
+  const clearErr = (el) => { if (!el) return; el.classList.remove('has-err'); const e = $('.err', el); if (e) { e.hidden = true; e.textContent = ''; } };
+  const setErr = (el, msg) => { el.classList.add('has-err'); const e = $('.err', el); if (e) { e.hidden = false; e.textContent = msg; } };
+
+  lap.forEach(({ t }) => paintItem(t));
+  paintEsc(); paintProgress(); paintDup();
+
+  // --- események
+  $('#items').addEventListener('click', (e) => {
+    const f = e.target.closest('button.fig');
+    if (f) { openImage(f.dataset.src, f.dataset.cap, f.dataset.ref); return; }
+    const b = e.target.closest('.seg button'); if (!b) return;
+    const sec = b.closest('.item'); const t = TASK_BY_KEY[sec.dataset.key];
+    const it = state(t);
+    it.status = b.dataset.st; if (b.dataset.st === 'ok') it.note = '';
+    paintItem(t); paintProgress(); clearErr(sec); saveDraft();
+    if (b.dataset.st !== 'ok') $('textarea', sec).focus();
+  });
+  $('#items').addEventListener('input', (e) => {
+    const sec = e.target.closest('.item'); if (!sec) return;
+    if (e.target.tagName === 'TEXTAREA') { state(TASK_BY_KEY[sec.dataset.key]).note = e.target.value; clearErr(sec); }
+    if (e.target.id === 'f_gas') d.gas_flow_lpm = e.target.value;
+    saveDraft();
+  });
+  // Dátumváltáskor más hét lapja lehet (más ritkább feladatok): újrarajzoljuk a listát.
+  $('#f_date').addEventListener('change', (e) => { d.check_date = e.target.value; saveDraft(); renderForm(true); });
+  $('#f_robot').addEventListener('change', (e) => { d.robot = e.target.value; saveDraft(); renderForm(true); });
+  $('#f_inspector').addEventListener('input', (e) => { d.inspector = e.target.value; clearErr(e.target.closest('.field')); saveDraft(); });
+  $('#f_remarks').addEventListener('input', (e) => { d.remarks = e.target.value; saveDraft(); });
+  $('#f_parts').addEventListener('input', (e) => { d.parts_used = e.target.value; saveDraft(); });
+  $('#f_escto').addEventListener('input', (e) => { d.escalate_to = e.target.value; clearErr($('#escTo')); saveDraft(); });
+  $('#escBox').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-esc]'); if (!b) return;
+    d.escalate = b.dataset.esc === 'true'; paintEsc(); clearErr($('#escBox')); saveDraft();
+    if (d.escalate) $('#f_escto').focus();
+  });
+  $('#resetDraft')?.addEventListener('click', () => { store.del(DRAFT_KEY); renderForm(true); });
+
+  // --- ellenőrzés + beküldés
+  function validate() {
+    const errs = [];
+    const f = (sel) => $(sel).closest('.field');
+    if (!d.check_date) { setErr(f('#f_date'), 'Add meg a dátumot.'); errs.push(f('#f_date')); }
+    else if (d.check_date > addDays(today(), 1)) { setErr(f('#f_date'), 'A dátum nem lehet jövőbeli.'); errs.push(f('#f_date')); }
+    if (!d.inspector.trim()) { setErr(f('#f_inspector'), 'Írd be a neved.'); errs.push(f('#f_inspector')); }
+    lap.forEach(({ t }) => {
+      const it = state(t); const sec = secOf(t.key);
+      if (!it.status) { setErr(sec, 'Jelöld: Rendben, Beavatkozás kellett vagy Nem csináltam meg.'); errs.push(sec); }
+      else if (it.status === 'action' && !it.note.trim()) { setErr(sec, 'Írd be, mit csináltál vagy mit találtál.'); errs.push(sec); }
+      else if (it.status === 'skip' && !it.note.trim()) { setErr(sec, 'Írd be, miért maradt el.'); errs.push(sec); }
+    });
+    const g = $('#f_gas');
+    if (g && d.gas_flow_lpm !== '' && (isNaN(Number(d.gas_flow_lpm)) || Number(d.gas_flow_lpm) < 0 || Number(d.gas_flow_lpm) > 100)) { const sec = g.closest('.item'); setErr(sec, 'A gázáramlás 0 és 100 l/min közötti szám legyen.'); errs.push(sec); }
+    if (d.escalate === null) { setErr($('#escBox'), 'Jelöld: Igen vagy Nem.'); errs.push($('#escBox')); }
+    else if (d.escalate && !d.escalate_to.trim()) { setErr($('#escTo'), 'Írd be, kinek kell továbbjelezni.'); errs.push($('#escTo')); }
+    return errs;
+  }
+
+  $('#submitBtn').addEventListener('click', () => {
+    const errs = validate();
+    if (errs.length) {
+      errs[0].scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      toast(`${errs.length} helyen hiányzik valami – pirossal jelölve.`, true);
+      return;
+    }
+    const cnt = (s) => lap.filter(({ t }) => state(t).status === s).length;
+    const dlg = $('#dlg');
+    dlg.innerHTML = `
+      <h3>Beküldöd a lapot?</h3>
+      <p><b>${weekInfo()}</b> · ${esc(d.robot)} · ${esc(d.inspector.trim())}</p>
+      <p>${cnt('ok')} rendben, <b>${cnt('action')}</b> beavatkozással, <b>${cnt('skip')}</b> elmaradt.${d.escalate ? ` Továbbjelzés: <b>${esc(d.escalate_to.trim())}</b>.` : ''}</p>
+      <p class="small muted">Beküldés után a lap nem módosítható.</p>
+      <p class="err" id="dlgErr" hidden></p>
+      <div class="actions"><button class="btn" type="button" id="dlgNo">Vissza</button><button class="btn primary" type="button" id="dlgYes">Beküldés</button></div>`;
+    dlg.showModal();
+    $('#dlgNo').onclick = () => dlg.close();
+    $('#dlgYes').onclick = async () => {
+      const yes = $('#dlgYes'); yes.disabled = true; yes.textContent = 'Mentés…';
+      const payload = {
+        form_version: FORM_VERSION, check_date: d.check_date, robot: d.robot, inspector: d.inspector.trim(),
+        items: lap.map(({ t }) => { const it = state(t); return { key: t.key, status: it.status, note: it.status === 'ok' ? null : it.note.trim() }; }),
+        gas_flow_lpm: d.gas_flow_lpm === '' ? null : Number(d.gas_flow_lpm),
+        remarks: d.remarks.trim(), parts_used: d.parts_used.trim(),
+        escalate: d.escalate, escalate_to: d.escalate ? d.escalate_to.trim() : null,
+      };
+      try {
+        const id = await call(() => api.submit(getCode(), payload));
+        store.del(DRAFT_KEY);
+        formList = null;
+        dlg.close();
+        toast('A lap elmentve.');
+        location.hash = `#/lap/${id}`;
+      } catch (e) {
+        if (e instanceof AccessError) { dlg.close(); return; }
+        const er = $('#dlgErr'); er.hidden = false;
+        er.textContent = `Nem sikerült menteni: ${e.message} A kitöltött lap megmarad ezen az eszközön.`;
+        yes.disabled = false; yes.textContent = 'Újrapróbálom';
+      }
+    };
+  });
+}
+
+/* ================================================================
+   Lap törlése – megerősítés a törlő nevével (a lap oldaláról és az archívumból)
+   ================================================================ */
+function confirmDelete(r, done) {
+  const dlg = $('#dlg');
+  dlg.innerHTML = `
+    <h3>Törlöd ezt a lapot?</h3>
+    <p><b>${r.iso_year}. ${r.iso_week}. hét</b> · ${fmtDate(r.check_date)} · ${esc(r.inspector)}${r.approved_by ? ` · jóváhagyta: ${esc(r.approved_by)}` : ''}</p>
+    <p class="small">A lap eltűnik az archívumból. Az ütemezés is ehhez igazodik: ami csak ezen a lapon volt elvégezve, az újra esedékes lesz.</p>
+    <form id="delForm" class="field" style="gap:12px">
+      <label class="field"><span>Ki törli?</span><input type="text" id="delName" maxlength="120" autocomplete="off" required></label>
+      <p class="err" id="delErr" hidden></p>
+      <div class="actions" style="margin-top:4px"><button class="btn" type="button" id="delNo">Mégse</button><button class="btn danger fill" type="submit" id="delYes">Törlés</button></div>
+    </form>`;
+  dlg.showModal();
+  $('#delName').focus();
+  $('#delNo').onclick = () => dlg.close();
+  $('#delForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const name = $('#delName').value.trim();
+    const er = $('#delErr');
+    if (!name) { er.hidden = false; er.textContent = 'Írd be a nevedet.'; return; }
+    const yes = $('#delYes'); yes.disabled = true; yes.textContent = 'Törlés…';
+    try {
+      await call(() => api.remove(getCode(), r.id, name));
+      formList = null;
+      dlg.close();
+      toast('A lap törölve.');
+      done();
+    } catch (err) {
+      if (err instanceof AccessError) { dlg.close(); return; }
+      er.hidden = false; er.textContent = `Nem sikerült törölni: ${err.message}`;
+      yes.disabled = false; yes.textContent = 'Újrapróbálom';
+    }
+  };
+}
+
+/* ================================================================
+   „Nem üzemelt” hét – a robot nem ment, ezért nem volt ellenőrzés.
+   A hét nem számít kimaradtnak; visszavonható. A ritkább feladatok
+   esedékessége ettől nem változik (naptár szerint számol).
+   ================================================================ */
+const idleText = (x) => `${x.reason || 'Nem volt ellenőrzés'} – ${x.marked_by}, ${fmtDT(x.created_at)}`;
+const weekRange = (w) => `${fmtShort(w.monday)} – ${fmtShort(addDays(w.monday, 6))}`;
+
+function confirmIdle(w, robot, done) {
+  const dlg = $('#dlg');
+  dlg.innerHTML = `
+    <h3>Nem üzemelt a robot ezen a héten?</h3>
+    <p><b>${w.year}. ${w.week}. hét</b> · ${weekRange(w)}</p>
+    <p class="small">A hét lap nélkül marad, de nem számít kimaradtnak. Ha mégis ment a robot, a jelölés visszavonható, vagy a lap utólag is kitölthető.</p>
+    <form id="idleForm" class="field" style="gap:12px">
+      <label class="field"><span>Miért? (nem kötelező)</span><input type="text" id="idleReason" maxlength="300" autocomplete="off" placeholder="pl. nem volt gyártás, szabadság, javításra vár"></label>
+      <label class="field"><span>Ki jelöli?</span><input type="text" id="idleName" maxlength="120" autocomplete="off" required></label>
+      <p class="err" id="idleErr" hidden></p>
+      <div class="actions" style="margin-top:4px"><button class="btn" type="button" id="idleNo">Mégse</button><button class="btn primary" type="submit" id="idleYes">Megjelölöm</button></div>
+    </form>`;
+  dlg.showModal();
+  $('#idleReason').focus();
+  $('#idleNo').onclick = () => dlg.close();
+  $('#idleForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const name = $('#idleName').value.trim();
+    const er = $('#idleErr');
+    if (!name) { er.hidden = false; er.textContent = 'Írd be a nevedet.'; return; }
+    const yes = $('#idleYes'); yes.disabled = true; yes.textContent = 'Mentés…';
+    try {
+      await call(() => api.idleMark(getCode(), { robot, iso_year: w.year, iso_week: w.week, reason: $('#idleReason').value.trim(), marked_by: name }));
+      formList = null;
+      dlg.close();
+      toast(`${w.week}. hét: a robot nem üzemelt.`);
+      done();
+    } catch (err) {
+      if (err instanceof AccessError) { dlg.close(); return; }
+      er.hidden = false; er.textContent = `Nem sikerült: ${err.message}`;
+      yes.disabled = false; yes.textContent = 'Újrapróbálom';
+    }
+  };
+}
+
+function confirmUnidle(w, done) {
+  const dlg = $('#dlg');
+  dlg.innerHTML = `
+    <h3>Visszavonod a „Nem üzemelt” jelölést?</h3>
+    <p><b>${w.year}. ${w.week}. hét</b> · ${weekRange(w)}</p>
+    <p class="small muted">${esc(idleText(w.idle))}</p>
+    <p class="small">Utána a hét újra kitöltendő (vagy hiányzó) lesz.</p>
+    <p class="err" id="unidleErr" hidden></p>
+    <div class="actions"><button class="btn" type="button" id="unidleNo">Mégse</button><button class="btn primary" type="button" id="unidleYes">Visszavonom</button></div>`;
+  dlg.showModal();
+  $('#unidleNo').onclick = () => dlg.close();
+  $('#unidleYes').onclick = async () => {
+    const yes = $('#unidleYes'); yes.disabled = true;
+    try {
+      await call(() => api.idleUnmark(getCode(), w.idle));
+      formList = null;
+      dlg.close();
+      toast('A jelölés visszavonva.');
+      done();
+    } catch (err) {
+      if (err instanceof AccessError) { dlg.close(); return; }
+      const er = $('#unidleErr'); er.hidden = false; er.textContent = `Nem sikerült: ${err.message}`;
+      yes.disabled = false;
+    }
+  };
+}
+
+/* ================================================================
+   Egy lap megtekintése, jóváhagyás, nyomtatás
+   ================================================================ */
+async function renderDetail(id) {
+  $('#nav').hidden = false;
+  const app = $('#app');
+  app.innerHTML = '<p class="muted">Betöltés…</p>';
+  let r;
+  try { r = await call(() => api.get(getCode(), id)); }
+  catch (e) { if (!(e instanceof AccessError)) app.innerHTML = `<div class="banner bad">${esc(e.message)}</div><a class="btn" href="#/">Vissza az áttekintéshez</a>`; return; }
+
+  // 3. változattól: kulcs + cím a lapon; régebbi lapok: sorszám + a régi címek.
+  const rows = (r.form_version || 1) >= 3
+    ? (r.items || []).map((x) => ({ title: x.title || TASK_BY_KEY[x.key]?.title || x.key, x }))
+    : legacyTitles(r).map((title, i) => ({ title, x: (r.items || []).find((y) => y.no === i + 1) || {} }));
+  app.innerHTML = `
+    <h1>Heti karbantartási lap – ${r.iso_year}. ${r.iso_week}. hét</h1>
+    <div class="panel kv">
+      <div><span>Dátum</span><b>${fmtDate(r.check_date)}</b></div>
+      <div><span>Robot / cella</span><b>${esc(r.robot)}</b></div>
+      <div><span>Ellenőrzést végezte</span><b>${esc(r.inspector)}</b></div>
+      <div><span>Beküldve</span><b>${fmtDT(r.created_at)}</b></div>
+    </div>
+
+    <h2>Feladatok</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Feladat</th><th>Eredmény</th><th>Megjegyzés</th></tr></thead>
+      <tbody>${rows.map(({ title, x }, i) => `
+        <tr><td><b>${i + 1}</b></td><td>${esc(title)}</td>
+        <td>${x.status ? `<span class="badge ${STATUS_BADGE[x.status]}">${STATUS_TXT[x.status]}</span>` : '—'}</td>
+        <td class="pre">${esc(x.note || '')}</td></tr>`).join('')}
+      </tbody></table></div>
+
+    <h2>Összegzés</h2>
+    <div class="panel kv">
+      <div><span>Hűtővíz-csere</span><b>${r.cooling_water_changed ? `Igen – ${fmtDate(r.cooling_water_changed)}` : 'Nem'}</b></div>
+      <div><span>Mért gázáramlás</span><b>${r.gas_flow_lpm != null ? `${String(r.gas_flow_lpm).replace('.', ',')} l/min` : '—'}</b></div>
+      <div><span>Továbbjelzés</span><b>${r.escalate ? `Igen – ${esc(r.escalate_to)}` : 'Nem'}</b></div>
+    </div>
+    <div class="panel" style="margin-top:10px"><span class="muted small" style="text-transform:uppercase;letter-spacing:.06em;font-weight:600">Észlelt hiba / megjegyzés</span><p class="pre" style="margin:6px 0 0">${esc(r.remarks) || '—'}</p></div>
+    <div class="panel" style="margin-top:10px"><span class="muted small" style="text-transform:uppercase;letter-spacing:.06em;font-weight:600">Alkatrész vagy anyag felhasználva</span><p class="pre" style="margin:6px 0 0">${esc(r.parts_used) || '—'}</p></div>
+
+    <h2>Műszakvezetői jóváhagyás</h2>
+    <div class="panel" id="appr">
+      ${r.approved_by
+        ? `<div class="kv"><div><span>Jóváhagyta</span><b>${esc(r.approved_by)}</b></div><div><span>Időpont</span><b>${fmtDT(r.approved_at)}</b></div></div>`
+        : `<form id="apprForm" class="grid-2 no-print" style="align-items:end">
+             <label class="field"><span>Műszakvezető neve</span><input type="text" id="apprName" maxlength="120" autocomplete="off" required></label>
+             <button class="btn primary" type="submit">Jóváhagyom</button>
+           </form>
+           <p class="err" id="apprErr" hidden></p>
+           <p class="small muted" style="margin:8px 0 0">A jóváhagyás egyszer írható be, utána nem módosítható.</p>`}
+    </div>
+
+    <div class="actions no-print">
+      <a class="btn" href="#/">Vissza az áttekintéshez</a>
+      <button class="btn" type="button" id="printBtn">Nyomtatás / PDF</button>
+      <button class="btn danger" type="button" id="delBtn" style="margin-left:auto">Lap törlése</button>
+    </div>`;
+
+  $('#printBtn').addEventListener('click', () => window.print());
+  $('#delBtn').addEventListener('click', () => confirmDelete(r, () => { location.hash = '#/'; }));
+  $('#apprForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('#apprName').value.trim();
+    if (!name) return;
+    const b = e.submitter; if (b) b.disabled = true;
+    try {
+      await call(() => api.approve(getCode(), r.id, name));
+      toast('Jóváhagyva.');
+      renderDetail(r.id);
+    } catch (err) {
+      if (err instanceof AccessError) return;
+      const er = $('#apprErr'); er.hidden = false; er.textContent = err.message;
+      if (b) b.disabled = false;
+    }
+  });
+}
+
+/* ================================================================
+   Útvonalak
+   ================================================================ */
+function route() {
+  if (!DEMO && !getCode()) return renderGate();
+  const h = location.hash || '#/';
+  window.scrollTo(0, 0);
+  const m = h.match(/^#\/lap\/([0-9a-zA-Z-]+)$/);
+  const run = m ? () => renderDetail(m[1]) : h === '#/uj' ? () => renderForm(false) : renderOverview;
+  Promise.resolve().then(run).catch((e) => {
+    if (e instanceof AccessError) return;
+    console.error(e);
+    $('#app').innerHTML = `<div class="banner bad">Váratlan hiba történt: ${esc(e.message)}</div><a class="btn" href="#/">Vissza az áttekintéshez</a>`;
+  });
+}
+
+$('#demo').hidden = !DEMO;
+codeFromUrl();
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
