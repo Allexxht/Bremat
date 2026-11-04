@@ -9,7 +9,7 @@
 <title>Munkanapló</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
 /* ================================================================
    BREMAT – Munkanapló. Külön oldal, külön adatok (a Valk heti laptól
@@ -127,9 +127,106 @@ dialog h3 { margin: 0 0 12px; font-family: var(--font-cond); font-size: 22px; }
   .top, .no-print, .demo-bar, #toast { display: none !important; }
   .entry { break-inside: avoid; }
 }
+
+/* ================================================================
+   ÜVEG RÉTEG (Munkanapló) – 2026. november 4.
+   A fenti stílus után jön, ezért felülírja: áttetsző „üveg” felületek,
+   mögöttük lassan úszó, elmosott színfoltok, lekerekített formák,
+   finom mozgás. A lap működéséhez nem nyúl, csak a kinézethez.
+   ================================================================ */
+:root {
+  --bg: #08090b;
+  --panel: rgba(255, 255, 255, .045);
+  --panel-2: rgba(255, 255, 255, .085);
+  --line: rgba(255, 255, 255, .11);
+  --field: rgba(0, 0, 0, .28);
+  --radius: 16px;
+  --font: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-cond: 'Sora', 'Manrope', system-ui, sans-serif;
+  --ease: cubic-bezier(.22, .8, .24, 1);
+  --glow: rgba(63, 182, 201, .32);
+}
+body { background: var(--bg); }
+
+/* Háttér: három nagy, elmosott színfolt, nagyon lassan mozognak */
+.backdrop { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.backdrop i { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .55; }
+.backdrop i:nth-child(1) { width: 52vmax; height: 52vmax; background: #0e5e6b; top: -18vmax; left: -14vmax; animation: g-drift1 28s var(--ease) infinite alternate; }
+.backdrop i:nth-child(2) { width: 48vmax; height: 48vmax; background: #1a3c66; bottom: -22vmax; right: -16vmax; animation: g-drift2 34s var(--ease) infinite alternate; }
+.backdrop i:nth-child(3) { width: 30vmax; height: 30vmax; background: #12483d; top: 35%; left: 40%; opacity: .35; animation: g-drift3 40s var(--ease) infinite alternate; }
+@keyframes g-drift1 { to { transform: translate(12vmax, 8vmax) scale(1.08); } }
+@keyframes g-drift2 { to { transform: translate(-10vmax, -10vmax) scale(1.1); } }
+@keyframes g-drift3 { to { transform: translate(-14vmax, 8vmax) scale(.9); } }
+main.wrap { position: relative; z-index: 1; }
+
+/* Fejléc: üveg, alatta egy vékony, színes fénycsík */
+.top {
+  background: rgba(8, 9, 11, .92);
+  -webkit-backdrop-filter: blur(20px) saturate(150%); backdrop-filter: blur(20px) saturate(150%);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 0 color-mix(in srgb, var(--hot) 55%, transparent), 0 10px 30px rgba(0, 0, 0, .35);
+}
+.brand b { font-family: var(--font-cond); letter-spacing: .03em; text-transform: none; font-weight: 700; }
+h1, h2, dialog h3 { font-family: var(--font-cond); letter-spacing: .01em; }
+h2 { text-transform: none; font-weight: 600; }
+
+/* Felületek: áttetsző üveg, finom világos éllel */
+.panel, .card, .entry, dialog, .table-wrap {
+  background: var(--panel); border-color: var(--line); border-radius: 20px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 10px 30px rgba(0, 0, 0, .25);
+}
+dialog {
+  background: rgba(20, 21, 25, .78);
+  -webkit-backdrop-filter: blur(24px) saturate(150%); backdrop-filter: blur(24px) saturate(150%);
+  border-radius: 24px;
+}
+dialog::backdrop { background: rgba(0, 0, 0, .45); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+dialog[open] { animation: g-pop .35s var(--ease); }
+@keyframes g-pop { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+
+/* Gombok: lekerekítve, puha mozgás; a fő gomb halványan „világít” */
+.btn { border-radius: 14px; border-width: 1px; background: var(--panel-2); transition: transform .2s var(--ease), background .25s var(--ease), border-color .25s, box-shadow .25s; }
+.btn:hover { border-color: rgba(255, 255, 255, .28); }
+.btn:active { transform: scale(.97); }
+.btn.primary, .btn.naplo, .btn.valk { box-shadow: 0 8px 24px var(--glow); }
+.btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn.ghost { background: transparent; }
+
+/* Beviteli mezők */
+input[type=text], input[type=date], input[type=number], input[type=search], input[type=password], select, textarea {
+  background: var(--field); border-width: 1px; border-color: var(--line); border-radius: 12px;
+  transition: border-color .2s, box-shadow .2s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: color-mix(in srgb, var(--hot) 70%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hot) 22%, transparent); }
+
+/* Megjelenés: a lap részei finoman, egymás után úsznak be */
+#app > * { animation: g-rise .5s var(--ease) both; }
+#app > *:nth-child(2) { animation-delay: .05s; } #app > *:nth-child(3) { animation-delay: .1s; }
+#app > *:nth-child(4) { animation-delay: .15s; } #app > *:nth-child(5) { animation-delay: .2s; }
+#app > *:nth-child(n+6) { animation-delay: .25s; }
+@keyframes g-rise { from { opacity: 0; transform: translateY(12px); } }
+
+#toast { border-radius: 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, .4); }
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop i, #app > *, dialog[open] { animation: none; }
+  .btn { transition: none; }
+}
+@media print { .backdrop { display: none; } .panel, .card, .entry, .table-wrap { box-shadow: none; } }
+
+/* --- Napló-specifikus részek --- */
+.entry { border-left-width: 1px; position: relative; padding-left: 18px; transition: transform .25s var(--ease), border-color .25s; }
+.entry::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 0 4px 4px 0; background: var(--hot); box-shadow: 0 0 12px var(--glow); }
+.entry:hover { border-color: rgba(255, 255, 255, .2); }
+.day { border-color: var(--line); }
+.day.today .day-head h3 { text-shadow: 0 0 18px var(--glow); }
+.tag { background: var(--panel-2); border-color: var(--line); }
+.hist .old { background: rgba(0, 0, 0, .25); border-radius: 14px; }
+.weekbar .title b { font-family: var(--font-cond); }
 </style>
 </head>
 <body>
+<div class="backdrop" aria-hidden="true"><i></i><i></i><i></i></div>
 <div id="demo" class="demo-bar" hidden>DEMÓ mód – mintaadatok, csak ebben a böngészőben tárolva. Az éles naplóhoz nyisd meg a címet ?demo nélkül.</div>
 <header class="top">
   <div class="wrap">
