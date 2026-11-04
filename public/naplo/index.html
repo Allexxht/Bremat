@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14171a">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Munkanapló</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* ================================================================
+   BREMAT – Munkanapló. Külön oldal, külön adatok (a Valk heti laptól
+   független). A kinézet ugyanaz a sötét, ipari stílus, más kiemelőszínnel.
+   ================================================================ */
+:root {
+  --bg: #14171a;
+  --panel: #1d2126;
+  --panel-2: #262b31;
+  --line: #3a4048;
+  --text: #eef0f2;
+  --muted: #b1b8c0;
+  --hot: #3fb6c9;          /* kékeszöld kiemelés – hogy ne tévesszük össze a Valk lappal */
+  --hot-ink: #06171a;
+  --hot-text: #7fd6e3;
+  --ok: #34a862;
+  --bad: #e5484d;
+  --bad-text: #ff9296;
+  --warn: #e9a92b;
+  --ink-on-color: #0f1210;
+  --radius: 10px;
+  --font: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-cond: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.45; }
+a { color: var(--hot-text); }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--hot-text); outline-offset: 2px; }
+.wrap { max-width: 900px; margin: 0 auto; padding: 0 16px; }
+
+.top { background: #0e1012; border-bottom: 3px solid var(--hot); }
+.top .wrap { display: flex; align-items: center; gap: 12px; min-height: 60px; flex-wrap: wrap; padding-top: 6px; padding-bottom: 6px; }
+.brand { display: flex; flex-direction: column; line-height: 1.1; text-decoration: none; color: var(--text); margin-right: auto; }
+.brand b { font-family: var(--font-cond); font-size: 22px; letter-spacing: .06em; text-transform: uppercase; }
+.brand b span { color: var(--hot); }
+.brand small { color: var(--muted); font-size: 13px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--panel-2); color: var(--text); font-weight: 600; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--hot); border-color: var(--hot); color: var(--hot-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn[disabled] { opacity: .55; cursor: not-allowed; }
+.btn.ghost { background: transparent; }
+.btn.danger { background: transparent; border-color: var(--bad); color: var(--bad-text); }
+.btn.danger.fill { background: var(--bad); color: var(--ink-on-color); }
+.btn.sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
+
+main.wrap { padding-top: 18px; padding-bottom: 60px; }
+h1 { font-family: var(--font-cond); font-size: 28px; line-height: 1.1; margin: 4px 0 14px; }
+h2 { font-family: var(--font-cond); font-size: 20px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .04em; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.err { color: var(--bad-text); font-weight: 600; font-size: 14px; margin: 0; }
+.banner { border-radius: var(--radius); padding: 12px 14px; margin: 0 0 14px; border: 1.5px solid var(--bad); background: rgba(229,72,77,.1); }
+.demo-bar { background: var(--warn); color: var(--ink-on-color); text-align: center; font-weight: 600; font-size: 14px; padding: 6px 12px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > span { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+input[type=text], input[type=date], input[type=search], textarea {
+  background: #101316; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 46px; width: 100%;
+}
+textarea { min-height: 96px; resize: vertical; }
+input:hover, textarea:hover { border-color: var(--muted); }
+.grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* Hét-léptető */
+.weekbar { display: flex; align-items: center; gap: 10px; margin: 22px 0 12px; flex-wrap: wrap; }
+.weekbar .title { flex: 1 1 200px; text-align: center; }
+.weekbar .title b { display: block; font-family: var(--font-cond); font-size: 24px; line-height: 1.1; }
+.weekbar .title span { color: var(--muted); font-size: 14px; }
+
+/* Napok */
+.day { border-top: 1px solid var(--line); padding: 12px 0; }
+.day:last-child { border-bottom: 1px solid var(--line); }
+.day-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.day-head h3 { margin: 0; font-size: 17px; margin-right: auto; }
+.day-head h3 small { color: var(--muted); font-weight: 500; margin-left: 6px; }
+.day.today .day-head h3 { color: var(--hot-text); }
+.day.empty .day-head h3 { color: var(--muted); font-weight: 500; }
+.sum { color: var(--muted); font-size: 14px; white-space: nowrap; }
+.entry { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--hot); border-radius: var(--radius); padding: 12px 14px; margin-top: 10px; }
+.entry .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.entry .meta { display: flex; gap: 6px 14px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 13.5px; margin-top: 8px; }
+.entry .meta .grow { margin-left: auto; }
+.tag { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); font-weight: 600; font-size: 13px; }
+.hrs { color: var(--hot-text); font-weight: 700; }
+
+.results .entry { cursor: default; }
+.results .when { font-weight: 700; margin-bottom: 4px; }
+
+.gate { max-width: 420px; margin: 8vh auto 0; }
+
+dialog { background: var(--panel); color: var(--text); border: 1.5px solid var(--line); border-radius: 12px; padding: 20px; width: min(560px, calc(100vw - 32px)); max-width: none; }
+dialog::backdrop { background: rgba(0,0,0,.6); }
+dialog h3 { margin: 0 0 12px; font-family: var(--font-cond); font-size: 22px; }
+.hist { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
+.hist .old { background: #15181c; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 14.5px; }
+.hist .old .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ok); color: var(--ink-on-color); font-weight: 700; padding: 12px 18px; border-radius: 10px; z-index: 50; display: none; max-width: calc(100vw - 32px); }
+#toast.bad { background: var(--bad); }
+
+@media (max-width: 560px) {
+  h1 { font-size: 24px; }
+  .weekbar .title { order: -1; flex-basis: 100%; }
+  .weekbar .btn { flex: 1; }
+}
+@media print {
+  :root { --bg:#fff; --panel:#fff; --panel-2:#fff; --line:#000; --text:#000; --muted:#333; --hot:#000; --hot-text:#000; color-scheme: light; }
+  .top, .no-print, .demo-bar, #toast { display: none !important; }
+  .entry { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div id="demo" class="demo-bar" hidden>DEMÓ mód – mintaadatok, csak ebben a böngészőben tárolva. Az éles naplóhoz nyisd meg a címet ?demo nélkül.</div>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#/"><b>BREMAT <span>·</span> Munkanapló</b><small>Mit csináltam – hetente, napokra bontva</small></a>
+  </div>
+</header>
+<main class="wrap" id="app" aria-live="polite"></main>
+<div id="toast" role="status"></div>
+<dialog id="dlg"></dialog>
+
+<script type="module">
+/* ================================================================
+   Adatok: /api/naplo (Netlify Blobs, "naplo" tároló) – külön a Valk
+   heti laptól. DEMÓ mód: a cím végére ?demo.
+   ================================================================ */
+const API_URL = '/api/naplo';
+const DEMO = new URLSearchParams(location.search).has('demo');
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* nincs tárolás */ } },
+  del(k) { try { localStorage.removeItem(k); } catch { /* nincs tárolás */ } },
+};
+
+// --- Dátum (Europe/Budapest) ------------------------------------------
+const ymdFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest', year: 'numeric', month: '2-digit', day: '2-digit' });
+const today = () => ymdFmt.format(new Date());
+const toDate = (ymd) => new Date(ymd + 'T00:00:00Z');
+const addDays = (ymd, n) => { const d = toDate(ymd); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const mondayOf = (ymd) => addDays(ymd, -((toDate(ymd).getUTCDay() + 6) % 7));
+function isoWeek(ymd) {
+  const d = toDate(ymd);
+  d.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7));
+  const year = d.getUTCFullYear();
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  return { year, week: 1 + Math.round(((d - jan4) / 86400000 - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7) };
+}
+function mondayOfIsoWeek(year, week) {
+  if (!Number.isInteger(year) || !Number.isInteger(week) || week < 1 || week > 53) return null;
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  jan4.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7) + (week - 1) * 7);
+  const ymd = jan4.toISOString().slice(0, 10);
+  const w = isoWeek(ymd);
+  return w.year === year && w.week === week ? ymd : null;
+}
+const DAYS = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'];
+const huShort = new Intl.DateTimeFormat('hu-HU', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+const huLong = new Intl.DateTimeFormat('hu-HU', { timeZone: 'UTC', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+const huDT = new Intl.DateTimeFormat('hu-HU', { timeZone: 'Europe/Budapest', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+const fmtShort = (ymd) => huShort.format(toDate(ymd));
+const fmtLong = (ymd) => huLong.format(toDate(ymd));
+const fmtDT = (ts) => (ts ? huDT.format(new Date(ts)) : '—');
+const fmtH = (h) => `${String(Math.round(h * 100) / 100).replace('.', ',')} óra`;
+const sumH = (rows) => rows.reduce((s, r) => s + (r.hours || 0), 0);
+const weekHash = (ymd) => { const w = isoWeek(ymd); return `#/het/${w.year}-${String(w.week).padStart(2, '0')}`; };
+
+function toast(msg, bad = false) {
+  const t = $('#toast');
+  t.textContent = msg; t.className = bad ? 'bad' : ''; t.style.display = 'block';
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, bad ? 6000 : 3000);
+}
+
+/* ================================================================
+   Adatréteg – az éles és a demó azonos felülettel
+   ================================================================ */
+class AccessError extends Error {}
+
+function createApiAdapter() {
+  async function call(action, payload) {
+    let res;
+    try {
+      res = await fetch(API_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, ...payload }), cache: 'no-store' });
+    } catch {
+      throw new Error('Nincs kapcsolat a szerverrel. Ellenőrizd az internetet, és próbáld újra.');
+    }
+    let body = null;
+    try { body = await res.json(); } catch { /* nem JSON */ }
+    if (res.status === 401) throw new AccessError('Hibás hozzáférési kód');
+    if (!res.ok) throw new Error(body?.error || `Szerverhiba (${res.status}). Próbáld újra később.`);
+    return body?.data;
+  }
+  return {
+    ping: (code) => call('ping', { code }),
+    range: (code, from, to) => call('range', { code, from, to }),
+    all: (code) => call('all', { code }),
+    create: (code, entry, name) => call('create', { code, entry, name }),
+    update: (code, id, version, entry, name) => call('update', { code, id, version, entry, name }),
+    history: (code, id) => call('history', { code, id }),
+    remove: (code, id, name) => call('delete', { code, id, name }),
+  };
+}
+
+function createDemoAdapter() {
+  const KEY = 'naplo-demo-v1';
+  let mem = null;
+  const save = () => store.set(KEY, JSON.stringify(mem));
+  const load = () => {
+    if (mem) return mem;
+    try { mem = JSON.parse(store.get(KEY)); } catch { mem = null; }
+    if (!mem) { mem = seed(); save(); }
+    return mem;
+  };
+  function mk(date, text, area, hours, author) {
+    const { year, week } = isoWeek(date);
+    return { id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2), date, iso_year: year, iso_week: week, text, area, hours, author, created_at: new Date(date + 'T14:00:00Z').toISOString(), version: 1, updated_at: null, updated_by: null };
+  }
+  function seed() {
+    const m = mondayOf(today());
+    const e = [
+      mk(addDays(m, -7), 'Heti karbantartás a Valk roboton.\nÁramátadó csere, gázfúvóka tisztítás.', 'Valk robot', 1.5, 'Alex'),
+      mk(addDays(m, -6), 'Kompresszor szűrőcsere.', 'Kompresszor', 0.5, 'Alex'),
+      mk(addDays(m, -4), 'Új jig beállítása, próbahegesztés.', 'Valk robot', 3, 'Alex'),
+      mk(m, 'Heti karbantartás a Valk roboton.', 'Valk robot', 1.5, 'Alex'),
+    ];
+    if (addDays(m, 1) <= today()) e.push(mk(addDays(m, 1), 'Megrendeltem a pótalkatrészeket (gázfúvóka, áramátadó).', null, null, 'Alex'));
+    return { entries: e, hist: [] };
+  }
+  const delay = (v) => new Promise((r) => setTimeout(() => r(structuredClone(v)), 100));
+  const fail = (m) => Promise.reject(new Error(m));
+  const sort = (rows) => rows.sort((a, b) => a.date.localeCompare(b.date) || a.created_at.localeCompare(b.created_at));
+  const clean = (e) => {
+    const text = (e.text || '').trim();
+    if (!text) return { err: 'Írd be, mit csináltál' };
+    if (!e.date || e.date > addDays(today(), 1)) return { err: 'A dátum nem lehet jövőbeli' };
+    let hours = null;
+    if (e.hours !== '' && e.hours != null) { hours = Number(String(e.hours).replace(',', '.')); if (!Number.isFinite(hours) || hours <= 0 || hours > 24) return { err: 'Az idő 0 és 24 óra között lehet' }; }
+    const { year, week } = isoWeek(e.date);
+    return { date: e.date, iso_year: year, iso_week: week, text, area: (e.area || '').trim() || null, hours };
+  };
+  return {
+    ping: () => delay(true),
+    range: (_c, from, to) => delay(sort(load().entries.filter((x) => x.date >= from && x.date <= to))),
+    all: () => delay(sort([...load().entries])),
+    create: (_c, e, name) => {
+      const v = clean(e); if (v.err) return fail(v.err);
+      if (!name.trim()) return fail('Írd be a nevedet');
+      const r = { ...mk(v.date, v.text, v.area, v.hours, name.trim()), created_at: new Date().toISOString() };
+      load().entries.push(r); save(); return delay(r);
+    },
+    update: (_c, id, version, e, name) => {
+      const v = clean(e); if (v.err) return fail(v.err);
+      if (!name.trim()) return fail('Írd be a nevedet');
+      const r = load().entries.find((x) => x.id === id);
+      if (!r) return fail('Nincs ilyen bejegyzés');
+      if (r.version !== version) return fail('Közben valaki módosította ezt a bejegyzést.');
+      if (['date', 'text', 'area', 'hours'].every((f) => (r[f] ?? null) === (v[f] ?? null))) return delay(r);
+      mem.hist.push({ ...structuredClone(r), replaced_at: new Date().toISOString(), replaced_by: name.trim() });
+      Object.assign(r, v, { version: r.version + 1, updated_at: new Date().toISOString(), updated_by: name.trim() });
+      save(); return delay(r);
+    },
+    history: (_c, id) => delay(load().hist.filter((x) => x.id === id).sort((a, b) => b.version - a.version)),
+    remove: (_c, id, name) => {
+      if (!name.trim()) return fail('Írd be a nevedet a törléshez');
+      const i = load().entries.findIndex((x) => x.id === id);
+      if (i < 0) return fail('Nincs ilyen bejegyzés');
+      mem.entries.splice(i, 1); save(); return delay(true);
+    },
+  };
+}
+
+const api = DEMO ? createDemoAdapter() : createApiAdapter();
+
+/* ================================================================
+   Belépés: ugyanaz a kód, mint a heti lapé (ha az oldalon nincs külön
+   NAPLO_ACCESS_CODE). Ha ezen az eszközön már be vagy lépve a heti
+   laphoz, itt nem kell újra beírni.
+   ================================================================ */
+function codeFromUrl() {
+  const u = new URL(location.href);
+  const k = u.searchParams.get('kod');
+  if (k) {
+    store.set('naplo-kod', k.trim());
+    u.searchParams.delete('kod');
+    history.replaceState(null, '', u.pathname + (u.search || '') + u.hash);
+  }
+}
+const getCode = () => store.get('naplo-kod') || store.get('km-kod') || '';
+
+async function call(fn) {
+  try { return await fn(); } catch (e) {
+    if (e instanceof AccessError) { store.del('naplo-kod'); renderGate('A hozzáférési kód nem érvényes ehhez a naplóhoz.'); }
+    throw e;
+  }
+}
+
+function renderGate(msg = '') {
+  $('#app').innerHTML = `
+    <div class="gate panel">
+      <h1>Belépés</h1>
+      <p class="muted">Írd be a hozzáférési kódot. Ezen az eszközön megjegyzi, legközelebb nem kell újra beírni.</p>
+      ${msg ? `<p class="err">${esc(msg)}</p>` : ''}
+      <form id="gateForm" class="stack" style="margin-top:12px">
+        <label class="field"><span>Hozzáférési kód</span>
+          <input id="gateCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label>
+        <button class="btn primary" type="submit">Belépés</button>
+      </form>
+    </div>`;
+  $('#gateCode').focus();
+  $('#gateForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const code = $('#gateCode').value.trim();
+    try { await api.ping(code); store.set('naplo-kod', code); route(); }
+    catch (e) { renderGate(e instanceof AccessError ? 'Hibás hozzáférési kód.' : e.message); }
+  });
+}
+
+/* ================================================================
+   Név és a korábban beírt gépek / területek (csak ezen az eszközön)
+   ================================================================ */
+const myName = () => store.get('naplo-nev') || '';
+const AREAS_KEY = 'naplo-teruletek';
+const areas = () => { try { return JSON.parse(store.get(AREAS_KEY)) || ['Valk robot']; } catch { return ['Valk robot']; } };
+const rememberArea = (a) => { if (!a) return; store.set(AREAS_KEY, JSON.stringify([a, ...areas().filter((x) => x !== a)].slice(0, 20))); };
+const areaOptions = () => areas().map((a) => `<option value="${esc(a)}">`).join('');
+
+/* ================================================================
+   Bejegyzés űrlap (új és szerkesztés)
+   ================================================================ */
+function entryFields(p, e = {}) {
+  return `
+    <label class="field"><span>Mit csináltam?</span>
+      <textarea id="${p}Text" maxlength="4000" required placeholder="pl. áramátadó csere, szűrőtisztítás, hibakeresés a jignél…">${esc(e.text || '')}</textarea></label>
+    <div class="grid-4">
+      <label class="field"><span>Nap</span><input type="date" id="${p}Date" value="${esc(e.date || today())}" max="${today()}" required></label>
+      <label class="field"><span>Gép / terület</span><input type="text" id="${p}Area" list="areaList" maxlength="120" value="${esc(e.area || '')}" placeholder="nem kötelező"></label>
+      <label class="field"><span>Idő (óra)</span><input type="text" id="${p}Hours" inputmode="decimal" maxlength="5" value="${e.hours != null ? esc(String(e.hours).replace('.', ',')) : ''}" placeholder="pl. 1,5"></label>
+      <label class="field"><span>${p === 'ed' ? 'Ki módosítja?' : 'Ki írja?'}</span><input type="text" id="${p}Name" maxlength="120" autocomplete="name" value="${esc(myName())}" required></label>
+    </div>`;
+}
+const readFields = (p) => ({
+  entry: { date: $(`#${p}Date`).value, text: $(`#${p}Text`).value, area: $(`#${p}Area`).value, hours: $(`#${p}Hours`).value.trim() },
+  name: $(`#${p}Name`).value.trim(),
+});
+function checkFields({ entry, name }) {
+  if (!entry.text.trim()) return 'Írd be, mit csináltál.';
+  if (!entry.date) return 'Add meg a napot.';
+  if (entry.date > today()) return 'A nap nem lehet jövőbeli.';
+  if (entry.hours) { const h = Number(entry.hours.replace(',', '.')); if (!Number.isFinite(h) || h <= 0 || h > 24) return 'Az idő 0 és 24 óra között lehet (pl. 1,5).'; }
+  if (!name) return 'Írd be a nevedet.';
+  return null;
+}
+const DRAFT = 'naplo-piszkozat';
+
+/* ================================================================
+   Heti nézet
+   ================================================================ */
+let allCache = null; // keresés és CSV – módosításkor eldobjuk
+const invalidate = () => { allCache = null; };
+
+async function renderWeek(monday) {
+  const sunday = addDays(monday, 6);
+  const { year, week } = isoWeek(monday);
+  const t = today();
+  const isCurrent = monday === mondayOf(t);
+  const app = $('#app');
+  const draft = (() => { try { return JSON.parse(store.get(DRAFT)) || {}; } catch { return {}; } })();
+  app.innerHTML = `
+    <datalist id="areaList">${areaOptions()}</datalist>
+    <section class="panel no-print">
+      <h2>Új bejegyzés</h2>
+      <form id="newForm" class="stack" novalidate>
+        ${entryFields('nw', { text: draft.text || '', date: draft.date && draft.date <= t ? draft.date : (isCurrent || monday > t ? t : monday), area: draft.area || '', hours: draft.hours || null })}
+        <p class="err" id="nwErr" hidden></p>
+        <div class="row"><button class="btn primary" type="submit" id="nwSave">Mentés</button><span class="small muted">A bejegyzés a kiválasztott napnál jelenik meg. Utólag javítható, a korábbi változat megmarad.</span></div>
+      </form>
+    </section>
+
+    <div class="weekbar">
+      <a class="btn" href="${weekHash(addDays(monday, -7))}" aria-label="Előző hét">‹ Előző</a>
+      <div class="title"><b>${year}. ${week}. hét</b><span>${fmtShort(monday)} – ${fmtShort(sunday)}<span id="weekSum"></span></span></div>
+      <a class="btn" href="${weekHash(addDays(monday, 7))}" aria-label="Következő hét" ${monday >= mondayOf(t) ? 'hidden' : ''}>Következő ›</a>
+      ${isCurrent ? '' : `<a class="btn ghost" href="#/">Ez a hét</a>`}
+    </div>
+    <div id="days"><p class="muted">Betöltés…</p></div>
+
+    <section class="panel no-print" style="margin-top:28px">
+      <h2>Keresés</h2>
+      <form id="searchForm" class="row">
+        <input type="search" id="q" placeholder="pl. szűrő, görgő, kompresszor…" style="flex:1 1 220px">
+        <button class="btn" type="submit">Keresés</button>
+        <button class="btn ghost" type="button" id="csv">CSV letöltése (minden bejegyzés)</button>
+      </form>
+      <div id="results" class="results"></div>
+    </section>`;
+
+  // Új bejegyzés: a beírt szöveg megmarad, ha közben újratöltődik az oldal.
+  const saveDraft = () => { const { entry } = readFields('nw'); store.set(DRAFT, JSON.stringify(entry)); };
+  ['nwText', 'nwDate', 'nwArea', 'nwHours'].forEach((id) => $('#' + id).addEventListener('input', saveDraft));
+  $('#newForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const f = readFields('nw');
+    const er = $('#nwErr');
+    const msg = checkFields(f);
+    if (msg) { er.hidden = false; er.textContent = msg; return; }
+    er.hidden = true;
+    const b = $('#nwSave'); b.disabled = true; b.textContent = 'Mentés…';
+    try {
+      const r = await call(() => api.create(getCode(), f.entry, f.name));
+      store.set('naplo-nev', f.name); rememberArea(r.area); store.del(DRAFT); invalidate();
+      toast('Elmentve.');
+      const target = mondayOf(r.date);
+      if (target !== monday) location.hash = weekHash(r.date); else renderWeek(monday);
+    } catch (e) {
+      if (e instanceof AccessError) return;
+      er.hidden = false; er.textContent = `Nem sikerült menteni: ${e.message}`;
+      b.disabled = false; b.textContent = 'Újrapróbálom';
+    }
+  });
+  $('#searchForm').addEventListener('submit', (ev) => { ev.preventDefault(); search($('#q').value); });
+  $('#csv').addEventListener('click', downloadCsv);
+
+  let rows;
+  try { rows = await call(() => api.range(getCode(), monday, sunday)); } catch (e) {
+    if (e instanceof AccessError) return;
+    $('#days').innerHTML = `<div class="banner">Nem sikerült betölteni: ${esc(e.message)}</div>`;
+    return;
+  }
+  const total = sumH(rows);
+  $('#weekSum').textContent = rows.length ? ` · ${rows.length} bejegyzés${total ? ` · ${fmtH(total)}` : ''}` : '';
+  $('#days').innerHTML = DAYS.map((name, i) => {
+    const d = addDays(monday, i);
+    const list = rows.filter((r) => r.date === d);
+    const h = sumH(list);
+    const future = d > t;
+    return `
+      <section class="day${d === t ? ' today' : ''}${list.length ? '' : ' empty'}">
+        <div class="day-head">
+          <h3>${name}<small>${fmtShort(d)}${d === t ? ' · ma' : ''}</small></h3>
+          ${h ? `<span class="sum">${fmtH(h)}</span>` : ''}
+          ${future ? '' : `<button class="btn sm ghost no-print" type="button" data-add="${d}">+ Bejegyzés</button>`}
+        </div>
+        ${list.map((r) => entryHtml(r)).join('')}
+      </section>`;
+  }).join('');
+  $$('[data-add]').forEach((b) => b.addEventListener('click', () => {
+    $('#nwDate').value = b.dataset.add; saveDraft();
+    $('#newForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('#nwText').focus({ preventScroll: true });
+  }));
+  $$('[data-edit]').forEach((b) => b.addEventListener('click', () => openEdit(rows.find((r) => r.id === b.dataset.edit), () => renderWeek(monday))));
+}
+
+function entryHtml(r, withEdit = true) {
+  return `
+    <article class="entry">
+      <div class="txt">${esc(r.text)}</div>
+      <div class="meta">
+        ${r.area ? `<span class="tag">${esc(r.area)}</span>` : ''}
+        ${r.hours ? `<span class="hrs">${fmtH(r.hours)}</span>` : ''}
+        <span>${esc(r.author)} · ${fmtDT(r.created_at)}</span>
+        ${r.updated_at ? `<span>módosítva: ${fmtDT(r.updated_at)} (${esc(r.updated_by)})</span>` : ''}
+        ${withEdit ? `<span class="grow"></span><button class="btn sm no-print" type="button" data-edit="${esc(r.id)}">Szerkesztés</button>` : ''}
+      </div>
+    </article>`;
+}
+
+/* ================================================================
+   Szerkesztés, korábbi változatok, törlés
+   ================================================================ */
+function openEdit(r, done) {
+  if (!r) return;
+  const dlg = $('#dlg');
+  dlg.innerHTML = `
+    <h3>Bejegyzés szerkesztése</h3>
+    <form id="edForm" class="stack" novalidate>
+      ${entryFields('ed', r)}
+      <p class="err" id="edErr" hidden></p>
+      <div class="row">
+        <button class="btn primary" type="submit" id="edSave">Mentés</button>
+        <button class="btn" type="button" id="edCancel">Mégse</button>
+        <span style="margin-left:auto"></span>
+        <button class="btn danger" type="button" id="edDel">Törlés</button>
+      </div>
+    </form>
+    <div class="hist">
+      <p class="small muted" style="margin:0">Beírta: ${esc(r.author)}, ${fmtDT(r.created_at)}${r.updated_at ? ` · utoljára módosította: ${esc(r.updated_by)}, ${fmtDT(r.updated_at)}` : ''}</p>
+      ${r.version > 1 ? `<button class="btn sm ghost" type="button" id="edHist" style="margin-top:8px">Korábbi változatok (${r.version - 1})</button><div id="histList"></div>` : ''}
+    </div>`;
+  dlg.showModal();
+  $('#edText').focus();
+  $('#edCancel').onclick = () => dlg.close();
+  const er = $('#edErr');
+  $('#edForm').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const f = readFields('ed');
+    const msg = checkFields(f);
+    if (msg) { er.hidden = false; er.textContent = msg; return; }
+    const b = $('#edSave'); b.disabled = true; b.textContent = 'Mentés…';
+    try {
+      const n = await call(() => api.update(getCode(), r.id, r.version, f.entry, f.name));
+      store.set('naplo-nev', f.name); rememberArea(n.area); invalidate();
+      dlg.close(); toast('Elmentve.');
+      if (mondayOf(n.date) !== mondayOf(r.date)) location.hash = weekHash(n.date); else done();
+    } catch (e) {
+      if (e instanceof AccessError) { dlg.close(); return; }
+      er.hidden = false; er.textContent = `Nem sikerült menteni: ${e.message}`;
+      b.disabled = false; b.textContent = 'Újrapróbálom';
+    }
+  };
+  $('#edDel').onclick = async () => {
+    const name = $('#edName').value.trim();
+    if (!name) { er.hidden = false; er.textContent = 'Írd be a nevedet a törléshez („Ki módosítja?”).'; return; }
+    if (!confirm('Biztosan törlöd ezt a bejegyzést?')) return;
+    try {
+      await call(() => api.remove(getCode(), r.id, name));
+      invalidate(); dlg.close(); toast('Törölve.'); done();
+    } catch (e) {
+      if (e instanceof AccessError) { dlg.close(); return; }
+      er.hidden = false; er.textContent = `Nem sikerült törölni: ${e.message}`;
+    }
+  };
+  $('#edHist')?.addEventListener('click', async (ev) => {
+    ev.target.disabled = true;
+    const box = $('#histList');
+    box.innerHTML = '<p class="small muted">Betöltés…</p>';
+    try {
+      const h = await call(() => api.history(getCode(), r.id));
+      box.innerHTML = h.length ? h.map((x) => `
+        <div class="old">
+          <div class="small muted">${x.version}. változat · ${fmtLong(x.date)}${x.area ? ` · ${esc(x.area)}` : ''}${x.hours ? ` · ${fmtH(x.hours)}` : ''}<br>
+          lecserélte: ${esc(x.replaced_by)}, ${fmtDT(x.replaced_at)}</div>
+          <div class="txt" style="margin-top:6px">${esc(x.text)}</div>
+        </div>`).join('') : '<p class="small muted">Nincs korábbi változat.</p>';
+    } catch (e) {
+      if (e instanceof AccessError) { dlg.close(); return; }
+      box.innerHTML = `<p class="err">${esc(e.message)}</p>`;
+    }
+  });
+}
+
+/* ================================================================
+   Keresés és CSV
+   ================================================================ */
+async function loadAll() { if (!allCache) allCache = await call(() => api.all(getCode())); return allCache; }
+
+async function search(q) {
+  const box = $('#results');
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) { box.innerHTML = ''; return; }
+  box.innerHTML = '<p class="muted">Keresés…</p>';
+  let rows;
+  try { rows = await loadAll(); } catch (e) { if (!(e instanceof AccessError)) box.innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
+  const hit = rows.filter((r) => { const s = `${r.text} ${r.area || ''} ${r.author}`.toLowerCase(); return words.every((w) => s.includes(w)); }).reverse();
+  box.innerHTML = `<p class="small muted" style="margin:14px 0 0">${hit.length ? `${hit.length} találat, a legújabb elöl.` : 'Nincs találat.'}</p>` +
+    hit.slice(0, 200).map((r) => `<div style="margin-top:12px"><div class="when"><a href="${weekHash(r.date)}">${fmtLong(r.date)} · ${r.iso_year}. ${r.iso_week}. hét</a></div>${entryHtml(r, false)}</div>`).join('');
+}
+
+async function downloadCsv() {
+  let rows;
+  try { rows = await loadAll(); } catch (e) { if (!(e instanceof AccessError)) toast(e.message, true); return; }
+  const head = ['Dátum', 'Nap', 'Év', 'Hét', 'Gép / terület', 'Idő (óra)', 'Mit csináltam', 'Írta', 'Rögzítve', 'Módosítva', 'Módosította', 'Változat'];
+  const cell = (v) => { const s = String(v ?? ''); return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const lines = [head, ...rows.map((r) => [r.date, DAYS[(toDate(r.date).getUTCDay() + 6) % 7], r.iso_year, r.iso_week, r.area || '', r.hours != null ? String(r.hours).replace('.', ',') : '', r.text, r.author, fmtDT(r.created_at), r.updated_at ? fmtDT(r.updated_at) : '', r.updated_by || '', r.version])]
+    .map((l) => l.map(cell).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + lines], { type: 'text/csv;charset=utf-8' }));
+  a.download = `munkanaplo-${today()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ================================================================
+   Útvonal: #/ = ez a hét, #/het/2026-45 = egy adott hét
+   ================================================================ */
+function route() {
+  if (!DEMO && !getCode()) return renderGate();
+  const m = (location.hash || '').match(/^#\/het\/(\d{4})-(\d{1,2})$/);
+  let monday = m ? mondayOfIsoWeek(Number(m[1]), Number(m[2])) : null;
+  const cur = mondayOf(today());
+  if (!monday || monday > cur) monday = cur;
+  window.scrollTo(0, 0);
+  renderWeek(monday).catch((e) => {
+    if (e instanceof AccessError) return;
+    console.error(e);
+    $('#app').innerHTML = `<div class="banner">Váratlan hiba történt: ${esc(e.message)}</div><a class="btn" href="#/">Vissza</a>`;
+  });
+}
+
+$('#demo').hidden = !DEMO;
+codeFromUrl();
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>

@@ -1,7 +1,8 @@
 # BREMAT – Valk robot heti karbantartási lap
 # A public/ mappa változtatás nélkül megy ki (nincs build lépés).
-# Az adatkezelés egyetlen Netlify Function (/api/km), az adatok a site saját
-# Netlify Blobs tárolójában vannak – külső adatbázis nincs.
+# Az adatkezelés Netlify Functions: /api/km (heti lap) és /api/naplo (külön
+# Munkanapló, /naplo/). Az adatok a site saját Netlify Blobs tárolójában
+# vannak (km-checks, naplo) – külső adatbázis nincs.
 [build]
   publish = "public"
   command = ""

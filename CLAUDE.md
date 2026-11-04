@@ -39,7 +39,10 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   tesztekhez). Kódellenőrzés (sha256 + `timingSafeEqual`), `validateSubmit()` minden mezőre,
   ISO hét és „ma” Europe/Budapest szerint.
 - `tests/km-core.test.mjs` – `npm test` (Node 22-ben a `node --test tests/` mappát nem fogad
-  el, a fájlt kell megadni).
+  el, a fájlokat kell megadni; a `package.json` mindkét tesztfájlt felsorolja).
+- **Munkanapló** (2026. november 4., a felhasználó kérésére): `public/naplo/index.html`,
+  `netlify/functions/naplo.mjs` (`/api/naplo`), `lib/naplo-core.mjs`, `tests/naplo-core.test.mjs`.
+  Lásd lent a „Munkanapló” részt.
 
 ## A feladatok – 3. változat (2026. október 1.)
 - A felhasználó által jóváhagyott lista. **Útvonal szerint** (hogy ne kelljen ide-oda
@@ -138,6 +141,27 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   továbbra is naptár szerint számol.
 - A `list` minden lapot teljes tartalommal ad vissza (hetente egy lap, évente ~52 blob –
   sok év után is kicsi). Ha valaha lassú lenne, akkor jöhet egy összesítő index-blob.
+
+## Munkanapló (2026. november 4.)
+- A felhasználó saját naplója: melyik héten, melyik nap mit csinált, visszakövethetően.
+  **Külön oldal** (`/naplo/`) ugyanazon a Netlify oldalon (bremat-stuff) – a felhasználó
+  kifejezett kérése: „ne szúrjuk össze a Valk welding naplóval”. A heti lapról nincs rá link,
+  és fordítva sem; saját Blobs tároló (`naplo`), saját függvény. Közös csak a kódellenőrzés és a
+  dátumkezelés (a `naplo-core` a `km-core`-ból importálja). Nem külön Netlify oldal, mert az a
+  fiók kreditkeretén osztozna, és a felhasználó a keret miatt aggódik.
+- Bejegyzés kulcsa `e/<YYYY-MM-DD>/<uuid>` (a dátum a kulcsban, így egy hét lekéréséhez csak a
+  kulcsokat listázzuk, és csak azokat olvassuk be). Mezők: `id`, `date`, `iso_year`/`iso_week`,
+  `text`, `area` (gép/terület, nem kötelező), `hours` (0–24, nem kötelező), `author`,
+  `created_at`, `version`, `updated_at`/`updated_by`.
+- Módosítás: a régi változat `h/<uuid>/<változat>` alá kerül `onlyIfNew`-val – ez egyben zár:
+  ugyanarra a változatra épülő második módosítás 409. Ha a nap változik, az új kulcsra írás után
+  törlődik a régi. Törlés: `d/<uuid>` másolat, utána törlés (mint a heti lapnál).
+- Műveletek: `ping`, `range` (max. 62 nap), `all` (keresés, CSV), `create`, `update`,
+  `history`, `delete`. A kliens `createApiAdapter()`/`createDemoAdapter()` – új funkciót mindkettőbe.
+- Kód: `NAPLO_ACCESS_CODE`, ha be van állítva, különben `KM_ACCESS_CODE`. A kliens `naplo-kod`
+  localStorage kulcsot használ, és ha az nincs, a heti lap `km-kod`-ját próbálja.
+- Kinézet: ugyanaz a sötét stílus, de **kékeszöld** kiemelés (a heti lap narancs), hogy ne
+  lehessen összetéveszteni.
 
 ## Munkamódszer
 - A magyarázatok magyarul szóljanak, de a menü- és beállításneveket angolul írd

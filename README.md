@@ -41,6 +41,9 @@ Netlify oldalnak a saját tárolójában (Netlify Blobs) vannak.
 | `lib/km-core.mjs` | A szerveroldali logika: kódellenőrzés, a beküldött lap teljes újraellenőrzése, jóváhagyás egyszer. Tárolófüggetlen, ezért tesztelhető. |
 | `tests/km-core.test.mjs` | Egységtesztek: `npm test`. |
 | `netlify.toml` | Netlify beállítás: a `public/` mappa, a function, biztonsági fejlécek. |
+| `public/naplo/index.html` | **Munkanapló** – külön oldal (`/naplo/`), lásd lent. |
+| `netlify/functions/naplo.mjs`, `lib/naplo-core.mjs` | A napló szerveroldala (`/api/naplo`, Blobs tároló: `naplo`). |
+| `tests/naplo-core.test.mjs` | A napló tesztjei (az `npm test` ezt is futtatja). |
 
 **DEMÓ mód:** a cím végére `?demo` (pl. `https://…/?demo`). Mintaadatokkal fut, a böngészőben
 tárolva, az éles adatokhoz nem nyúl. Kipróbálásra és betanításra.
@@ -75,10 +78,27 @@ tárolva, az éles adatokhoz nem nyúl. Kipróbálásra és betanításra.
    irányértéke, a hűtő folyadéka és az üzembe helyezés napja (ettől számolja a ritkább
    feladatok első esedékességét).
 
+## Munkanapló (`/naplo/`)
+
+Külön oldal ugyanazon a Netlify oldalon: `https://bremat-stuff.netlify.app/naplo/`.
+A Valk heti laphoz nincs köze (nincs rá link, saját tároló), csak a belépési kód közös.
+
+- **Bejegyzés:** nap, „Mit csináltam?”, gép / terület és idő (óra) – ez kettő nem kötelező –,
+  és ki írta. A félig beírt szöveg újratöltés után is megmarad.
+- **Heti nézet** hétfőtől vasárnapig, napokra bontva, napi és heti óraösszeggel; lapozás
+  hétről hétre (a hét a címben: `#/het/2026-45`).
+- **Keresés** minden bejegyzésben, **CSV letöltés** minden bejegyzéssel.
+- **Visszakövethető:** minden bejegyzésnél ott van, ki és mikor írta. Javításkor a korábbi
+  változat megmarad (Szerkesztés → Korábbi változatok), törléskor egy másolat marad a
+  tárolóban (`d/<id>`).
+- **Belépés:** ugyanaz a kód, mint a heti lapé (`KM_ACCESS_CODE`). Ha külön kód kell, a Netlify-on
+  állítsd be a `NAPLO_ACCESS_CODE` env vart (legalább 12 betű/szám), és az lesz a napló kódja.
+- **DEMÓ:** `/naplo/?demo`.
+
 ## Ahol az adat van – fontos
 
 - Az adatok **ennek a Netlify oldalnak** a tárolójában vannak (Netlify → a site → **Blobs**,
-  `km-checks`). Új deploy, repó-módosítás nem érinti őket.
+  `km-checks`, a naplóé `naplo`). Új deploy, repó-módosítás nem érinti őket.
 - **A Netlify oldalt ne töröld**, mert vele együtt a lapok is törlődnek. Átnevezni lehet.
 - Mentés: az Archívum **CSV letöltés** gombja minden lapot, minden tétellel kiad. Érdemes
   negyedévente letölteni és elrakni.
