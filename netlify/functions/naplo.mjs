@@ -16,6 +16,7 @@ function blobStore() {
     },
     async setIfNew(k, v) { return (await s.setJSON(k, v, { onlyIfNew: true })).modified; },
     async setIfMatch(k, v, etag) { return (await s.setJSON(k, v, { onlyIfMatch: etag })).modified; },
+    async set(k, v) { await s.setJSON(k, v); },
     delete: (k) => s.delete(k),
     async listKeys(prefix) {
       const { blobs } = await s.list({ prefix });

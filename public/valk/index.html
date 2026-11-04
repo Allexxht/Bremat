@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#eef0f3">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <title>Valk robot – heti karbantartás</title>
@@ -271,75 +271,91 @@ dialog h3 { margin: 0 0 10px; font-family: var(--font-cond); font-size: 22px; }
 }
 
 /* ================================================================
-   ÜVEG RÉTEG (Valk) – 2026. november 4.
-   A fenti stílus után jön, ezért felülírja: áttetsző „üveg” felületek,
-   mögöttük lassan úszó, elmosott színfoltok, lekerekített formák,
-   finom mozgás. A lap működéséhez nem nyúl, csak a kinézethez.
+   ÜVEG RÉTEG – VILÁGOS (Valk) – 2026. november 4.
+   A fenti stílus után jön, ezért felülírja: VILÁGOS, áttetsző „üveg”
+   felületek (az üzemben, erős fényben is jól olvasható), mögöttük lassan
+   úszó, halvány színfoltok, lekerekített formák, finom mozgás.
+   A lap működéséhez nem nyúl, csak a kinézethez.
    ================================================================ */
 :root {
-  --bg: #08090b;
-  --panel: rgba(255, 255, 255, .045);
-  --panel-2: rgba(255, 255, 255, .085);
-  --line: rgba(255, 255, 255, .11);
-  --field: rgba(0, 0, 0, .28);
+  --bg: #eef0f3;
+  --panel: rgba(255, 255, 255, .74);
+  --panel-2: rgba(255, 255, 255, .96);
+  --line: rgba(16, 20, 28, .13);
+  --field: #ffffff;
+  --text: #12151b;
+  --muted: #535b69;
+  --hot: #c8102e;
+  --hot-ink: #ffffff;
+  --hot-text: #ad0c25;
+  --ok: #1e9a4e; --ok-text: #137638;
+  --warn: #e39b12; --warn-text: #8a5600;
+  --bad: #d93a40; --bad-text: #b0222a;
+  --ink-on-color: #ffffff;
   --radius: 16px;
   --font: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-cond: 'Sora', 'Manrope', system-ui, sans-serif;
   --ease: cubic-bezier(.22, .8, .24, 1);
-  --glow: rgba(213, 15, 37, .35);
+  --glow: rgba(200, 16, 46, .28);
+  --shadow: 0 8px 26px rgba(20, 24, 33, .07);
+  color-scheme: light;
 }
-body { background: var(--bg); }
+body { background: var(--bg); color: var(--text); }
 
-/* Háttér: három nagy, elmosott színfolt, nagyon lassan mozognak */
+/* Háttér: három nagy, halvány, elmosott színfolt, nagyon lassan mozognak */
 .backdrop { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-.backdrop i { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .55; }
-.backdrop i:nth-child(1) { width: 52vmax; height: 52vmax; background: #8a0d1d; top: -18vmax; left: -14vmax; animation: g-drift1 28s var(--ease) infinite alternate; }
-.backdrop i:nth-child(2) { width: 48vmax; height: 48vmax; background: #3d0710; bottom: -22vmax; right: -16vmax; animation: g-drift2 34s var(--ease) infinite alternate; }
-.backdrop i:nth-child(3) { width: 30vmax; height: 30vmax; background: #2a2a30; top: 35%; left: 40%; opacity: .35; animation: g-drift3 40s var(--ease) infinite alternate; }
+.backdrop i { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .6; }
+.backdrop i:nth-child(1) { width: 52vmax; height: 52vmax; background: #f2a9b3; top: -18vmax; left: -14vmax; animation: g-drift1 28s var(--ease) infinite alternate; }
+.backdrop i:nth-child(2) { width: 48vmax; height: 48vmax; background: #f5ccd2; bottom: -22vmax; right: -16vmax; animation: g-drift2 34s var(--ease) infinite alternate; }
+.backdrop i:nth-child(3) { width: 30vmax; height: 30vmax; background: #c9ccd3; top: 35%; left: 40%; opacity: .45; animation: g-drift3 40s var(--ease) infinite alternate; }
 @keyframes g-drift1 { to { transform: translate(12vmax, 8vmax) scale(1.08); } }
 @keyframes g-drift2 { to { transform: translate(-10vmax, -10vmax) scale(1.1); } }
 @keyframes g-drift3 { to { transform: translate(-14vmax, 8vmax) scale(.9); } }
 main.wrap { position: relative; z-index: 1; }
 
-/* Fejléc: üveg, alatta egy vékony, színes fénycsík */
+/* Fejléc: fehér üveg, alatta vékony, színes csík */
 .top {
-  background: rgba(8, 9, 11, .92);
-  -webkit-backdrop-filter: blur(20px) saturate(150%); backdrop-filter: blur(20px) saturate(150%);
+  background: rgba(255, 255, 255, .97);
+  -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%);
   border-bottom: 1px solid var(--line);
-  box-shadow: 0 1px 0 0 color-mix(in srgb, var(--hot) 55%, transparent), 0 10px 30px rgba(0, 0, 0, .35);
+  box-shadow: 0 2px 0 0 var(--hot), 0 8px 24px rgba(20, 24, 33, .08);
 }
-.brand b { font-family: var(--font-cond); letter-spacing: .03em; text-transform: none; font-weight: 700; }
-h1, h2, dialog h3 { font-family: var(--font-cond); letter-spacing: .01em; }
+.brand { color: var(--text); }
+.brand b { font-family: var(--font-cond); letter-spacing: .02em; text-transform: none; font-weight: 700; }
+h1, h2, dialog h3 { font-family: var(--font-cond); letter-spacing: .005em; }
 h2 { text-transform: none; font-weight: 600; }
+a { color: var(--hot-text); }
 
-/* Felületek: áttetsző üveg, finom világos éllel */
-.panel, .card, .entry, dialog, .table-wrap {
+/* Felületek: fehér, áttetsző üveg, finom árnyékkal */
+.panel, .card, .entry, dialog, .table-wrap, .howto {
   background: var(--panel); border-color: var(--line); border-radius: 20px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 10px 30px rgba(0, 0, 0, .25);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), var(--shadow);
 }
-dialog {
-  background: rgba(20, 21, 25, .78);
-  -webkit-backdrop-filter: blur(24px) saturate(150%); backdrop-filter: blur(24px) saturate(150%);
-  border-radius: 24px;
-}
-dialog::backdrop { background: rgba(0, 0, 0, .45); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+dialog { background: rgba(255, 255, 255, .95); color: var(--text); border-radius: 24px; }
+dialog::backdrop { background: rgba(20, 24, 33, .28); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 dialog[open] { animation: g-pop .35s var(--ease); }
 @keyframes g-pop { from { opacity: 0; transform: translateY(10px) scale(.98); } }
 
-/* Gombok: lekerekítve, puha mozgás; a fő gomb halványan „világít” */
-.btn { border-radius: 14px; border-width: 1px; background: var(--panel-2); transition: transform .2s var(--ease), background .25s var(--ease), border-color .25s, box-shadow .25s; }
-.btn:hover { border-color: rgba(255, 255, 255, .28); }
+/* Gombok */
+.btn { border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, .9); color: var(--text);
+  transition: transform .2s var(--ease), background .25s var(--ease), border-color .25s, box-shadow .25s; }
+.btn:hover { border-color: rgba(16, 20, 28, .3); }
 .btn:active { transform: scale(.97); }
-.btn.primary, .btn.naplo, .btn.valk { box-shadow: 0 8px 24px var(--glow); }
-.btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
-.btn.ghost { background: transparent; }
+.btn.primary, .btn.naplo, .btn.valk { background: var(--hot); border-color: var(--hot); color: var(--hot-ink); box-shadow: 0 8px 22px var(--glow); }
+.btn.primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn.ghost { background: rgba(255, 255, 255, .55); }
+.btn.danger { background: rgba(255, 255, 255, .8); color: var(--bad-text); border-color: color-mix(in srgb, var(--bad) 60%, transparent); }
+.btn.danger.fill { background: var(--bad); color: #fff; }
 
 /* Beviteli mezők */
 input[type=text], input[type=date], input[type=number], input[type=search], input[type=password], select, textarea {
-  background: var(--field); border-width: 1px; border-color: var(--line); border-radius: 12px;
+  background: var(--field); color: var(--text); border: 1px solid rgba(16, 20, 28, .18); border-radius: 12px;
   transition: border-color .2s, box-shadow .2s;
 }
-input:focus, select:focus, textarea:focus { outline: none; border-color: color-mix(in srgb, var(--hot) 70%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hot) 22%, transparent); }
+input:hover, select:hover, textarea:hover { border-color: rgba(16, 20, 28, .32); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--hot); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hot) 20%, transparent); }
+:focus-visible { outline-color: var(--hot); }
 
 /* Megjelenés: a lap részei finoman, egymás után úsznak be */
 #app > * { animation: g-rise .5s var(--ease) both; }
@@ -348,45 +364,61 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: color-m
 #app > *:nth-child(n+6) { animation-delay: .25s; }
 @keyframes g-rise { from { opacity: 0; transform: translateY(12px); } }
 
-#toast { border-radius: 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, .4); }
+#toast { border-radius: 14px; color: #fff; box-shadow: 0 12px 30px rgba(20, 24, 33, .25); }
+.demo-bar { position: relative; z-index: 2; }
 
 @media (prefers-reduced-motion: reduce) {
   .backdrop i, #app > *, dialog[open] { animation: none; }
   .btn { transition: none; }
 }
-@media print { .backdrop { display: none; } .panel, .card, .entry, .table-wrap { box-shadow: none; } }
+@media print { .backdrop { display: none; } .panel, .card, .entry, .table-wrap { box-shadow: none; backdrop-filter: none; } }
 
 /* --- Valk-specifikus részek --- */
 .top .wrap { min-height: 64px; }
-.item { background: var(--panel); border-width: 1px; border-color: var(--line); border-radius: 20px; transition: border-color .3s var(--ease), background .3s var(--ease); }
-.item.st-ok { border-color: color-mix(in srgb, var(--ok) 65%, transparent); background: color-mix(in srgb, var(--ok) 7%, var(--panel)); }
-.item.st-action { border-color: color-mix(in srgb, var(--warn) 65%, transparent); background: color-mix(in srgb, var(--warn) 7%, var(--panel)); }
-.item.st-skip { background: color-mix(in srgb, var(--bad) 7%, var(--panel)); }
-.item .no { background: color-mix(in srgb, var(--hot) 16%, rgba(0,0,0,.35)); border-radius: 12px; font-family: var(--font-cond); font-size: 18px; }
-.more { background: rgba(0, 0, 0, .22); border-color: var(--line); border-radius: 14px; }
-.seg button { background: var(--field); border-width: 1px; border-radius: 12px; transition: background .2s var(--ease), border-color .2s, transform .15s var(--ease); }
+.brand b span { color: var(--hot); }
+.item { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); transition: border-color .3s var(--ease), background .3s var(--ease); }
+.item.st-ok { border-color: color-mix(in srgb, var(--ok) 55%, transparent); background: color-mix(in srgb, var(--ok) 7%, rgba(255,255,255,.85)); }
+.item.st-action { border-color: color-mix(in srgb, var(--warn) 60%, transparent); background: color-mix(in srgb, var(--warn) 8%, rgba(255,255,255,.85)); }
+.item.st-skip { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 6%, rgba(255,255,255,.85)); }
+.item.has-err { border-color: var(--bad); }
+.item .no { background: color-mix(in srgb, var(--hot) 10%, #ffffff); color: var(--hot-text); border-radius: 12px; font-family: var(--font-cond); font-size: 18px; }
+.item.kind-look .no { background: #e8f0fa; color: #2c64a8; }
+.tag { border-width: 1px; }
+.tag.t-look { color: #2c64a8; border-color: #9dbbe0; background: #f1f6fc; }
+.kindhead.k-look { color: #2c64a8; }
+.more { background: rgba(255, 255, 255, .65); border-color: var(--line); border-radius: 14px; }
+.seg button { background: #ffffff; color: var(--text); border: 1px solid rgba(16, 20, 28, .2); border-radius: 12px; transition: background .2s var(--ease), border-color .2s, transform .15s var(--ease); }
+.seg button:hover { border-color: rgba(16, 20, 28, .38); }
 .seg button:active { transform: scale(.97); }
-.extra { background: rgba(0, 0, 0, .2); border-radius: 12px; }
-.howto, .bring { border-radius: 20px; }
+.seg button[aria-pressed=true].s-ok, .seg button[aria-pressed=true].s-no { background: var(--ok); border-color: var(--ok); color: #fff; }
+.seg button[aria-pressed=true].s-skip { background: var(--bad); border-color: var(--bad); color: #fff; }
+.seg button[aria-pressed=true].s-action, .seg button[aria-pressed=true].s-yes { background: var(--warn); border-color: var(--warn); color: #241600; }
+.badge.warn { color: #241600; }
+.extra { background: rgba(255, 255, 255, .7); border-radius: 12px; }
+.bring { border-radius: 20px; }
 .group { border-left: 0; padding-left: 0; }
-.group h3::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 3px; background: var(--hot); margin-right: 10px; vertical-align: middle; box-shadow: 0 0 12px var(--glow); }
-th { background: rgba(0, 0, 0, .35); }
-td.del, tr.missing td.del, tr.idle td.del { background: #0d0e10; }
-tr.link { transition: background .2s; }
+.group h3::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 3px; background: var(--hot); margin-right: 10px; vertical-align: middle; box-shadow: 0 0 10px var(--glow); }
+.safety { background: color-mix(in srgb, var(--hot) 6%, rgba(255,255,255,.85)); border: 1px solid color-mix(in srgb, var(--hot) 55%, transparent); border-radius: 18px; }
+.banner { border-radius: 16px; border-width: 1px; background-color: rgba(255,255,255,.8); }
+th { background: rgba(16, 20, 28, .045); color: var(--muted); }
+td { border-color: var(--line); }
+td.del, tr.missing td.del, tr.idle td.del { background: #f6f7f9; }
+th.del, td.del { box-shadow: -10px 0 10px -10px rgba(16, 20, 28, .18); }
+tr.link:hover td { background: rgba(16, 20, 28, .04); }
+.tabs { border-color: var(--line); }
 .tabs button { transition: color .2s, border-color .25s var(--ease); }
 .submitbar {
-  background: rgba(8, 9, 11, .93);
-  -webkit-backdrop-filter: blur(20px) saturate(150%); backdrop-filter: blur(20px) saturate(150%);
-  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, .97);
+  -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%);
+  border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(20, 24, 33, .08);
 }
-.progress .bar { border-radius: 99px; background: rgba(255, 255, 255, .08); }
-.progress .bar i { border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--hot) 55%, transparent), var(--hot)); box-shadow: 0 0 14px var(--glow); }
+.progress .bar { border-radius: 99px; background: rgba(16, 20, 28, .08); }
+.progress .bar i { border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--hot) 55%, white), var(--hot)); }
 .card { border-left-width: 1px; position: relative; overflow: hidden; }
 .card::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 4px; border-radius: 0 4px 4px 0; background: var(--line); }
 .card.ok::before { background: var(--ok); } .card.warn::before { background: var(--warn); } .card.bad::before { background: var(--bad); }
 .badge { border-radius: 999px; }
-.safety { border-radius: 18px; border-width: 1px; }
-.banner { border-radius: 16px; border-width: 1px; }
+.badge.neutral { background: rgba(16, 20, 28, .06); }
 </style>
 </head>
 <body>

@@ -2,216 +2,280 @@
 <html lang="hu">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f1011">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#eceef2">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <title>BREMAT Központ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap">
+<!-- Ikonok: Lucide (nyílt forrású ikonkészlet) -->
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 <!--
   =====================================================================
   BREMAT Központ – a bremat-stuff kezdőlapja.
-  Felül cím, bal oldalt lenyitható menü, középen két fül:
-    1. Munkanapló – a heti bejegyzések (adat: /api/naplo)
-    2. Valk lap   – a heti karbantartási lap állapota (adat: /api/km)
-  A Projektek a menüből nyílnak (adat: /api/kozpont, csak kóddal).
-  A Központ maga nem tárol semmit, csak összerakja a meglévő oldalak adatait.
+  Felül középen a cím, bal oldalt lenyitható menü, a cím alatt két
+  „sziget”: Munkanapló és Valk heti lap, értesítés-jelvénnyel.
+  Háttér: animált, hajlított „selyemszalagok” (canvas). Alapból világos,
+  a Beállításokban sötétre váltható.
+  A Központ nem tárol semmit: a meglévő szerverfüggvényeket kérdezi
+  (/api/naplo, /api/km, /api/kozpont).
   =====================================================================
 -->
 <style>
-/* ---------- Színek (tokenek) ----------
-   Semleges grafit alap; a két fülnek megmarad a saját színe:
-   a napló kékeszöld, a Valk lap piros – mint a saját oldalukon. */
+/* ---------- Színek (tokenek): világos alap, sötét változat ---------- */
 :root {
-  --bg: #0f1011;
-  --panel: #1a1b1d;
-  --panel-2: #242528;
-  --line: #36383c;
-  --text: #eeeeec;
-  --muted: #a9abb0;
-  --naplo: #3fb6c9;  --naplo-text: #7fd6e3;
-  --valk: #d50f25;   --valk-text: #ff6670;
-  --ok: #34a862; --ok-text: #74dc9a; --warn: #e9a92b; --bad: #e5484d;
-  --ink-on-color: #0f1011;
-  --radius: 10px;
-  --font: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-cond: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+  --bg: #eceef2;
+  --glass: rgba(255, 255, 255, .62);
+  --glass-strong: rgba(255, 255, 255, .86);
+  --glass-line: rgba(255, 255, 255, .85);
+  --line: rgba(16, 20, 28, .1);
+  --shadow: 0 12px 40px rgba(24, 30, 44, .12);
+  --text: #12151b;
+  --muted: #586070;
+  --hover: rgba(16, 20, 28, .055);
+  --active: rgba(16, 20, 28, .085);
+  --accent: #c8102e;
+  --scrim: rgba(20, 24, 33, .22);
+  --naplo: #0e8ea3;  --naplo-soft: rgba(14, 142, 163, .13);
+  --valk: #c8102e;   --valk-soft: rgba(200, 16, 46, .1);
+  --ok: #1e9a4e; --warn: #c27c00; --bad: #c8102e;
+  --badge-ink: #ffffff;
+  --display: 'Sora', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+  --ease: cubic-bezier(.22, .8, .24, 1);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0b0c0e;
+  --glass: rgba(22, 24, 28, .55);
+  --glass-strong: rgba(20, 22, 26, .86);
+  --glass-line: rgba(255, 255, 255, .12);
+  --line: rgba(255, 255, 255, .1);
+  --shadow: 0 12px 40px rgba(0, 0, 0, .5);
+  --text: #eef1f6; --muted: #9aa3b2;
+  --hover: rgba(255, 255, 255, .06); --active: rgba(255, 255, 255, .1);
+  --accent: #ff5468; --scrim: rgba(0, 0, 0, .4);
+  --naplo: #4cc7da; --naplo-soft: rgba(76, 199, 218, .14);
+  --valk: #ff5468;  --valk-soft: rgba(255, 84, 104, .14);
+  --ok: #4ad37f; --warn: #f2b84b; --bad: #ff5468;
   color-scheme: dark;
 }
+
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.45; }
+html, body { margin: 0; min-height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); font-size: 16px; line-height: 1.5; overflow-x: hidden; }
 a { color: inherit; }
-button, input, textarea { font: inherit; color: inherit; }
-:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
-.wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+button, input { font: inherit; color: inherit; }
 
-/* ---------- Fejléc: menügomb + cím ---------- */
-.top { position: sticky; top: 0; z-index: 20; background: #000; border-bottom: 1px solid var(--line); }
-.top .wrap { display: flex; align-items: center; gap: 12px; min-height: 58px; }
-.burger { width: 44px; height: 44px; border-radius: 8px; border: 1.5px solid var(--line); background: transparent; cursor: pointer; display: grid; place-items: center; flex: none; }
-.burger:hover { border-color: var(--muted); }
-.burger i, .burger i::before, .burger i::after { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; position: relative; content: ''; }
-.burger i::before { position: absolute; top: -6px; } .burger i::after { position: absolute; top: 6px; }
-.brand { font-family: var(--font-cond); font-size: 22px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; }
-.brand span { color: var(--muted); font-weight: 600; }
-.top .week { margin-left: auto; color: var(--muted); font-size: 14px; white-space: nowrap; }
+/* ---------- Háttér: a szalagokat a canvas rajzolja (lásd 1. pont a scriptben) ---------- */
+#silk { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; display: block; }
 
-/* ---------- Oldalsó menü (lenyitható) ---------- */
-.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 40; opacity: 0; transition: opacity .2s; }
-.scrim.open { opacity: 1; }
-.drawer { position: fixed; top: 0; bottom: 0; left: 0; width: min(300px, 86vw); background: var(--panel); border-right: 1px solid var(--line); z-index: 41;
-  transform: translateX(-100%); transition: transform .22s ease; display: flex; flex-direction: column; padding: 14px 12px; gap: 4px; overflow-y: auto; }
-.drawer.open { transform: none; }
-.drawer .head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 12px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
-.drawer .head b { font-family: var(--font-cond); font-size: 20px; letter-spacing: .06em; text-transform: uppercase; }
-.drawer .close { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--line); background: transparent; cursor: pointer; font-size: 22px; line-height: 1; }
-.drawer .sec { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 14px 10px 4px; }
-.navlink { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 10px; border-radius: 8px; text-decoration: none; font-weight: 600; }
-.navlink:hover, .navlink[aria-current="page"] { background: var(--panel-2); }
-.navlink .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--muted); flex: none; }
-.navlink .ext { margin-left: auto; color: var(--muted); font-weight: 500; font-size: 13px; }
-@media (prefers-reduced-motion: reduce) { .drawer, .scrim { transition: none; } }
+/* ---------- Üveg ---------- */
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--shadow);
+}
+
+/* ---------- Fejléc: bal oldalt menügomb, középen a cím ---------- */
+.topbar {
+  position: fixed; z-index: 20;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  height: 64px; border-radius: 20px;
+  display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; padding: 0 10px;
+  animation: dropIn .7s var(--ease) both;
+}
+.title { grid-column: 2; text-align: center; margin: 0; font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .02em; }
+.title a { text-decoration: none; }
+.title span { color: var(--muted); font-weight: 500; }
+@keyframes dropIn { from { opacity: 0; transform: translateY(-14px); } }
+
+.icon-btn { width: 44px; height: 44px; border-radius: 14px; border: 1px solid transparent; display: grid; place-items: center; background: transparent; color: var(--text); cursor: pointer;
+  transition: background .25s var(--ease), transform .2s var(--ease), border-color .25s; }
+.icon-btn:hover { background: var(--hover); border-color: var(--glass-line); }
+.icon-btn:active { transform: scale(.94); }
+.icon-btn svg { width: 22px; height: 22px; stroke-width: 1.8; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Lenyitható menü ---------- */
+.scrim { position: fixed; inset: 0; z-index: 30; background: var(--scrim); opacity: 0; pointer-events: none; transition: opacity .35s var(--ease); }
+.drawer {
+  position: fixed; z-index: 31;
+  top: calc(12px + env(safe-area-inset-top, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  left: max(12px, env(safe-area-inset-left, 0px)); width: min(300px, calc(100vw - 24px));
+  border-radius: 24px; padding: 14px; background: var(--glass-strong);
+  display: flex; flex-direction: column; gap: 6px; overflow-y: auto;
+  transform: translateX(calc(-100% - 24px)); visibility: hidden;
+  transition: transform .45s var(--ease), visibility 0s linear .45s;
+}
+body.menu-open .scrim { opacity: 1; pointer-events: auto; }
+body.menu-open .drawer { transform: none; visibility: visible; transition: transform .45s var(--ease), visibility 0s; }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 12px 10px; }
+.drawer-head b { font-family: var(--display); font-weight: 600; font-size: 17px; }
+.nav { display: flex; flex-direction: column; gap: 4px; }
+.nav .label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 14px 12px 4px; }
+.nav a { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px; border-radius: 14px; text-decoration: none; font-weight: 600;
+  transition: background .25s var(--ease); opacity: 0; transform: translateX(-10px); }
+.nav a svg { width: 20px; height: 20px; stroke-width: 1.8; color: var(--muted); flex: none; transition: color .25s; }
+.nav a .ext { margin-left: auto; width: 15px; height: 15px; }
+.nav a:hover { background: var(--hover); }
+.nav a:hover svg, .nav a[aria-current="page"] svg { color: var(--accent); }
+.nav a[aria-current="page"] { background: var(--active); }
+body.menu-open .nav a { opacity: 1; transform: none; transition: opacity .4s var(--ease) calc(var(--i) * 40ms + 120ms), transform .4s var(--ease) calc(var(--i) * 40ms + 120ms), background .25s var(--ease); }
+.drawer-foot { margin-top: auto; padding: 12px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
 
 /* ---------- Tartalom ---------- */
-main.wrap { padding-top: 22px; padding-bottom: 60px; }
-h1 { font-family: var(--font-cond); font-size: 34px; line-height: 1.05; margin: 0 0 4px; }
-.sub { color: var(--muted); margin: 0 0 18px; }
-h2 { font-family: var(--font-cond); font-size: 20px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .04em; }
-.muted { color: var(--muted); } .small { font-size: 14px; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
-.stack { display: flex; flex-direction: column; gap: 14px; }
-.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.err { color: #ff9296; font-weight: 600; font-size: 14px; margin: 0; }
-.banner { border: 1.5px solid var(--bad); background: rgba(229,72,77,.1); border-radius: var(--radius); padding: 12px 14px; }
-.demo-bar { background: var(--warn); color: var(--ink-on-color); text-align: center; font-weight: 600; font-size: 14px; padding: 6px 12px; }
-
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--panel-2); font-weight: 600; text-decoration: none; cursor: pointer; white-space: nowrap; }
-.btn:hover { border-color: var(--muted); }
-.btn[disabled] { opacity: .55; cursor: not-allowed; }
-.btn.naplo { background: var(--naplo); border-color: var(--naplo); color: #06171a; }
-.btn.valk { background: var(--valk); border-color: var(--valk); color: #fff; }
-.btn.ghost { background: transparent; }
-/* Hosszú feliratú gomb: telefonon sorba törhet, nem lóg ki */
-.btn.long { white-space: normal; text-align: center; padding-block: 8px; }
-
-input[type=text], input[type=password], textarea { background: #101113; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 46px; width: 100%; }
-textarea { min-height: 80px; resize: vertical; }
-.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.field > span { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
-
-/* ---------- A két fül ---------- */
-.tabs { display: flex; gap: 6px; border-bottom: 2px solid var(--line); margin-bottom: 18px; }
-.tab { flex: 1 1 0; max-width: 260px; min-height: 52px; padding: 0 16px; background: transparent; border: 0; border-bottom: 4px solid transparent; margin-bottom: -2px;
-  cursor: pointer; font-family: var(--font-cond); font-size: 20px; font-weight: 700; letter-spacing: .03em; color: var(--muted); display: flex; align-items: center; gap: 10px; justify-content: center; }
-.tab .sw { width: 10px; height: 10px; border-radius: 3px; }
-.tab[data-tab="naplo"] .sw { background: var(--naplo); } .tab[data-tab="valk"] .sw { background: var(--valk); }
-.tab[aria-selected="true"] { color: var(--text); }
-.tab[data-tab="naplo"][aria-selected="true"] { border-bottom-color: var(--naplo); }
-.tab[data-tab="valk"][aria-selected="true"] { border-bottom-color: var(--valk); }
-
-/* Munkanapló fül */
-.day { border-top: 1px solid var(--line); padding: 10px 0; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 14px; }
-.day:last-child { border-bottom: 1px solid var(--line); }
-.day .dname { font-weight: 700; } .day .dname small { display: block; color: var(--muted); font-weight: 500; }
-.day.today .dname { color: var(--naplo-text); }
-.day .none { color: var(--muted); font-size: 14px; }
-.ent { padding: 2px 0 6px; } .ent + .ent { border-top: 1px dashed var(--line); padding-top: 8px; }
-.ent .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
-.ent .meta { color: var(--muted); font-size: 13.5px; margin-top: 2px; display: flex; gap: 4px 12px; flex-wrap: wrap; }
-.hrs { color: var(--naplo-text); font-weight: 700; }
-.tag { display: inline-block; padding: 1px 9px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); font-weight: 600; font-size: 12.5px; }
-
-/* Valk fül */
-.status { border-left: 6px solid var(--line); }
-.status.ok { border-left-color: var(--ok); } .status.todo { border-left-color: var(--warn); } .status.idle { border-left-color: var(--muted); }
-.status .big { font-size: 22px; font-weight: 700; margin: 2px 0 4px; }
-.status.ok .big { color: var(--ok-text); } .status.todo .big { color: #f6cb6a; }
-.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-.fact { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
-.fact b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
-.fact span { color: var(--muted); font-size: 14px; }
-.sheets { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.sheets li + li { border-top: 1px solid var(--line); }
-.sheets a { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 11px 14px; text-decoration: none; }
-.sheets a:hover { background: var(--panel-2); }
-.sheets .wk { font-weight: 700; font-variant-numeric: tabular-nums; }
-.badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
-.badge.ok { background: var(--ok); color: var(--ink-on-color); } .badge.warn { background: var(--warn); color: var(--ink-on-color); }
-.badge.bad { background: var(--bad); color: var(--ink-on-color); } .badge.n { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
-
-/* Projektek */
-.proj { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; align-items: start; }
-.pcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
-.pcard > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
-.pcard > summary::-webkit-details-marker { display: none; }
-.pcard > summary b { font-family: var(--font-cond); font-size: 21px; display: flex; justify-content: space-between; gap: 10px; }
-.pcard > summary b span { color: var(--muted); font-family: var(--font); font-size: 14px; font-weight: 600; }
-.pcard > summary small { color: var(--muted); }
-.pcard ul { list-style: none; margin: 0; padding: 0 8px 8px; border-top: 1px solid var(--line); }
-.pcard li a { display: flex; justify-content: space-between; gap: 10px; padding: 9px 8px; border-radius: 6px; text-decoration: none; }
-.pcard li a:hover { background: var(--panel-2); }
-.pcard li a small { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-
-.gate { max-width: 420px; margin: 6vh auto 0; }
-#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ok); color: var(--ink-on-color); font-weight: 700; padding: 12px 18px; border-radius: 10px; z-index: 60; display: none; max-width: calc(100vw - 32px); }
-#toast.bad { background: var(--bad); }
-
-@media (max-width: 560px) {
-  h1 { font-size: 28px; }
-  .top .week { display: none; }
-  .tab { font-size: 18px; padding: 0 8px; }
-  .day { grid-template-columns: minmax(0, 1fr); }
-  .sheets a { grid-template-columns: 60px minmax(0, 1fr); }
-  .sheets .badges { grid-column: 1 / -1; justify-content: flex-start; }
+main {
+  position: relative; z-index: 1;
+  padding-top: calc(112px + env(safe-area-inset-top, 0px)); padding-bottom: 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
 }
+.page { width: min(860px, 100%); display: flex; flex-direction: column; gap: 16px; }
+.greet { text-align: center; animation: rise .7s var(--ease) both; }
+.greet h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: clamp(24px, 4vw, 32px); text-wrap: balance; }
+.greet p { margin: 2px 0 0; color: var(--muted); }
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+
+/* Szigetek */
+.islands { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px; }
+.island {
+  --tone: var(--naplo); --tone-soft: var(--naplo-soft);
+  position: relative; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 26px; text-decoration: none;
+  animation: rise .8s var(--ease) both; animation-delay: calc(var(--i) * 90ms + 150ms);
+  transition: transform .35s var(--ease), border-color .35s var(--ease);
+}
+.island.valk { --tone: var(--valk); --tone-soft: var(--valk-soft); }
+.island::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120% 70% at 0% 0%, var(--tone-soft), transparent 60%); transition: opacity .35s var(--ease); }
+.island:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--tone) 45%, var(--glass-line)); }
+.island:active { transform: translateY(-1px) scale(.99); }
+.island .head { position: relative; display: flex; align-items: center; gap: 14px; }
+.island .ico { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; background: var(--tone-soft); color: var(--tone); flex: none; }
+.island .ico svg { width: 24px; height: 24px; stroke-width: 1.8; }
+.island h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 19px; line-height: 1.2; }
+.island .sub { color: var(--muted); font-size: 14px; }
+.island .go { margin-left: auto; color: var(--muted); transition: transform .35s var(--ease), color .35s; }
+.island .go svg { width: 20px; height: 20px; }
+.island:hover .go { transform: translateX(4px); color: var(--tone); }
+.island ul { position: relative; list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 9px; font-size: 14.5px; }
+.island li { display: flex; align-items: flex-start; gap: 10px; }
+.island li svg { width: 16px; height: 16px; color: var(--muted); flex: none; stroke-width: 2; margin-top: 3px; }
+.island li.alert svg { color: var(--tone); }
+.island li.good svg { color: var(--ok); }
+.island li b { font-variant-numeric: tabular-nums; }
+.island .dim { color: var(--muted); }
+.island .foot { position: relative; font-size: 12.5px; color: var(--muted); }
+.skeleton { height: 14px; border-radius: 7px; background: var(--hover); animation: shimmer 1.4s ease-in-out infinite; }
+@keyframes shimmer { 50% { opacity: .45; } }
+
+.progress { position: relative; display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--muted); }
+.progress .track { flex: 1; height: 8px; border-radius: 99px; background: var(--hover); overflow: hidden; }
+.progress .track i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 50%, transparent), var(--tone)); transition: width 1.2s var(--ease); }
+.progress b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+.badge { position: absolute; top: -8px; right: -6px; z-index: 2; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px;
+  display: grid; place-items: center; font-weight: 700; font-size: 13.5px; font-variant-numeric: tabular-nums;
+  background: var(--tone); color: var(--badge-ink); box-shadow: 0 0 0 3px var(--bg), 0 6px 16px color-mix(in srgb, var(--tone) 45%, transparent);
+  animation: pop .5s var(--ease) both; }
+.badge::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--tone); animation: ping 2.4s var(--ease) 1s infinite; }
+@keyframes pop { from { transform: scale(0); } }
+@keyframes ping { 0% { transform: scale(1); opacity: .7; } 70%, 100% { transform: scale(1.8); opacity: 0; } }
+
+/* Projektek, beállítások, belépés */
+.card { border-radius: 24px; padding: 20px; animation: rise .6s var(--ease) both; }
+.card h2 { margin: 0 0 6px; font-family: var(--display); font-weight: 600; font-size: 18px; }
+.muted { color: var(--muted); }
+.proj { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; align-items: start; }
+.pcard { border-radius: 22px; animation: rise .6s var(--ease) both; animation-delay: calc(var(--i) * 60ms); }
+.pcard > summary { list-style: none; cursor: pointer; padding: 16px 18px; display: flex; gap: 14px; align-items: center; }
+.pcard > summary::-webkit-details-marker { display: none; }
+.pcard .ico { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: var(--hover); color: var(--text); flex: none; }
+.pcard .ico svg { width: 20px; height: 20px; }
+.pcard b { font-family: var(--display); font-weight: 600; display: block; }
+.pcard small { color: var(--muted); }
+.pcard .chev { margin-left: auto; color: var(--muted); transition: transform .3s var(--ease); flex: none; }
+.pcard[open] .chev { transform: rotate(90deg); }
+.pcard ul { list-style: none; margin: 0; padding: 4px 10px 10px; border-top: 1px solid var(--line); }
+.pcard li a { display: flex; justify-content: space-between; gap: 10px; padding: 9px 8px; border-radius: 10px; text-decoration: none; }
+.pcard li a:hover { background: var(--hover); }
+.pcard li small { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.chip { display: inline-block; padding: 0 7px; margin-left: 4px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: var(--hover); color: var(--muted); }
+.search { width: 100%; min-height: 48px; padding: 0 16px 0 44px; border-radius: 16px; border: 1px solid var(--line); background: var(--glass-strong); }
+.search-wrap { position: relative; }
+.search-wrap svg { position: absolute; left: 14px; top: 14px; width: 20px; height: 20px; color: var(--muted); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field span { font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.field input { min-height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass-strong); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--glass-strong); font-weight: 600; cursor: pointer; text-decoration: none; transition: transform .2s var(--ease), border-color .2s; }
+.btn:hover { border-color: color-mix(in srgb, var(--text) 30%, transparent); }
+.btn:active { transform: scale(.97); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 35%, transparent); }
+.btn svg { width: 18px; height: 18px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.switch { display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 600; }
+.switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+.err { color: var(--bad); font-weight: 600; margin: 0; }
+.gate { width: min(420px, 100%); display: flex; flex-direction: column; gap: 14px; }
+#toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; display: none;
+  padding: 12px 18px; border-radius: 14px; background: var(--text); color: var(--bg); font-weight: 700; box-shadow: var(--shadow); }
+.demo-bar { position: fixed; z-index: 50; left: 50%; transform: translateX(-50%); bottom: 12px; background: #e9a92b; color: #1b1200; font-weight: 700; font-size: 13px; padding: 6px 14px; border-radius: 999px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar, .island, .badge, .badge::after, .greet, .card, .pcard, .skeleton { animation: none; }
+  .drawer, .scrim, .nav a, body.menu-open .nav a, .island, .island .go, .progress .track i { transition: none; }
+}
+@media (max-width: 480px) { .title { font-size: 17px; } }
 </style>
 </head>
 <body>
-<div id="demo" class="demo-bar" hidden>DEMÓ mód – mintaadatok, csak ebben a böngészőben. Az éleshez nyisd meg a címet ?demo nélkül.</div>
+<canvas id="silk" aria-hidden="true"></canvas>
+<div id="demo" class="demo-bar" hidden>DEMÓ – mintaadatok</div>
 
-<!-- Fejléc: menügomb, cím, aktuális hét -->
-<header class="top">
-  <div class="wrap">
-    <button class="burger" id="menuBtn" type="button" aria-label="Menü megnyitása" aria-expanded="false" aria-controls="drawer"><i></i></button>
-    <a class="brand" href="#/">BREMAT <span>Központ</span></a>
-    <span class="week" id="weekLabel"></span>
-  </div>
+<header class="topbar glass">
+  <button class="icon-btn" id="menuBtn" type="button" aria-label="Menü megnyitása" aria-expanded="false" aria-controls="drawer"><i data-lucide="menu"></i></button>
+  <h1 class="title"><a href="#/">BREMAT <span>Központ</span></a></h1>
 </header>
 
-<!-- A lenyitható menü. A gombok vagy a Központon belül váltanak (#/...),
-     vagy átvisznek a teljes oldalra. -->
-<div class="scrim" id="scrim" hidden></div>
-<nav class="drawer" id="drawer" aria-label="Főmenü" hidden>
-  <div class="head"><b>Menü</b><button class="close" id="menuClose" type="button" aria-label="Menü bezárása">×</button></div>
-  <a class="navlink" href="#/" data-view="home"><span class="dot"></span>Kezdőlap</a>
-  <a class="navlink" href="#/projektek" data-view="projektek"><span class="dot"></span>Projektek</a>
-  <div class="sec">Oldalak</div>
-  <a class="navlink" href="/naplo/"><span class="dot" style="background:var(--naplo)"></span>Munkanapló<span class="ext">teljes</span></a>
-  <a class="navlink" href="/valk/"><span class="dot" style="background:var(--valk)"></span>Valk heti lap<span class="ext">teljes</span></a>
-  <a class="navlink" href="/valk/#/uj"><span class="dot" style="background:var(--valk)"></span>Új heti lap kitöltése</a>
-  <a class="navlink" id="privLink" href="#" target="_blank" rel="noopener" hidden><span class="dot"></span>Saját oldalak<span class="ext">Claude ↗</span></a>
-  <div class="sec">Egyéb</div>
-  <a class="navlink" href="#/beallitasok" data-view="beallitasok"><span class="dot"></span>Beállítások</a>
-</nav>
+<div class="scrim" id="scrim"></div>
+<aside class="drawer glass" id="drawer" aria-label="Főmenü">
+  <div class="drawer-head">
+    <b>Menü</b>
+    <button class="icon-btn" id="menuClose" type="button" aria-label="Menü bezárása"><i data-lucide="x"></i></button>
+  </div>
+  <nav class="nav">
+    <a href="#/" data-view="#/" style="--i:0"><i data-lucide="house"></i>Kezdőlap</a>
+    <a href="#/projektek" data-view="#/projektek" style="--i:1"><i data-lucide="folder-kanban"></i>Projektek</a>
+    <span class="label">Oldalak</span>
+    <a href="/naplo/" style="--i:2"><i data-lucide="notebook-pen"></i>Munkanapló</a>
+    <a href="/valk/" style="--i:3"><i data-lucide="clipboard-check"></i>Valk heti lap</a>
+    <a href="/valk/#/uj" style="--i:4"><i data-lucide="clipboard-pen"></i>Új heti lap kitöltése</a>
+    <a id="privLink" href="#" target="_blank" rel="noopener" style="--i:5" hidden><i data-lucide="lock"></i>Saját oldalak<i class="ext" data-lucide="arrow-up-right"></i></a>
+    <span class="label">Egyéb</span>
+    <a href="#/beallitasok" data-view="#/beallitasok" style="--i:6"><i data-lucide="settings"></i>Beállítások</a>
+  </nav>
+  <div class="drawer-foot">BREMAT · belső eszközök</div>
+</aside>
 
-<main class="wrap" id="app" aria-live="polite"></main>
+<main id="app" aria-live="polite"></main>
 <div id="toast" role="status"></div>
 
 <script type="module">
 /* =====================================================================
-   0. Régi címek: a heti lap a /valk/ címre költözött. Ha valaki a régi
-      könyvjelzővel jön (pl. /#/uj vagy /#/lap/...), átküldjük oda.
+   0. Régi címek: a heti lap a /valk/ címre költözött (régi könyvjelzők).
    ===================================================================== */
-if (/^#\/(uj|lap\/)/.test(location.hash)) location.replace('/valk/' + location.search + location.hash);
+const OLD = /^#\/(uj|lap\/)/;
+if (OLD.test(location.hash)) location.replace('/valk/' + location.search + location.hash);
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const ROBOT = 'Valk robot';
-
-/* ---------- Segédfüggvények ---------- */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -220,113 +284,172 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* nincs tárolás */ } },
   del(k) { try { localStorage.removeItem(k); } catch { /* nincs tárolás */ } },
 };
-function toast(msg, bad = false) {
-  const t = $('#toast'); t.textContent = msg; t.className = bad ? 'bad' : ''; t.style.display = 'block';
-  clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, bad ? 6000 : 3000);
-}
+const icons = () => { if (window.lucide) lucide.createIcons(); };
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, 2600); }
 
-/* ---------- Dátum (mindig budapesti idő szerint) ---------- */
-const ymdFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest', year: 'numeric', month: '2-digit', day: '2-digit' });
-const today = () => ymdFmt.format(new Date());
-const toDate = (ymd) => new Date(ymd + 'T00:00:00Z');
-const addDays = (ymd, n) => { const d = toDate(ymd); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-const mondayOf = (ymd) => addDays(ymd, -((toDate(ymd).getUTCDay() + 6) % 7));
-function isoWeek(ymd) {
-  const d = toDate(ymd);
-  d.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7));
-  const year = d.getUTCFullYear(); const jan4 = new Date(Date.UTC(year, 0, 4));
-  return { year, week: 1 + Math.round(((d - jan4) / 86400000 - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7) };
-}
-const DAYS = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'];
-const huShort = new Intl.DateTimeFormat('hu-HU', { timeZone: 'UTC', month: 'short', day: 'numeric' });
-const huLong = new Intl.DateTimeFormat('hu-HU', { timeZone: 'UTC', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-const fmtShort = (ymd) => huShort.format(toDate(ymd));
-const fmtH = (h) => `${String(Math.round(h * 100) / 100).replace('.', ',')} óra`;
+// Téma: alapból világos; a Beállításokban sötétre váltható (eszközönként megjegyzi)
+const applyTheme = () => {
+  const dark = store.get('kozpont-tema') === 'sotet' || new URLSearchParams(location.search).get('tema') === 'sotet';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  $('meta[name="theme-color"]').content = dark ? '#0b0c0e' : '#eceef2';
+};
+applyTheme();
 
 /* =====================================================================
-   1. Adatréteg – kinek mit küldünk.
-   Mindhárom szerverfüggvény ugyanúgy működik: POST kérés JSON-nal,
-   benne a művelet neve (action) és a belépési kód.
-   DEMÓ módban ugyanezek a függvények mintaadatot adnak vissza.
+   1. A háttér: hajlított „selyemszalagok”.
+   Minden szalag egy hullámzó vonal alatti kitöltött terület, a széle
+   mentén puha árnyékkal – egymásra rakva olyan, mint az egymásra boruló
+   anyag. A hullámok nagyon lassan mozognak. Kis felbontásban rajzoljuk
+   (az elmosódás úgyis eltakarja), és csak akkor fut, ha látszik az oldal.
+   ===================================================================== */
+const silk = (() => {
+  const cv = $('#silk'), ctx = cv.getContext('2d');
+  const SCALE = 0.5;                        // fél felbontás – kímélet a tabletnek
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let w = 0, h = 0, t0 = performance.now(), last = 0, raf = 0;
+  // Színpaletta szalagonként: [fény, árnyék]
+  const PALETTES = {
+    light: { bg: '#eceef2', shadow: 'rgba(30, 40, 60, .16)', edge: 'rgba(255, 255, 255, .95)', bands: [
+      ['#f7f8fb', '#e3e6ec'], ['#eef6f8', '#d6e7ec'], ['#f8f4f6', '#ebdde2'], ['#f3f5f9', '#dfe3ea'],
+      ['#eef3f9', '#d8e1ee'], ['#f9f6f2', '#ece5dc'], ['#f4f6f9', '#e1e5eb'] ] },
+    dark: { bg: '#0b0c0e', shadow: 'rgba(0, 0, 0, .65)', edge: 'rgba(255, 255, 255, .09)', bands: [
+      ['#1c1e22', '#0e0f11'], ['#16222a', '#0b1013'], ['#241519', '#100a0c'], ['#1a1c20', '#0d0e10'],
+      ['#141c26', '#0a0d12'], ['#211a1c', '#0f0c0d'], ['#1d1f23', '#0e0f11'] ] },
+  };
+  function resize() {
+    w = Math.max(1, Math.round(innerWidth * SCALE)); h = Math.max(1, Math.round(innerHeight * SCALE));
+    cv.width = w; cv.height = h;
+  }
+  function frame(now) {
+    raf = requestAnimationFrame(frame);
+    if (now - last < 33) return;            // kb. 30 kép/mp elég
+    last = now;
+    draw((now - t0) / 1000);
+  }
+  function draw(t) {
+    const pal = PALETTES[document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'];
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = pal.bg; ctx.fillRect(0, 0, w, h);
+    // Az egész jelenet ferdén áll (mint a képen), a szalagok átlósan futnak
+    const diag = Math.hypot(w, h);
+    ctx.translate(w / 2, h / 2); ctx.rotate(-0.42); ctx.translate(-diag / 2, -diag / 2);
+    const n = pal.bands.length, step = diag / (n + 1);
+    for (let i = 0; i < n; i++) {
+      const base = step * (i + 0.6), amp = step * (0.55 + 0.25 * Math.sin(i * 1.7));
+      const k1 = (1.1 + i * 0.17) / diag * Math.PI * 2, k2 = (2.3 + i * 0.11) / diag * Math.PI * 2;
+      const s1 = t * (0.05 + i * 0.008), s2 = t * (0.03 + i * 0.006);
+      ctx.beginPath(); ctx.moveTo(0, diag);
+      for (let x = 0; x <= diag; x += diag / 48) {
+        const y = base + Math.sin(x * k1 + s1 + i) * amp + Math.sin(x * k2 - s2 + i * 2.3) * amp * 0.45;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(diag, diag); ctx.closePath();
+      const [hi, lo] = pal.bands[i];
+      const g = ctx.createLinearGradient(0, base - amp, 0, base + step * 1.6);
+      g.addColorStop(0, hi); g.addColorStop(1, lo);
+      ctx.fillStyle = g;
+      ctx.shadowColor = pal.shadow; ctx.shadowBlur = 28 * SCALE * 2; ctx.shadowOffsetY = -6 * SCALE * 2;
+      ctx.fill();
+      // A szalag fényes éle: vékony világos vonal a hullám tetején (mint a selyem széle)
+      ctx.shadowColor = 'transparent';
+      ctx.beginPath();
+      for (let x = 0; x <= diag; x += diag / 48) {
+        const y = base + Math.sin(x * k1 + s1 + i) * amp + Math.sin(x * k2 - s2 + i * 2.3) * amp * 0.45;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = pal.edge; ctx.lineWidth = 1.2; ctx.stroke();
+    }
+    ctx.shadowColor = 'transparent';
+  }
+  function start() { cancelAnimationFrame(raf); if (calm) { draw(8); return; } raf = requestAnimationFrame(frame); }
+  resize(); start();
+  addEventListener('resize', () => { resize(); if (calm) draw(8); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAnimationFrame(raf); else start(); });
+  return { redraw: () => { if (calm) draw(8); } };
+})();
+
+/* =====================================================================
+   2. Adatréteg – mindhárom szerverfüggvény ugyanúgy működik:
+   POST kérés JSON-nal, benne a művelet (action) és a belépési kód.
    ===================================================================== */
 class AccessError extends Error {}
 async function post(url, action, payload, code) {
   let res;
-  try {
-    res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, code, ...payload }), cache: 'no-store' });
-  } catch { throw new Error('Nincs kapcsolat a szerverrel. Ellenőrizd az internetet.'); }
+  try { res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, code, ...payload }), cache: 'no-store' }); }
+  catch { throw new Error('Nincs kapcsolat a szerverrel.'); }
   let body = null; try { body = await res.json(); } catch { /* nem JSON */ }
   if (res.status === 401) throw new AccessError(body?.error || 'Hibás hozzáférési kód');
   if (!res.ok) throw new Error(body?.error || `Szerverhiba (${res.status})`);
   return body?.data;
 }
-// A kód: ugyanaz a tárolt kód, amit a heti lap és a napló is használ.
 const kmCode = () => store.get('km-kod') || '';
 const naploCode = () => store.get('naplo-kod') || store.get('km-kod') || '';
-
 const live = {
   ping: (code) => post('/api/kozpont', 'ping', {}, code),
   projects: () => post('/api/kozpont', 'projects', {}, kmCode()),
   checks: () => post('/api/km', 'list', {}, kmCode()),
   idle: () => post('/api/km', 'idle_list', {}, kmCode()),
   week: (from, to) => post('/api/naplo', 'range', { from, to }, naploCode()),
-  addEntry: (entry, name) => post('/api/naplo', 'create', { entry, name }, naploCode()),
+  todo: () => post('/api/naplo', 'todo_status', {}, naploCode()),
 };
 
+/* ---------- Dátum (budapesti idő) ---------- */
+const ymdFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest', year: 'numeric', month: '2-digit', day: '2-digit' });
+const today = () => ymdFmt.format(new Date());
+const toDate = (ymd) => new Date(ymd + 'T00:00:00Z');
+const addDays = (ymd, n) => { const d = toDate(ymd); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const mondayOf = (ymd) => addDays(ymd, -((toDate(ymd).getUTCDay() + 6) % 7));
+function isoWeek(ymd) {
+  const d = toDate(ymd); d.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7));
+  const year = d.getUTCFullYear(), jan4 = new Date(Date.UTC(year, 0, 4));
+  return { year, week: 1 + Math.round(((d - jan4) / 86400000 - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7) };
+}
+const huLong = new Intl.DateTimeFormat('hu-HU', { timeZone: 'UTC', month: 'long', day: 'numeric', weekday: 'long' });
+const huShort = new Intl.DateTimeFormat('hu-HU', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+const hhmm = (iso) => new Date(iso).toLocaleTimeString('hu-HU', { timeZone: 'Europe/Budapest', hour: '2-digit', minute: '2-digit' });
+function fmtDur(ms) { const m = Math.floor(ms / 60000); if (m < 1) return '<1 p'; const h = Math.floor(m / 60); return h ? `${h} ó ${m % 60} p` : `${m} p`; }
+
 function demoApi() {
-  const m = mondayOf(today());
-  const wk = (d) => isoWeek(d);
-  const mkCheck = (d, who, a, s, appr, esc) => ({ id: 'demo-' + d, check_date: d, iso_year: wk(d).year, iso_week: wk(d).week, robot: ROBOT, inspector: who, action_count: a, skip_count: s, approved_by: appr ? 'Nagy Béla' : null, escalate: !!esc });
-  const checks = [mkCheck(addDays(m, -7), 'Tóth Ádám', 1, 1, false, true), mkCheck(addDays(m, -14), 'Kovács Gábor', 2, 0, false), mkCheck(addDays(m, -21), 'Tóth Ádám', 0, 0, true), mkCheck(addDays(m, -35), 'Kovács Gábor', 1, 0, true)];
-  let entries = [
-    { id: 'a', date: m, text: 'Heti karbantartás a Valk roboton.', area: 'Valk robot', hours: 1.5, author: 'Alex' },
-    { id: 'b', date: addDays(m, 1) <= today() ? addDays(m, 1) : m, text: 'Kész: 3100.0610 uj kialakitas (összesen 2 ó 10 p)', area: null, hours: null, author: 'Alex' },
-  ];
-  const delay = (v) => new Promise((r) => setTimeout(() => r(structuredClone(v)), 120));
+  const m = mondayOf(today()), w = isoWeek(today());
+  const mk = (d, who, a, s, appr, escl) => ({ id: 'demo-' + d, check_date: d, ...(({ year, week }) => ({ iso_year: year, iso_week: week }))(isoWeek(d)), robot: ROBOT, inspector: who, action_count: a, skip_count: s, approved_by: appr ? 'Nagy Béla' : null, escalate: !!escl });
+  const d = (v) => new Promise((r) => setTimeout(() => r(structuredClone(v)), 250));
   return {
-    ping: () => delay(true),
-    projects: () => delay({ private_index: '#', projects: [
-      { key: 'a', name: 'Tokmány vagy lemez', about: 'Mintaprojekt a demóhoz.', items: [{ t: 'Lemez vagy tokmány', u: '#', d: '2026-11-04' }, { t: 'Vastag lemez 3D', u: '#', d: '2026-10-29', k: ['3D'] }] },
-      { key: 'b', name: 'Univerzális adapter és befogó', about: 'Mintaprojekt a demóhoz.', items: [{ t: 'Univerzális adapter', u: '#', d: '2026-10-19' }] },
-    ] }),
-    checks: () => delay(checks),
-    idle: () => delay([]),
-    week: (from, to) => delay(entries.filter((e) => e.date >= from && e.date <= to)),
-    addEntry: (e, name) => { const r = { id: String(Math.random()), date: e.date, text: e.text.trim(), area: null, hours: e.hours ? Number(String(e.hours).replace(',', '.')) : null, author: name }; entries.push(r); return delay(r); },
+    ping: () => d(true),
+    projects: () => d({ private_index: '#', projects: [
+      { key: 'tokmany', name: 'Tokmány vagy lemez', about: 'Mintaprojekt a demóhoz.', items: [{ t: 'Lemez vagy tokmány', u: '#', d: '2026-11-04' }, { t: 'Vastag lemez 3D', u: '#', d: '2026-10-29', k: ['3D'] }] },
+      { key: 'adapter', name: 'Univerzális adapter és befogó', about: 'Mintaprojekt a demóhoz.', items: [{ t: 'Univerzális adapter', u: '#', d: '2026-10-19' }] } ] }),
+    checks: () => d([mk(addDays(m, -7), 'Tóth Ádám', 1, 1, false, true), mk(addDays(m, -14), 'Kovács Gábor', 2, 0, false), mk(addDays(m, -21), 'Tóth Ádám', 0, 0, true)]),
+    idle: () => d([]),
+    week: () => d([1, 2, 3, 4, 5].map((i) => ({ id: String(i), date: m, text: i < 6 ? `Kész: minta ${i}` : 'x' }))),
+    todo: () => d({ open: 5, starred: 3, doing: [{ text: '3100.0610 új kialakítás', spent_ms: 3600000, started_at: Date.now() - 720000 }], updated_at: new Date(Date.now() - 300000).toISOString() }),
   };
 }
 const api = DEMO ? demoApi() : live;
 
 /* =====================================================================
-   2. Belépés – ha nincs kód ezen az eszközön, bekérjük.
-   (A ?kod=... linket is elfogadja, és kiveszi a címsorból.)
+   3. Belépés
    ===================================================================== */
 (function codeFromUrl() {
   const u = new URL(location.href); const k = u.searchParams.get('kod');
   if (k) { store.set('km-kod', k.trim()); u.searchParams.delete('kod'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
 })();
-
 function renderGate(msg = '') {
   $('#menuBtn').hidden = true;
   $('#app').innerHTML = `
-    <div class="gate panel stack">
-      <h1>Belépés</h1>
+    <form class="gate card glass" id="gateForm">
+      <h2>Belépés</h2>
       <p class="muted" style="margin:0">Írd be a hozzáférési kódot. Ezen az eszközön megjegyzi.</p>
       ${msg ? `<p class="err">${esc(msg)}</p>` : ''}
-      <form id="gateForm" class="stack">
-        <label class="field"><span>Hozzáférési kód</span><input id="gateCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label>
-        <button class="btn valk" type="submit">Belépés</button>
-      </form>
-    </div>`;
-  $('#gateCode').focus();
+      <label class="field"><span>Hozzáférési kód</span><input id="gateCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label>
+      <button class="btn primary" type="submit"><i data-lucide="log-in"></i>Belépés</button>
+    </form>`;
+  icons(); $('#gateCode').focus();
   $('#gateForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const code = $('#gateCode').value.trim();
+    e.preventDefault(); const code = $('#gateCode').value.trim();
     try { await api.ping(code); store.set('km-kod', code); route(); }
     catch (err) { renderGate(err instanceof AccessError ? 'Hibás hozzáférési kód.' : err.message); }
   });
 }
-// Minden adatlekérés ezen megy át: ha a kód rossz, visszamegyünk a belépéshez.
 async function guarded(fn) {
   try { return await fn(); } catch (e) {
     if (e instanceof AccessError) { store.del('km-kod'); renderGate('A kód nem érvényes. Írd be újra.'); }
@@ -335,222 +458,180 @@ async function guarded(fn) {
 }
 
 /* =====================================================================
-   3. A menü nyitása / zárása
+   4. Menü
    ===================================================================== */
 function setMenu(open) {
-  const d = $('#drawer'), s = $('#scrim');
+  document.body.classList.toggle('menu-open', open);
   $('#menuBtn').setAttribute('aria-expanded', String(open));
-  if (open) {
-    d.hidden = false; s.hidden = false;
-    requestAnimationFrame(() => { d.classList.add('open'); s.classList.add('open'); });
-    $('#menuClose').focus();
-  } else {
-    d.classList.remove('open'); s.classList.remove('open');
-    setTimeout(() => { if (!d.classList.contains('open')) { d.hidden = true; s.hidden = true; } }, 230);
-  }
+  if (open) $('#menuClose').focus();
 }
 $('#menuBtn').addEventListener('click', () => setMenu(true));
 $('#menuClose').addEventListener('click', () => setMenu(false));
 $('#scrim').addEventListener('click', () => setMenu(false));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
-$$('#drawer a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
+$$('.nav a').forEach((a) => a.addEventListener('click', () => setTimeout(() => setMenu(false), 120)));
 
 /* =====================================================================
-   4. Kezdőlap: cím + két fül
+   5. Kezdőlap: a két sziget
+   Jelvény = a figyelmet kérő tételek összege (alert: true, n: darab).
    ===================================================================== */
-const TABS = { naplo: 'Munkanapló', valk: 'Valk lap' };
-let tab = store.get('kozpont-ful') in TABS ? store.get('kozpont-ful') : 'naplo';
+function islandShell(id, cls, icon, title, sub, href, i) {
+  return `<a class="island ${cls} glass" id="${id}" href="${href}" style="--i:${i}">
+    <span class="badge" hidden></span>
+    <div class="head"><span class="ico"><i data-lucide="${icon}"></i></span>
+      <div><h2>${title}</h2><span class="sub">${sub}</span></div>
+      <span class="go"><i data-lucide="arrow-right"></i></span></div>
+    <div class="progress" hidden><div class="track"><i></i></div><span></span></div>
+    <ul><li><div class="skeleton" style="width:80%"></div></li><li><div class="skeleton" style="width:60%"></div></li></ul>
+    <span class="foot"></span>
+  </a>`;
+}
+function fillIsland(el, d) {
+  el.querySelector('ul').innerHTML = d.items.map((it) =>
+    `<li class="${it.alert ? 'alert' : it.good ? 'good' : ''}"><i data-lucide="${it.icon}"></i><span>${it.html}</span></li>`).join('');
+  const n = d.items.filter((it) => it.alert).reduce((s, it) => s + (it.n ?? 1), 0);
+  const b = el.querySelector('.badge'); b.hidden = n === 0; b.textContent = n > 9 ? '9+' : n; b.setAttribute('aria-label', `${n} értesítés`);
+  const bar = el.querySelector('.progress');
+  if (d.progress) {
+    const { done, left } = d.progress; bar.hidden = false;
+    bar.querySelector('span').innerHTML = `<b>${done}</b> kész · <b>${left}</b> hátra`;
+    requestAnimationFrame(() => { bar.querySelector('i').style.width = Math.round(done / Math.max(1, done + left) * 100) + '%'; });
+  }
+  el.querySelector('.foot').textContent = d.foot || '';
+  icons();
+}
 
+let tickTimer = null;
 function renderHome() {
-  const t = today(); const { year, week } = isoWeek(t);
-  $('#app').innerHTML = `
-    <h1>Jó munkát!</h1>
-    <p class="sub">${esc(huLong.format(toDate(t)))} · ${year}. ${week}. hét</p>
-    <div class="tabs" role="tablist">
-      ${Object.entries(TABS).map(([k, label]) => `<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${k === tab}"><span class="sw"></span>${label}</button>`).join('')}
-    </div>
-    <section id="tabBody" role="tabpanel"><p class="muted">Betöltés…</p></section>`;
-  $$('.tab').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; store.set('kozpont-ful', tab); renderHome(); }));
-  (tab === 'naplo' ? renderNaplo : renderValk)().catch(showError);
-}
-function showError(e) {
-  if (e instanceof AccessError) return;
-  const box = $('#tabBody') || $('#app');
-  box.innerHTML = `<div class="banner">Nem sikerült betölteni: ${esc(e.message)}</div>`;
+  const t = today(), { year, week } = isoWeek(t);
+  const hour = Number(new Date().toLocaleString('en-GB', { timeZone: 'Europe/Budapest', hour: '2-digit', hour12: false }));
+  const hello = hour < 10 ? 'Jó reggelt!' : hour < 18 ? 'Jó munkát!' : 'Szép estét!';
+  $('#app').innerHTML = `<div class="page">
+    <div class="greet"><h1>${hello}</h1><p>${esc(huLong.format(toDate(t)))} · ${year}. ${week}. hét</p></div>
+    <div class="islands">
+      ${islandShell('isNaplo', 'naplo', 'notebook-pen', 'Munkanapló', 'Teendők és bejegyzések', '/naplo/', 0)}
+      ${islandShell('isValk', 'valk', 'clipboard-check', 'Valk heti lap', 'Robot karbantartás', '/valk/', 1)}
+    </div></div>`;
+  icons();
+  loadNaplo().catch(() => {});
+  loadValk().catch(() => {});
 }
 
-/* ---------- 4/a. Munkanapló fül: a hét napjai + gyors beírás ---------- */
-async function renderNaplo() {
-  const t = today(), mon = mondayOf(t), sun = addDays(mon, 6);
-  // A napló kódja lehet más, mint a Központé (NAPLO_ACCESS_CODE) – ilyenkor
-  // nem léptetünk ki, csak jelezzük, hogy a teljes naplóban kell belépni.
-  let rows;
-  try { rows = await api.week(mon, sun); } catch (e) {
-    if (!(e instanceof AccessError)) throw e;
-    $('#tabBody').innerHTML = `<div class="panel stack"><p style="margin:0">A Munkanapló külön kóddal védett ezen az eszközön.</p><div><a class="btn naplo" href="/naplo/">Belépés a naplóba</a></div></div>`;
+// --- Munkanapló sziget: a heti „Kész:” bejegyzések + a Teendőim állapota ---
+async function loadNaplo() {
+  const el = $('#isNaplo'); const t = today(), mon = mondayOf(t);
+  let rows, st;
+  try { [rows, st] = await Promise.all([api.week(mon, addDays(mon, 6)), api.todo()]); }
+  catch (e) {
+    fillIsland(el, { items: [{ icon: e instanceof AccessError ? 'lock' : 'wifi-off', html: e instanceof AccessError ? 'A napló külön kóddal védett – koppints a belépéshez.' : esc(e.message) }] });
     return;
   }
-  const name = store.get('naplo-nev') || '';
-  const sum = rows.reduce((s, r) => s + (r.hours || 0), 0);
-  // Csak a mai napig mutatjuk a napokat (a jövő üres lenne)
-  const days = DAYS.map((n, i) => ({ n, d: addDays(mon, i) })).filter((x) => x.d <= t);
-  $('#tabBody').innerHTML = `
-    <div class="stack">
-      <form id="quick" class="panel stack" novalidate>
-        <label class="field"><span>Mit csináltál ma?</span><textarea id="qText" maxlength="4000" placeholder="pl. áramátadó csere, szűrőtisztítás…"></textarea></label>
-        <div class="row">
-          <label class="field" style="flex:0 1 120px"><span>Idő (óra)</span><input type="text" id="qHours" inputmode="decimal" maxlength="5" placeholder="pl. 1,5"></label>
-          <label class="field" style="flex:1 1 180px" ${name ? 'hidden' : ''}><span>Neved</span><input type="text" id="qName" maxlength="120" value="${esc(name)}"></label>
-          <button class="btn naplo" type="submit" id="qSave" style="align-self:flex-end">Mentés a mai napra</button>
-        </div>
-        <p class="err" id="qErr" hidden></p>
-      </form>
-      <div>
-        <div class="row" style="justify-content:space-between;margin-bottom:8px">
-          <h2 style="margin:0">Ez a hét</h2>
-          <span class="muted small">${fmtShort(mon)} – ${fmtShort(sun)}${rows.length ? ` · ${rows.length} bejegyzés${sum ? ` · ${fmtH(sum)}` : ''}` : ''}</span>
-        </div>
-        ${days.reverse().map(({ n, d }) => {
-          const list = rows.filter((r) => r.date === d);
-          return `<div class="day${d === t ? ' today' : ''}">
-            <div class="dname">${n}<small>${fmtShort(d)}${d === t ? ' · ma' : ''}</small></div>
-            <div>${list.length ? list.map((r) => `
-              <div class="ent"><div class="txt">${esc(r.text)}</div>
-                <div class="meta">${r.area ? `<span class="tag">${esc(r.area)}</span>` : ''}${r.hours ? `<span class="hrs">${fmtH(r.hours)}</span>` : ''}<span>${esc(r.author)}</span></div></div>`).join('')
-              : '<span class="none">Nincs bejegyzés</span>'}</div>
-          </div>`;
-        }).join('')}
-      </div>
-      <div class="row"><a class="btn long" href="/naplo/">Teljes napló – szerkesztés, keresés, korábbi hetek</a></div>
-    </div>`;
-  $('#quick').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const er = $('#qErr'), text = $('#qText').value.trim(), hours = $('#qHours').value.trim(), nm = ($('#qName').value || name).trim();
-    const fail = (m) => { er.hidden = false; er.textContent = m; };
-    if (!text) return fail('Írd be, mit csináltál.');
-    if (hours) { const h = Number(hours.replace(',', '.')); if (!Number.isFinite(h) || h <= 0 || h > 24) return fail('Az idő 0 és 24 óra között lehet (pl. 1,5).'); }
-    if (!nm) return fail('Írd be a nevedet.');
-    const b = $('#qSave'); b.disabled = true; b.textContent = 'Mentés…';
-    try {
-      await api.addEntry({ date: today(), text, hours }, nm);
-      store.set('naplo-nev', nm); toast('Elmentve.'); renderNaplo().catch(showError);
-    } catch (err) {
-      fail(err instanceof AccessError ? 'A napló kódja nem érvényes ezen az eszközön – lépj be a teljes naplóban.' : `Nem sikerült menteni: ${err.message}`); b.disabled = false; b.textContent = 'Újrapróbálom';
-    }
-  });
+  const done = rows.filter((r) => /^Kész:/.test(r.text)).length;
+  const items = [{ icon: 'circle-check-big', html: `Ezen a héten eddig <b>${done}</b> kész feladat`, good: done > 0 }];
+  if (st) {
+    items.push({ icon: 'list-todo', html: `Hátralévő feladatok: <b>${st.open}</b>` });
+    (st.doing || []).slice(0, 2).forEach((x) => items.push({ icon: 'timer', html: `Folyamatban: ${esc(x.text)} <span class="dim" data-run="${x.started_at || ''}" data-spent="${x.spent_ms}">· ${fmtDur(x.spent_ms + (x.started_at ? Date.now() - x.started_at : 0))}</span>` }));
+    if ((st.doing || []).length > 2) items.push({ icon: 'timer', html: `<span class="dim">+${st.doing.length - 2} további fut</span>` });
+    if (st.starred) items.push({ icon: 'star', html: `Fontos és még nincs kész: <b>${st.starred}</b>`, alert: true, n: st.starred });
+  } else {
+    items.push({ icon: 'info', html: '<span class="dim">A Teendőim még nem küldött állapotot. (Teendőim → menü → Munkanapló)</span>' });
+  }
+  fillIsland(el, { items, progress: st ? { done, left: st.open + (st.doing || []).length } : null, foot: st ? `Teendőim: frissítve ${hhmm(st.updated_at)}` : '' });
+  // A futó teendő ideje percenként frissül
+  clearInterval(tickTimer);
+  tickTimer = setInterval(() => $$('[data-run]').forEach((s) => { if (s.dataset.run) s.textContent = '· ' + fmtDur(Number(s.dataset.spent) + Date.now() - Number(s.dataset.run)); }), 30000);
 }
 
-/* ---------- 4/b. Valk fül: e heti állapot + legutóbbi lapok ---------- */
-async function renderValk() {
+// --- Valk sziget: e heti lap, jóváhagyásra vár, nyitott továbbjelzés ---
+async function loadValk() {
+  const el = $('#isValk');
   const [checks, idle] = await guarded(() => Promise.all([api.checks(), api.idle()]));
-  const t = today(), { year, week } = isoWeek(t);
-  const mine = checks.filter((r) => r.robot === ROBOT).sort((a, b) => b.check_date.localeCompare(a.check_date));
+  const { year, week } = isoWeek(today());
+  const mine = checks.filter((r) => r.robot === ROBOT);
   const thisWeek = mine.find((r) => r.iso_year === year && r.iso_week === week);
   const idleNow = idle.find((x) => x.robot === ROBOT && x.iso_year === year && x.iso_week === week);
   const unapproved = mine.filter((r) => !r.approved_by).length;
   const openEsc = mine.filter((r) => r.escalate && !r.approved_by).length;
-
-  // Az e heti kártya három állapota: kitöltve / nem üzemelt / még nincs
-  const status = thisWeek
-    ? `<div class="panel status ok"><span class="muted small">${year}. ${week}. hét</span>
-         <div class="big">Kitöltve</div>
-         <p style="margin:0 0 10px">${esc(thisWeek.inspector)} · ${fmtShort(thisWeek.check_date)}${thisWeek.approved_by ? ` · jóváhagyta: ${esc(thisWeek.approved_by)}` : ' · jóváhagyásra vár'}</p>
-         <a class="btn" href="/valk/#/lap/${encodeURIComponent(thisWeek.id)}">Lap megnyitása</a></div>`
-    : idleNow
-      ? `<div class="panel status idle"><span class="muted small">${year}. ${week}. hét</span>
-           <div class="big">Nem üzemelt</div><p style="margin:0">${esc(idleNow.reason || 'Ezen a héten nem volt ellenőrzés')} – ${esc(idleNow.marked_by)}</p></div>`
-      : `<div class="panel status todo"><span class="muted small">${year}. ${week}. hét</span>
-           <div class="big">Még nincs kitöltve</div>
-           <p style="margin:0 0 10px">A heti lap hétfőn esedékes.</p>
-           <a class="btn valk" href="/valk/#/uj">Kitöltés most</a></div>`;
-
-  $('#tabBody').innerHTML = `
-    <div class="stack">
-      ${status}
-      <div class="facts">
-        <div class="fact"><b>${unapproved}</b><span>lap jóváhagyásra vár</span></div>
-        <div class="fact"><b>${openEsc}</b><span>nyitott továbbjelzés</span></div>
-        <div class="fact"><b>${mine.length}</b><span>beküldött lap összesen</span></div>
-      </div>
-      <div>
-        <h2>Legutóbbi lapok</h2>
-        ${mine.length ? `<ul class="sheets">${mine.slice(0, 6).map((r) => `
-          <li><a href="/valk/#/lap/${encodeURIComponent(r.id)}">
-            <span class="wk">${r.iso_week}. hét</span>
-            <span>${esc(r.inspector)} <span class="muted small">· ${fmtShort(r.check_date)}</span></span>
-            <span class="badges">
-              ${r.action_count ? `<span class="badge warn">${r.action_count} beav.</span>` : ''}
-              ${r.skip_count ? `<span class="badge bad">${r.skip_count} elmaradt</span>` : ''}
-              ${r.approved_by ? '<span class="badge ok">Jóváhagyva</span>' : '<span class="badge n">Nincs jóváhagyva</span>'}
-            </span></a></li>`).join('')}</ul>` : '<p class="muted">Még nincs beküldött lap.</p>'}
-      </div>
-      <div class="row"><a class="btn long" href="/valk/">Valk heti lap – áttekintés, ütemezés, archívum</a></div>
-    </div>`;
+  const items = [];
+  if (thisWeek) items.push({ icon: 'circle-check-big', html: `A ${week}. heti lap kitöltve – ${esc(thisWeek.inspector)}, ${huShort.format(toDate(thisWeek.check_date))}`, good: true });
+  else if (idleNow) items.push({ icon: 'pause-circle', html: `A ${week}. héten nem üzemelt` });
+  else items.push({ icon: 'circle-alert', html: `A <b>${week}.</b> heti lap még nincs kitöltve`, alert: true });
+  items.push(unapproved ? { icon: 'stamp', html: `<b>${unapproved}</b> lap jóváhagyásra vár`, alert: true, n: unapproved } : { icon: 'stamp', html: 'Minden lap jóváhagyva', good: true });
+  if (openEsc) items.push({ icon: 'triangle-alert', html: `<b>${openEsc}</b> nyitott továbbjelzés`, alert: true, n: openEsc });
+  fillIsland(el, { items, foot: `${mine.length} beküldött lap összesen` });
+  if (!thisWeek && !idleNow) el.href = '/valk/#/uj';   // ha még nincs kész, egyből a kitöltésre visz
 }
 
 /* =====================================================================
-   5. Projektek – a szerverről, csak belépési kóddal
+   6. Projektek (a lista a szerverről jön, csak kóddal)
    ===================================================================== */
+const PICONS = { tokmany: 'cylinder', adapter: 'puzzle', hegesztett: 'flame', muhely: 'wrench' };
 let projCache = null;
-async function loadProjects() { if (!projCache) projCache = await guarded(() => api.projects()); return projCache; }
-
+const loadProjects = async () => (projCache ||= await guarded(() => api.projects()));
 async function renderProjects() {
-  $('#app').innerHTML = `<h1>Projektek</h1><p class="sub">A fő projektkörök. Koppints egyre, és lenyílik a hozzá tartozó oldalak listája.</p><div id="projBody"><p class="muted">Betöltés…</p></div>`;
+  $('#app').innerHTML = `<div class="page">
+    <div class="greet"><h1>Projektek</h1><p>Koppints egy projektre, és lenyílnak az oldalai.</p></div>
+    <div class="search-wrap"><i data-lucide="search"></i><input class="search" id="pq" type="search" placeholder="Keresés: tokmány, 3D, 2950…" autocomplete="off"></div>
+    <div class="proj" id="projBody"><div class="card glass"><div class="skeleton" style="width:60%"></div></div></div></div>`;
+  icons();
   const { projects } = await loadProjects();
-  $('#projBody').innerHTML = `<div class="proj">${projects.map((g) => `
-    <details class="pcard">
-      <summary><b>${esc(g.name)}<span>${g.items.length} oldal</span></b>${g.about ? `<small>${esc(g.about)}</small>` : ''}</summary>
-      <ul>${g.items.map((it) => `<li><a href="${esc(it.u)}" target="_blank" rel="noopener"><span>${esc(it.t)}${(it.k || []).map((k) => ` <span class="tag">${esc(k)}</span>`).join('')}</span>${it.d ? `<small>${fmtShort(it.d)}</small>` : ''}</a></li>`).join('')}</ul>
-    </details>`).join('')}</div>
-    <p class="muted small" style="margin-top:16px">A projektoldalak a Claude-ban vannak, és csak a te belépéseddel nyílnak meg.</p>`;
+  const plain = (s) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const draw = () => {
+    const words = plain($('#pq').value).split(/\s+/).filter(Boolean);
+    const list = projects.map((g) => ({ ...g, items: g.items.filter((it) => words.every((w) => plain(`${it.t} ${(it.k || []).join(' ')} ${g.name}`).includes(w))) })).filter((g) => g.items.length);
+    $('#projBody').innerHTML = list.length ? list.map((g, i) => `
+      <details class="pcard glass" style="--i:${i}" ${words.length ? 'open' : ''}>
+        <summary><span class="ico"><i data-lucide="${PICONS[g.key] || 'folder'}"></i></span>
+          <span><b>${esc(g.name)}</b><small>${g.items.length} oldal${g.about ? ' · ' + esc(g.about) : ''}</small></span>
+          <i class="chev" data-lucide="chevron-right"></i></summary>
+        <ul>${g.items.map((it) => `<li><a href="${esc(it.u)}" target="_blank" rel="noopener"><span>${esc(it.t)}${(it.k || []).map((k) => `<span class="chip">${esc(k)}</span>`).join('')}</span>${it.d ? `<small class="muted">${huShort.format(toDate(it.d))}</small>` : ''}</a></li>`).join('')}</ul>
+      </details>`).join('') : `<div class="card glass"><p class="muted" style="margin:0">Nincs találat.</p></div>`;
+    icons();
+  };
+  $('#pq').addEventListener('input', draw); draw();
 }
 
 /* =====================================================================
-   6. Beállítások
+   7. Beállítások
    ===================================================================== */
 function renderSettings() {
-  $('#app').innerHTML = `
-    <h1>Beállítások</h1><p class="sub">Ezek csak ezen az eszközön érvényesek.</p>
-    <div class="stack" style="max-width:560px">
-      <form id="nameForm" class="panel stack">
-        <h2 style="margin:0">Név a naplóban</h2>
-        <label class="field"><span>Ezzel a névvel kerülnek be a bejegyzéseid</span><input type="text" id="sName" maxlength="120" value="${esc(store.get('naplo-nev') || '')}"></label>
-        <div><button class="btn naplo" type="submit">Mentés</button></div>
-      </form>
-      <div class="panel stack">
-        <h2 style="margin:0">Belépés</h2>
-        <p style="margin:0">Ezen az eszközön be vagy lépve. Kilépés után a Központ, a napló és a heti lap is újra kéri a kódot.</p>
-        <div><button class="btn ghost" type="button" id="logout">Kilépés ezen az eszközön</button></div>
-      </div>
-      <div class="panel stack">
-        <h2 style="margin:0">Tablet</h2>
-        <p style="margin:0">A gépkezelő tabletjén a kezdőképernyő-ikon a Központra visz. Ha ott inkább egyből a heti lap nyíljon, a tableten nyisd meg a <b>/valk/</b> címet, és onnan add hozzá újra (Chrome ⋮ → Add to Home screen).</p>
-      </div>
-    </div>`;
+  const dark = store.get('kozpont-tema') === 'sotet';
+  $('#app').innerHTML = `<div class="page" style="max-width:600px">
+    <div class="greet"><h1>Beállítások</h1><p>Ezek csak ezen az eszközön érvényesek.</p></div>
+    <div class="card glass"><h2>Megjelenés</h2>
+      <label class="switch"><input type="checkbox" id="darkBg" ${dark ? 'checked' : ''}> Sötét háttér a Központban</label>
+      <p class="muted" style="margin:8px 0 0">Világosban az üzemben, erős fényben is jól olvasható.</p></div>
+    <form class="card glass" id="nameForm" style="display:flex;flex-direction:column;gap:12px"><h2 style="margin:0">Név a naplóban</h2>
+      <label class="field"><span>Ezzel a névvel kerülnek be a bejegyzéseid</span><input type="text" id="sName" maxlength="120" value="${esc(store.get('naplo-nev') || '')}"></label>
+      <div><button class="btn primary" type="submit"><i data-lucide="check"></i>Mentés</button></div></form>
+    <div class="card glass"><h2>Belépés</h2>
+      <p class="muted" style="margin:0 0 12px">Ezen az eszközön be vagy lépve. Kilépés után a Központ, a napló és a heti lap is újra kéri a kódot.</p>
+      <button class="btn" type="button" id="logout"><i data-lucide="log-out"></i>Kilépés ezen az eszközön</button></div>
+  </div>`;
+  icons();
+  $('#darkBg').addEventListener('change', (e) => { store.set('kozpont-tema', e.target.checked ? 'sotet' : 'vilagos'); applyTheme(); silk.redraw(); });
   $('#nameForm').addEventListener('submit', (e) => { e.preventDefault(); const v = $('#sName').value.trim(); if (v) store.set('naplo-nev', v); else store.del('naplo-nev'); toast('Elmentve.'); });
   $('#logout').addEventListener('click', () => { store.del('km-kod'); store.del('naplo-kod'); projCache = null; renderGate(); });
 }
 
 /* =====================================================================
-   7. Útvonalak: a cím # utáni része dönti el, melyik nézet látszik.
+   8. Útvonalak: a cím # utáni része dönti el, melyik nézet látszik
    ===================================================================== */
 const VIEWS = { '#/projektek': renderProjects, '#/beallitasok': renderSettings };
 function route() {
-  // Régi heti-lap cím, miközben a Központ már nyitva van (lásd 0. pont)
-  if (/^#\/(uj|lap\/)/.test(location.hash)) return location.replace('/valk/' + location.search + location.hash);
+  if (OLD.test(location.hash)) return location.replace('/valk/' + location.search + location.hash);
   if (!DEMO && !kmCode()) return renderGate();
   $('#menuBtn').hidden = false;
-  const view = VIEWS[location.hash] || renderHome;
-  $$('#drawer [data-view]').forEach((a) => a.setAttribute('aria-current', a.getAttribute('href') === (VIEWS[location.hash] ? location.hash : '#/') ? 'page' : 'false'));
-  window.scrollTo(0, 0);
-  Promise.resolve().then(view).catch(showError);
-  // A „Saját oldalak” link címe is a szerverről jön (nincs beégetve a nyilvános oldalba)
+  const key = VIEWS[location.hash] ? location.hash : '#/';
+  $$('.nav a[data-view]').forEach((a) => a.toggleAttribute('aria-current', a.dataset.view === key));
+  $$('.nav a[aria-current]').forEach((a) => a.setAttribute('aria-current', 'page'));
+  clearInterval(tickTimer); window.scrollTo(0, 0);
+  Promise.resolve().then(VIEWS[key] || renderHome).catch((e) => { if (!(e instanceof AccessError)) console.error(e); });
   loadProjects().then((p) => { if (p.private_index) { const a = $('#privLink'); a.href = p.private_index; a.hidden = false; } }).catch(() => {});
 }
-
-const w = isoWeek(today()); $('#weekLabel').textContent = `${w.year}. ${w.week}. hét`;
 $('#demo').hidden = !DEMO;
-window.addEventListener('hashchange', route);
+icons();
+addEventListener('hashchange', route);
 route();
 </script>
 </body>

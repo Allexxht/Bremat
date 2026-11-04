@@ -165,27 +165,55 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   `history`, `delete`. A kliens `createApiAdapter()`/`createDemoAdapter()` – új funkciót mindkettőbe.
 - Kód: `NAPLO_ACCESS_CODE`, ha be van állítva, különben `KM_ACCESS_CODE`. A kliens `naplo-kod`
   localStorage kulcsot használ, és ha az nincs, a heti lap `km-kod`-ját próbálja.
-- Kinézet: ugyanaz a sötét stílus, de **kékeszöld** kiemelés (a heti lap piros-fekete, 2026. november 4. óta; előtte narancs), hogy ne
-  lehessen összetéveszteni.
+- Kinézet: világos üveg, **kékeszöld** kiemelés (a heti lap piros), hogy ne lehessen
+  összetéveszteni. Lásd „Kinézet: üveg réteg”.
 
-## Központ (2026. november 4.)
-- A felhasználó kérése: egy hely, ahol minden megvan. Felül cím, bal oldalt lenyitható menü
-  (Kezdőlap, Projektek, Munkanapló, Valk heti lap, Új heti lap, Saját oldalak, Beállítások),
-  középen két fül: **Munkanapló** (a hét napjai a mai napig, gyors beírás a mai napra) és
-  **Valk lap** (e heti állapot, jóváhagyásra vár, nyitott továbbjelzés, legutóbbi 6 lap). A
-  választott fül eszközönként megmarad (`kozpont-ful`).
-- A Központ **nem tárol semmit**: a meglévő függvényeket hívja (`/api/naplo` `range`/`create`,
-  `/api/km` `list`/`idle_list`). Saját függvénye csak a `ping` és a `projects` (a projektkörök
-  listája, `lib/projektek.mjs`) – a lista **csak kóddal** jön, a nyilvános HTML-ben nincs benne.
-  A személyes oldalak (Jarvis, mellékjövedelem…) nem kerülnek ide: azok a privát Claude-oldalon
-  vannak (Műhelyindex, https://claude.ai/artifact/PFjAFQubRT1fs7gy63H4aR), a menü „Saját
-  oldalak” linkje oda visz (a címet is a szerver adja).
-- Új Claude-oldal a projektek közé: egy sor a `lib/projektek.mjs` megfelelő `items` listájába.
-- Kód: a Központ a `km-kod`-ot használja (KM_ACCESS_CODE). Ha a napló külön kódot kap, a Napló
-  fül nem léptet ki, csak a teljes napló belépésére küld.
-- A GitHub-repó **nyilvános** – a `lib/projektek.mjs` címei ott látszanak. Javasolt: a repót
-  priváttá tenni (a Netlify ugyanúgy deployol).
-- A Valk lap és a napló fejlécében „Központ” gomb vezet vissza.
+## Központ (2026. november 4., 2. változat)
+- A felhasználó kérése: egy hely, ahol minden megvan. **Üveghatású, letisztult, animált**
+  dizájn (a felhasználónak az 1. változat – fülek, egyszerű kártyák – „büdös szar” volt).
+  Felül középen cím, bal oldalt lenyitható üveg menü (Kezdőlap, Projektek, Munkanapló, Valk
+  heti lap, Új heti lap, Saját oldalak, Beállítások), a cím alatt **két sziget**: Munkanapló
+  és Valk heti lap, mindegyiken értesítés-jelvény. Ikonok: Lucide (`unpkg.com/lucide@0.460.0`).
+  Betűk: Sora (cím) + Manrope.
+- **Háttér:** canvas, animált „selyemszalagok” (a felhasználó egy sötét, hajlított
+  szalagos képet küldött mintának). **Alapból világos** (gyöngyház, halvány kék/kékeszöld/
+  rózsás) – a felhasználó kérése: egyik oldal se legyen sötét, mert az üzemben nem látszik.
+  A Beállításokban sötétre váltható (`kozpont-tema` = `sotet`). Fél felbontás, ~30 kép/mp,
+  rejtett lapnál áll, `prefers-reduced-motion`-nál álló kép.
+- **Munkanapló sziget:** a heti „Kész: …” bejegyzések száma (a Teendőimből jönnek) + a
+  **Teendőim állapota** (`/api/naplo` `todo_status`): hátralévő, folyamatban (névvel, élő
+  idővel a `started_at`-ból), fontos (★). Haladás-sáv: kész / (hátralévő + folyamatban).
+  **Jelvény = fontos, még nem kész teendők száma** (szándékosan nem az összes hátralévő –
+  az mindig ott lenne, és elveszítené a jelentését).
+- **Valk sziget:** e heti lap (kitöltve / nem üzemelt / nincs kitöltve), jóváhagyásra vár,
+  nyitott továbbjelzés. Jelvény = nincs kitöltve (1) + jóváhagyásra vár + nyitott továbbjelzés.
+  Ha a lap nincs kitöltve, a sziget egyből a `/valk/#/uj`-ra visz.
+- A Központ **nem tárol semmit**: a meglévő függvényeket hívja (`/api/naplo` `range`,
+  `todo_status`; `/api/km` `list`, `idle_list`). Saját függvénye csak a `ping` és a `projects`
+  (a projektkörök listája, `lib/projektek.mjs`) – a lista **csak kóddal** jön. A személyes
+  oldalak (Jarvis, mellékjövedelem…) a privát Claude-oldalon vannak (Műhelyindex,
+  https://claude.ai/artifact/PFjAFQubRT1fs7gy63H4aR), a menü „Saját oldalak” linkje oda visz.
+- Új Claude-oldal a projektek közé: egy sor a `lib/projektek.mjs` megfelelő `items` listájába
+  (a projektkör ikonja a `PICONS`-ban a `key` szerint).
+- Kód: a Központ a `km-kod`-ot használja (KM_ACCESS_CODE). Ha a napló külön kódot kap, a
+  napló sziget nem léptet ki, csak jelzi.
+- A GitHub-repó **nyilvános** – a `lib/projektek.mjs` címei ott látszanak. Javasolt: priváttá tenni.
+- Előnézet a Claude-ban (privát, mintaszámokkal, a régebbi sötét alap): https://claude.ai/artifact/KpD1RSVY3BP8a3z74ME1b5
+
+## Teendőim állapot (2026. november 4.)
+- `/api/naplo` `todo_status_set` (`status`: `open`, `starred`, `doing[]` = `text`, `spent_ms`,
+  `started_at`) és `todo_status`. Egy blob: `status/teendoim` (felülírja, `store.set`), a
+  bejegyzések (`e/`) közé nem kerül. A Teendőim (asztali PowerShell-program, a felhasználó
+  gépén, `%APPDATA%\Teendoim`) küldi, ha változott (legfeljebb 3 mp-enként), csak ha a
+  naplózás be van kapcsolva. A program forrása nincs a repóban (a felhasználó gépén van,
+  zipben kapja).
+
+## Kinézet: üveg réteg (2026. november 4.)
+- A Valk lap és a napló stílusának végén egy **„ÜVEG RÉTEG – VILÁGOS”** blokk van: világos,
+  áttetsző felületek, lassan úszó halvány színfoltok (`.backdrop`), Sora/Manrope, finom
+  beúszás (`#app > *`). A saját szín marad: Valk = fehér-fekete-piros, napló = kékeszöld.
+  A rögzített fejléc és a Beküldés-sáv majdnem tömör (`.97`), hogy a szöveg ne lássék át.
+  A működéshez nem nyúl – kinézet-változásnál ezt a blokkot szerkeszd.
 
 ## Munkamódszer
 - A magyarázatok magyarul szóljanak, de a menü- és beállításneveket angolul írd

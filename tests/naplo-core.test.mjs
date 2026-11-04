@@ -95,3 +95,21 @@ test('törlés: név kell, másolat marad, utána nincs', async () => {
   await rejects(call(s, { action: 'update', id: r.id, version: 1, entry: entry(), name: 'Alex' }), 404);
   await rejects(call(s, { action: 'delete', id: 'nem-uuid', name: 'Alex' }), 404);
 });
+
+test('Teendőim állapota: mentés, felülírás, ellenőrzés', async () => {
+  const s = memoryStore();
+  assert.equal(await call(s, { action: 'todo_status' }), null);
+  await rejects(call(s, { action: 'todo_status_set', status: { open: -1, starred: 0 } }), 400, /hátralévő/);
+  await rejects(call(s, { action: 'todo_status_set', status: { open: 'x', starred: 0 } }), 400);
+  await call(s, { action: 'todo_status_set', name: 'Alex', status: { open: 5, starred: 3, doing: [{ text: '3100.0610', spent_ms: 60000, started_at: 1793790000000 }] } });
+  let st = await call(s, { action: 'todo_status' });
+  assert.equal(st.open, 5); assert.equal(st.starred, 3); assert.equal(st.doing[0].text, '3100.0610');
+  assert.equal(st.doing[0].started_at, 1793790000000);
+  assert.equal(st.updated_at, NOW.toISOString());
+  await call(s, { action: 'todo_status_set', status: { open: 4, starred: 2 } });
+  st = await call(s, { action: 'todo_status' });
+  assert.equal(st.open, 4); assert.deepEqual(st.doing, []);
+  // az állapot nem keveredik a bejegyzések közé
+  assert.equal((await call(s, { action: 'all' })).length, 0);
+  await rejects(handle(JSON.stringify({ action: 'todo_status', code: 'rossz' }), ctx(s)), 401);
+});
