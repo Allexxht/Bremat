@@ -160,7 +160,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   `history`, `delete`. A kliens `createApiAdapter()`/`createDemoAdapter()` – új funkciót mindkettőbe.
 - Kód: `NAPLO_ACCESS_CODE`, ha be van állítva, különben `KM_ACCESS_CODE`. A kliens `naplo-kod`
   localStorage kulcsot használ, és ha az nincs, a heti lap `km-kod`-ját próbálja.
-- Kinézet: ugyanaz a sötét stílus, de **kékeszöld** kiemelés (a heti lap narancs), hogy ne
+- Kinézet: ugyanaz a sötét stílus, de **kékeszöld** kiemelés (a heti lap piros-fekete, 2026. november 4. óta; előtte narancs), hogy ne
   lehessen összetéveszteni.
 
 ## Munkamódszer

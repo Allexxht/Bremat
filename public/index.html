@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#14171a">
+<meta name="theme-color" content="#000000">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <title>Valk robot – heti karbantartás</title>
@@ -12,18 +12,18 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
 <style>
 /* ================================================================
-   Színek – minden szín token. Sötét, ipari: acélszürke + narancs.
+   Színek – minden szín token. Sötét, ipari: fekete + Valk-piros (a Munkanapló kékeszöld, hogy ne keveredjen).
    ================================================================ */
 :root {
-  --bg: #14171a;
-  --panel: #1d2126;
-  --panel-2: #262b31;
-  --line: #3a4048;
+  --bg: #0e0e0f;
+  --panel: #19191b;
+  --panel-2: #242427;
+  --line: #3a3a3e;
   --text: #eef0f2;
   --muted: #b1b8c0;
-  --hot: #ff7a1a;          /* narancs kitöltés */
-  --hot-ink: #1a1206;      /* szöveg narancson */
-  --hot-text: #ffa05c;     /* narancs szöveg / fókusz */
+  --hot: #d50f25;          /* Valk-piros kitöltés */
+  --hot-ink: #ffffff;      /* szöveg piroson */
+  --hot-text: #ff6670;     /* piros szöveg / fókusz sötét háttéren */
   --ok: #34a862;
   --ok-text: #74dc9a;
   --warn: #e9a92b;
@@ -45,7 +45,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
 
 /* Fejléc */
-.top { background: #0e1012; border-bottom: 3px solid var(--hot); position: sticky; top: 0; z-index: 20; }
+.top { background: #000000; border-bottom: 3px solid var(--hot); position: sticky; top: 0; z-index: 20; }
 .top .wrap { display: flex; align-items: center; gap: 14px; min-height: 60px; flex-wrap: wrap; padding-top: 6px; padding-bottom: 6px; }
 .brand { display: flex; flex-direction: column; line-height: 1.1; text-decoration: none; color: var(--text); margin-right: auto; }
 .brand b { font-family: var(--font-cond); font-size: 22px; letter-spacing: .06em; text-transform: uppercase; }
@@ -84,7 +84,7 @@ h2 { font-family: var(--font-cond); font-size: 21px; margin: 28px 0 12px; text-t
 .small { font-size: 14px; }
 
 .banner { border-radius: var(--radius); padding: 12px 14px; margin: 0 0 14px; border: 1.5px solid; }
-.banner.info { border-color: var(--hot); background: rgba(255,122,26,.08); }
+.banner.info { border-color: var(--hot); background: rgba(213,15,37,.08); }
 .banner.warn { border-color: var(--warn); background: rgba(233,169,43,.08); }
 .banner.bad { border-color: var(--bad); background: rgba(229,72,77,.1); }
 .demo-bar { background: var(--warn); color: var(--ink-on-color); text-align: center; font-weight: 600; font-size: 14px; padding: 6px 12px; }
@@ -99,7 +99,7 @@ h2 { font-family: var(--font-cond); font-size: 21px; margin: 28px 0 12px; text-t
 /* Táblázat */
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
 table { width: 100%; border-collapse: collapse; font-size: 15px; }
-th { text-align: left; background: #0e1012; color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; padding: 10px; white-space: nowrap; }
+th { text-align: left; background: #000000; color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; padding: 10px; white-space: nowrap; }
 td { padding: 10px; border-top: 1px solid var(--line); vertical-align: top; }
 tr.missing td { background: rgba(229,72,77,.07); }
 tr.idle td { background: rgba(177,184,192,.05); }
@@ -130,7 +130,7 @@ input:hover, select:hover, textarea:hover { border-color: var(--muted); }
 .item.st-ok { border-color: var(--ok); }
 .item.st-action { border-color: var(--warn); }
 .item.has-err { border-color: var(--bad); }
-.item .no { width: 40px; height: 40px; border-radius: 8px; background: #0e1012; color: var(--hot-text); font-family: var(--font-cond); font-size: 22px; display: flex; align-items: center; justify-content: center; }
+.item .no { width: 40px; height: 40px; border-radius: 8px; background: #000000; color: var(--hot-text); font-family: var(--font-cond); font-size: 22px; display: flex; align-items: center; justify-content: center; }
 .item h3 { margin: 6px 0 4px; font-size: 18px; }
 .item ul { margin: 0 0 8px; padding-left: 18px; color: var(--muted); font-size: 14.5px; }
 .item ul li { margin: 1px 0; }
@@ -187,7 +187,7 @@ table.mini th, table.mini td { padding: 6px 8px; white-space: normal; }
 .check { display: flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; }
 .check input { width: 24px; height: 24px; accent-color: var(--hot); }
 
-.safety { border: 1.5px solid var(--hot); border-radius: var(--radius); padding: 12px 14px; background: rgba(255,122,26,.07); font-size: 14.5px; margin-bottom: 14px; }
+.safety { border: 1.5px solid var(--hot); border-radius: var(--radius); padding: 12px 14px; background: rgba(213,15,37,.07); font-size: 14.5px; margin-bottom: 14px; }
 .safety b { color: var(--hot-text); }
 
 /* Feladat-címkék, háromállású választó, elmaradt / esedékes jelzések */
@@ -223,7 +223,7 @@ table.mini th, table.mini td { padding: 6px 8px; white-space: normal; }
 .tabs button[aria-selected=true] { color: var(--text); border-bottom-color: var(--hot); }
 @media (max-width: 560px) { .seg3 button { font-size: 14px; } .tabs button { padding: 8px 8px; font-size: 15px; } }
 /* Alsó sáv beküldéshez */
-.submitbar { position: fixed; left: 0; right: 0; bottom: 0; background: #0e1012; border-top: 2px solid var(--line); z-index: 30; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.submitbar { position: fixed; left: 0; right: 0; bottom: 0; background: #000000; border-top: 2px solid var(--line); z-index: 30; padding-bottom: env(safe-area-inset-bottom, 0px); }
 .submitbar .wrap { display: flex; align-items: center; gap: 12px; min-height: 76px; }
 .progress { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .progress .bar { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; }
