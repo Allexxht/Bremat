@@ -145,7 +145,7 @@ main {
 
 /* ---------- Nyitó animáció: konténer + kamion (videó), utána a kígyós BREMAT logó ---------- */
 .hero { position: relative; width: min(100%, 760px); aspect-ratio: 3 / 1; margin: -8px auto -4px; cursor: pointer; }
-.hero video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; transition: opacity .5s var(--ease); }
+.hero video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; z-index: 1; transition: opacity .5s var(--ease); }
 .hero svg { position: absolute; inset: 8% 9%; width: 82%; height: 84%; overflow: visible; color: var(--text); pointer-events: none; }
 .hero .letter { transform-box: fill-box; transform-origin: 50% 70%; }
 .hero .logo { transform-box: view-box; transform-origin: 50% 60%; }
@@ -548,7 +548,7 @@ function renderHome() {
 // A napi első megnyitáskor (utána legfeljebb 2,5 óránként) lemegy a videó: a konténer felépül,
 // felkerül a kamionra, a kamion elhúz – és mögötte a kígyós vonal kirajzolja a BREMAT logót.
 // Máskor csak a kész logó látszik. Koppintásra átugorható.
-const INTRO_SRC = '/kozpont/intro.webm', LOGO_AT = 8.45;   // a videóban ekkor indul el a kamion
+const INTRO_SRC = '/kozpont/intro.webm', LOGO_AT = 8.6;   // a videóban ekkor indul el a kamion
 const LOGO_FS = 236, LOGO_Y = 322, LOGO_X0 = 64;
 const LOGO_FRAME = 'M1246,300 L1250,334 L96,390 L22,52 L1240,52 L1244,92';
 const LOGO_PATHS = {   // a betűk vázvonala a betű „tinta-dobozában” (0–1): ezen fut a kígyó
@@ -623,7 +623,7 @@ async function intro(hero) {
   video = document.createElement('video');
   Object.assign(video, { muted: true, playsInline: true, preload: 'auto', src: INTRO_SRC });
   video.setAttribute('aria-hidden', 'true');
-  hero.insertBefore(video, svg);
+  hero.appendChild(video);   // a videó a logó fölött: a kamion eltakarja, mögötte bukkan elő
   const watch = () => { if (!hero.isConnected) return video.pause(); if (video.currentTime >= LOGO_AT) return startLogo(); raf = requestAnimationFrame(watch); };
   video.addEventListener('error', startLogo, { once: true });
   video.addEventListener('ended', () => { startLogo(); hero.classList.add('static'); }, { once: true });
