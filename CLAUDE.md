@@ -207,7 +207,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   (a videó alatt, így a kamion eltakarja; Archivo Black, betűnként kígyós maszk-felfedés, felemelkedés, keret, fénycsík). A felhasználó
   kérése: nincs színes „vezető fej”, és a betűk nem ugranak meg. A logó utána ott marad.
 - Lejátszás a napi első megnyitáskor, utána legfeljebb 2,5 óránként (`kozpont-intro` localStorage);
-  máskor és `prefers-reduced-motion`-nál csak a kész logó. Koppintásra átugorható. Safari (nincs
+  máskor és `prefers-reduced-motion`-nál csak a kész logó. Koppintásra átugorható, kész állapotban koppintásra újraindul. Safari (nincs
   átlátszó WebM) és hibás videó esetén csak a logó-animáció megy.
 - A 3D jelenet forrása nincs a repóban (Blender-program a Claude-munkamenetben; a felhasználó
   otthon nagy felbontásban rendereli). Új render: PNG-kockákból
