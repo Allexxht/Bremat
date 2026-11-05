@@ -202,9 +202,11 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 
 ## Nyitó animáció (2026. november 5.)
 - A Központ kezdőlapján a köszönés fölött (`#hero`, 3:1): `public/kozpont/intro.webm` (VP9 + alfa,
-  960×320, 30 kép/mp) – a BREMAT FT3 konténer felépül, felkerül a kamionra, a kamion elhúz –, és
-  a videó `LOGO_AT` (8,6 mp, a kamion indulása) idejétől SVG-ben kirajzolódik a BREMAT logó
-  (a videó alatt, így a kamion eltakarja; Archivo Black, betűnként kígyós maszk-felfedés, felemelkedés, keret, fénycsík). A felhasználó
+  1080×360, 30 kép/mp) – a BREMAT FT3 konténer felépül, felkerül a kamionra, a kamion elhúz; alacsony, oldalsó kamera,
+  alaplap („sziget”) nincs, csak árnyék –, és
+  a videó `LOGO_AT` (8,5 mp, a kamion indulása) idejétől SVG-ben kirajzolódik a BREMAT logó
+  (a videó alatt, így a kamion eltakarja; Archivo Black, betűnként kígyós maszk-felfedés). Kicsiben, középen
+  (`LOGO_FROM`) bújik elő a plató mögül, felnő a helyére, utána körbefut a keret, végül fénycsík. A felhasználó
   kérése: nincs színes „vezető fej”, és a betűk nem ugranak meg. A logó utána ott marad.
 - Lejátszás a napi első megnyitáskor, utána legfeljebb 2,5 óránként (`kozpont-intro` localStorage);
   máskor és `prefers-reduced-motion`-nál csak a kész logó. Koppintásra átugorható, kész állapotban koppintásra újraindul. Safari (nincs
