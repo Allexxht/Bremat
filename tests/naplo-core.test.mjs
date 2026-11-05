@@ -113,3 +113,32 @@ test('Teendőim állapota: mentés, felülírás, ellenőrzés', async () => {
   assert.equal((await call(s, { action: 'all' })).length, 0);
   await rejects(handle(JSON.stringify({ action: 'todo_status', code: 'rossz' }), ctx(s)), 401);
 });
+
+test('napi idősáv: mentés, felülírás, lekérés', async () => {
+  const s = memoryStore();
+  const t0 = Date.parse('2026-11-03T06:00:00Z');
+  const day = (segments, date = '2026-11-03') => ({ date, segments });
+  const set = (d) => call(s, { action: 'time_day_set', day: d, name: 'Alex' });
+  await rejects(set(day([], '2026-11-07')), 400, /jövőbeli/);
+  await rejects(set(day([{ name: 'x', kind: 'todo', start: t0, end: t0 - 1 }])), 400, /befejezés/);
+  await rejects(set(day([{ name: 'x', kind: 'todo', start: t0 + 5 * 86400000, end: null }])), 400, /napra/);
+  await rejects(set({ date: '2026-11-03' }), 400, /szakasz/);
+  assert.equal(await set(day([
+    { name: 'DPTS', kind: 'todo', start: t0 + 3600000, end: null },
+    { name: 'Általános', kind: 'activity', start: t0, end: t0 + 3600000 },
+    { name: '', kind: 'break', start: t0 + 1800000, end: t0 + 2400000 },
+    { name: 'Furcsa', kind: 'semmi', start: t0, end: t0 },
+  ])), true);
+  let r = await call(s, { action: 'time_range', from: '2026-11-02', to: '2026-11-08' });
+  assert.equal(r.length, 1);
+  assert.deepEqual(r[0].segments.map((x) => [x.name, x.kind]), [['Általános', 'activity'], ['Furcsa', 'todo'], ['Szünet', 'break'], ['DPTS', 'todo']]);
+  assert.equal(r[0].segments[3].end, null);
+  // Felülírás: a teljes nap újra
+  await set(day([{ name: 'Általános', kind: 'activity', start: t0, end: t0 + 60000 }]));
+  await set(day([{ name: 'E-mail', kind: 'activity', start: t0, end: null }], '2026-11-04'));
+  r = await call(s, { action: 'time_range', from: '2026-11-02', to: '2026-11-08' });
+  assert.deepEqual(r.map((x) => [x.date, x.segments.length]), [['2026-11-03', 1], ['2026-11-04', 1]]);
+  // A bejegyzések közé nem kerül
+  assert.deepEqual(await call(s, { action: 'range', from: '2026-11-02', to: '2026-11-08' }), []);
+  await rejects(call(s, { action: 'time_range', from: '2026-01-01', to: '2026-11-08' }), 400, /hosszú/);
+});

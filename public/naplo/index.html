@@ -104,6 +104,29 @@ input:hover, textarea:hover { border-color: var(--muted); }
 .hrs { color: var(--hot-text); font-weight: 700; }
 
 .results .entry { cursor: default; }
+/* Napi idősáv – a Teendőim óráiból */
+.tl { margin-top: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.tl-head { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; font-size: 14px; color: var(--muted); }
+.tl-head b { color: var(--text); font-size: 15px; }
+.tl-bar { position: relative; height: 26px; margin: 10px 0 4px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
+.tl-bar i { position: absolute; min-width: 2px; }
+.tl-bar i.brk { background: repeating-linear-gradient(135deg, rgba(120,128,140,.35) 0 5px, rgba(120,128,140,.15) 5px 10px) !important; }
+.tl-bar i.run { animation: tlpulse 2s ease-in-out infinite; }
+@keyframes tlpulse { 50% { opacity: .55; } }
+.tl-axis { position: relative; height: 16px; font-size: 11.5px; color: var(--muted); }
+.tl-axis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.tl-sum { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 14px; }
+.tl-sum span { display: inline-flex; align-items: center; gap: 6px; }
+.tl-sum em { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.tl-sum b { font-weight: 700; }
+.tl details { margin-top: 8px; font-size: 14px; }
+.tl summary { cursor: pointer; color: var(--hot-text); font-weight: 600; }
+.tl table { border-collapse: collapse; width: 100%; margin-top: 6px; }
+.tl td { padding: 4px 8px 4px 0; border-top: 1px solid var(--line); vertical-align: top; }
+.tl td.t { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--muted); }
+.tl td.d { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.tl .gap td { color: var(--muted); font-style: italic; }
+@media (prefers-reduced-motion: reduce) { .tl-bar i.run { animation: none; } }
 .results .when { font-weight: 700; margin-bottom: 4px; }
 
 .gate { max-width: 420px; margin: 8vh auto 0; }
@@ -337,11 +360,12 @@ function createApiAdapter() {
     update: (code, id, version, entry, name) => call('update', { code, id, version, entry, name }),
     history: (code, id) => call('history', { code, id }),
     remove: (code, id, name) => call('delete', { code, id, name }),
+    timeRange: (code, from, to) => call('time_range', { code, from, to }),
   };
 }
 
 function createDemoAdapter() {
-  const KEY = 'naplo-demo-v1';
+  const KEY = 'naplo-demo-v3';
   let mem = null;
   const save = () => store.set(KEY, JSON.stringify(mem));
   const load = () => {
@@ -363,7 +387,27 @@ function createDemoAdapter() {
       mk(m, 'Heti karbantartás a Valk roboton.', 'Valk robot', 1.5, 'Alex'),
     ];
     if (addDays(m, 1) <= today()) e.push(mk(addDays(m, 1), 'Megrendeltem a pótalkatrészeket (gázfúvóka, áramátadó).', null, null, 'Alex'));
-    return { entries: e, hist: [] };
+    return { entries: e, hist: [], time: seedTime(m) };
+  }
+  // Mintanapok a Teendőim órájából (hétfő és – ha már eljött – a mai nap)
+  function seedTime(m) {
+    const at = (d, hm) => { const [h, mi] = hm.split(':').map(Number); return Date.parse(`${d}T${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}:00+01:00`); };
+    const seg = (d, name, kind, a, b) => ({ name, kind, start: at(d, a), end: b ? at(d, b) : null });
+    const days = [];
+    const day1 = (d, live) => ({ date: d, segments: [
+      seg(d, 'Általános', 'activity', '7:02', '7:45'),
+      seg(d, 'DPTS programozás – 2-es jig', 'todo', '7:45', '9:30'),
+      seg(d, 'Szünet', 'break', '9:30', '9:50'),
+      seg(d, 'DPTS programozás – 2-es jig', 'todo', '9:50', '11:05'),
+      seg(d, 'Általános', 'activity', '11:05', '11:40'),
+      seg(d, 'Szünet', 'break', '11:40', '12:10'),
+      seg(d, 'Adapter tervezés', 'todo', '12:25', live ? null : '14:40'),
+      ...(live ? [] : [seg(d, 'Bremat központ', 'todo', '13:10', '14:00'), seg(d, 'Általános', 'activity', '14:40', '15:35')]),
+    ] });
+    days.push(day1(addDays(m, -7), false));
+    days.push(day1(m, false));
+    if (today() !== m) days.push({ ...day1(today(), true), segments: day1(today(), true).segments.filter((x) => x.start <= Date.now()) });
+    return days;
   }
   const delay = (v) => new Promise((r) => setTimeout(() => r(structuredClone(v)), 100));
   const fail = (m) => Promise.reject(new Error(m));
@@ -405,6 +449,7 @@ function createDemoAdapter() {
       if (i < 0) return fail('Nincs ilyen bejegyzés');
       mem.entries.splice(i, 1); save(); return delay(true);
     },
+    timeRange: (_c, from, to) => delay((load().time || []).filter((x) => x.date >= from && x.date <= to)),
   };
 }
 
@@ -559,35 +604,141 @@ async function renderWeek(monday) {
   $('#searchForm').addEventListener('submit', (ev) => { ev.preventDefault(); search($('#q').value); });
   $('#csv').addEventListener('click', downloadCsv);
 
-  let rows;
-  try { rows = await call(() => api.range(getCode(), monday, sunday)); } catch (e) {
+  let rows, times = [];
+  // Az idősáv nem akadályozhatja a bejegyzések megjelenését: ha nem jön, csak kimarad.
+  const timeP = api.timeRange(getCode(), monday, sunday).catch(() => []);
+  try { rows = await call(() => api.range(getCode(), monday, sunday)); times = await timeP; } catch (e) {
     if (e instanceof AccessError) return;
     $('#days').innerHTML = `<div class="banner">Nem sikerült betölteni: ${esc(e.message)}</div>`;
     return;
   }
   const total = sumH(rows);
-  $('#weekSum').textContent = rows.length ? ` · ${rows.length} bejegyzés${total ? ` · ${fmtH(total)}` : ''}` : '';
+  const worked = times.reduce((a, x) => a + tlStats(x.segments, x.date).work, 0);
+  $('#weekSum').textContent = (rows.length ? ` · ${rows.length} bejegyzés${total ? ` · ${fmtH(total)}` : ''}` : '') + (worked ? ` · mért munka: ${fmtDur(worked)}` : '');
   $('#days').innerHTML = DAYS.map((name, i) => {
     const d = addDays(monday, i);
     const list = rows.filter((r) => r.date === d);
     const h = sumH(list);
     const future = d > t;
+    const tday = times.find((x) => x.date === d && x.segments.length);
     return `
-      <section class="day${d === t ? ' today' : ''}${list.length ? '' : ' empty'}">
+      <section class="day${d === t ? ' today' : ''}${list.length || tday ? '' : ' empty'}">
         <div class="day-head">
           <h3>${name}<small>${fmtShort(d)}${d === t ? ' · ma' : ''}</small></h3>
           ${h ? `<span class="sum">${fmtH(h)}</span>` : ''}
           ${future ? '' : `<button class="btn sm ghost no-print" type="button" data-add="${d}">+ Bejegyzés</button>`}
         </div>
+        ${tday ? timelineHtml(tday) : ''}
         ${list.map((r) => entryHtml(r)).join('')}
       </section>`;
   }).join('');
+  // A mai, még futó szakasz percenként frissül.
+  clearInterval(renderWeek._tick);
+  if (times.some((x) => x.date === t && x.segments.some((g) => g.end == null))) {
+    const live = times.find((x) => x.date === t);
+    renderWeek._tick = setInterval(() => {
+      const el = document.querySelector(`.tl[data-d="${t}"]`);
+      if (!el) return clearInterval(renderWeek._tick);
+      const open = el.querySelector('details')?.open;
+      el.outerHTML = timelineHtml(live);
+      if (open) document.querySelector(`.tl[data-d="${t}"] details`).open = true;
+    }, 60000);
+  }
   $$('[data-add]').forEach((b) => b.addEventListener('click', () => {
     $('#nwDate').value = b.dataset.add; saveDraft();
     $('#newForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
     $('#nwText').focus({ preventScroll: true });
   }));
   $$('[data-edit]').forEach((b) => b.addEventListener('click', () => openEdit(rows.find((r) => r.id === b.dataset.edit), () => renderWeek(monday))));
+}
+
+/* ================================================================
+   Napi idősáv – a Teendőim órájának szakaszai (mettől meddig mi ment)
+   ================================================================ */
+const huHM = new Intl.DateTimeFormat('hu-HU', { timeZone: 'Europe/Budapest', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const huYMD = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest', year: 'numeric', month: '2-digit', day: '2-digit' });
+const fmtHM = (ms) => huHM.format(new Date(ms));
+// Percek a nap éjfelétől (budapesti idő); a következő napra átnyúló időnél 24 óra fölé megy.
+function minOfDay(ms, ymd) {
+  const [h, m] = fmtHM(ms).split(':').map(Number);
+  const d = huYMD.format(new Date(ms));
+  return h * 60 + m + (d > ymd ? 1440 : d < ymd ? -1440 : 0);
+}
+function fmtDur(ms) {
+  const m = Math.round(ms / 60000);
+  if (m < 1) return '<1 p';
+  if (m < 60) return `${m} p`;
+  return `${Math.floor(m / 60)} ó${m % 60 ? ` ${m % 60} p` : ''}`;
+}
+const TL_COLORS = ['#0e8ea3', '#6d5bd0', '#d9822b', '#2f9e5b', '#c2417a', '#3b6fd6', '#a1872a', '#7a4fb3', '#1d9c8c', '#c4543a'];
+const tlColor = (name) => { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0; return TL_COLORS[h % TL_COLORS.length]; };
+// A futó szakasz vége: ma most, korábbi napon a nap vége (elfelejtett leállítás).
+const segEnd = (g, ymd) => g.end ?? (ymd === today() ? Date.now() : Math.max(g.start, Date.parse(addDays(ymd, 1) + 'T00:00:00+01:00') - 1));
+// Átfedő szakaszok (egyszerre több óra fut) összes ideje: amit egyszerre csináltál, csak egyszer számít.
+function unionMs(list) {
+  const iv = list.map(([a, b]) => [a, Math.max(a, b)]).sort((x, y) => x[0] - y[0]);
+  let sum = 0, cs = null, ce = null;
+  for (const [a, b] of iv) {
+    if (ce == null || a > ce) { if (ce != null) sum += ce - cs; cs = a; ce = b; } else ce = Math.max(ce, b);
+  }
+  return ce == null ? sum : sum + ce - cs;
+}
+function tlStats(segs, ymd) {
+  const by = new Map();
+  const w = [], br = [], all = [];
+  for (const g of segs) {
+    const e = segEnd(g, ymd);
+    all.push([g.start, e]);
+    if (g.kind === 'break') { br.push([g.start, e]); continue; }
+    w.push([g.start, e]);
+    by.set(g.name, (by.get(g.name) || 0) + Math.max(0, e - g.start));
+  }
+  const work = unionMs(w);
+  // a szünetből csak az számít, ami alatt nem ment munka
+  const brk = unionMs(all) - work;
+  return { work, brk, covered: unionMs(all), by: [...by].sort((a, b) => b[1] - a[1]) };
+}
+function timelineHtml(day) {
+  const ymd = day.date;
+  const segs = day.segments.map((g) => ({ ...g, e: segEnd(g, ymd) }));
+  const first = segs[0].start, last = Math.max(...segs.map((g) => g.e));
+  const st = tlStats(day.segments, ymd);
+  // A napon belül minden név más színt kap (a leghosszabb az első színt)
+  const cmap = new Map(st.by.map(([nm], i) => [nm, TL_COLORS[i % TL_COLORS.length]]));
+  const col = (nm) => cmap.get(nm) || tlColor(nm);
+  // A sáv legalább 7:00–16:00, de kitágul, ha korábban kezdtél vagy tovább maradtál.
+  const a = Math.min(7 * 60, Math.floor(minOfDay(first, ymd) / 60) * 60);
+  const b = Math.max(16 * 60, Math.ceil(minOfDay(last, ymd) / 60) * 60);
+  const pct = (min) => ((min - a) / (b - a)) * 100;
+  // Egyszerre futó szakaszok külön sávba (egymás alá) kerülnek
+  const laneEnd = [];
+  const lane = segs.map((g) => { let i = laneEnd.findIndex((e) => e <= g.start); if (i < 0) { i = laneEnd.length; laneEnd.push(0); } laneEnd[i] = g.e; return i; });
+  const nl = Math.max(1, laneEnd.length);
+  const bars = segs.map((g, k) => {
+    const x = pct(minOfDay(g.start, ymd)), w = Math.max(0, pct(minOfDay(g.e, ymd)) - x);
+    const tip = `${fmtHM(g.start)}–${g.end == null ? 'most' : fmtHM(g.e)} · ${g.name} (${fmtDur(g.e - g.start)})`;
+    return `<i class="${g.kind === 'break' ? 'brk' : ''}${g.end == null ? ' run' : ''}" style="left:${x}%;width:${w}%;top:${(lane[k] * 100) / nl}%;height:${100 / nl}%;background:${col(g.name)}" title="${esc(tip)}"></i>`;
+  }).join('');
+  const ticks = [];
+  const step = b - a > 12 * 60 ? 180 : 120;
+  for (let m = a; m <= b; m += step) ticks.push(`<span style="left:${pct(m)}%">${m / 60 % 24}:00</span>`);
+  // Részletes lista, a lyukakkal („nem mért idő”) együtt.
+  const rowsHtml = [];
+  let prev = null;
+  for (const g of segs) {
+    if (prev != null && g.start - prev >= 5 * 60000) rowsHtml.push(`<tr class="gap"><td class="t">${fmtHM(prev)}–${fmtHM(g.start)}</td><td>nem mért idő</td><td class="d">${fmtDur(g.start - prev)}</td></tr>`);
+    rowsHtml.push(`<tr><td class="t">${fmtHM(g.start)}–${g.end == null ? (ymd === today() ? 'most' : '?') : fmtHM(g.e)}</td><td>${g.kind === 'break' ? '<i>Szünet</i>' : esc(g.name)}</td><td class="d">${fmtDur(g.e - g.start)}</td></tr>`);
+    prev = Math.max(prev ?? 0, g.e);
+  }
+  const span = last - first;
+  return `
+    <div class="tl" data-d="${ymd}">
+      <div class="tl-head"><b>Munka: ${fmtDur(st.work)}</b><span>${fmtHM(first)} – ${segs.some((g) => g.end == null) && ymd === today() ? 'most' : fmtHM(last)}</span>${st.brk ? `<span>szünet: ${fmtDur(st.brk)}</span>` : ''}${span - st.covered >= 5 * 60000 ? `<span>nem mért: ${fmtDur(span - st.covered)}</span>` : ''}</div>
+      <div class="tl-bar" role="img" aria-label="Napi idősáv" style="height:${nl > 1 ? 14 + 14 * nl : 26}px">${bars}</div>
+      <div class="tl-axis" aria-hidden="true">${ticks.join('')}</div>
+      <div class="tl-sum">${st.by.map(([n, d]) => `<span><em style="background:${col(n)}"></em>${esc(n)} <b>${fmtDur(d)}</b></span>`).join('')}</div>
+      <details><summary>Mettől meddig</summary><table>${rowsHtml.join('')}</table></details>
+    </div>`;
 }
 
 function entryHtml(r, withEdit = true) {

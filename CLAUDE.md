@@ -207,7 +207,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   (a videó alatt, így a kamion eltakarja; Archivo Black, betűnként kígyós maszk-felfedés, felemelkedés, keret, fénycsík). A felhasználó
   kérése: nincs színes „vezető fej”, és a betűk nem ugranak meg. A logó utána ott marad.
 - Lejátszás a napi első megnyitáskor, utána legfeljebb 2,5 óránként (`kozpont-intro` localStorage);
-  máskor és `prefers-reduced-motion`-nál csak a kész logó. Koppintásra átugorható. Safari (nincs
+  máskor és `prefers-reduced-motion`-nál csak a kész logó. Koppintásra átugorható, kész állapotban koppintásra újraindul. Safari (nincs
   átlátszó WebM) és hibás videó esetén csak a logó-animáció megy.
 - A 3D jelenet forrása nincs a repóban (Blender-program a Claude-munkamenetben; a felhasználó
   otthon nagy felbontásban rendereli). Új render: PNG-kockákból
@@ -219,7 +219,27 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   bejegyzések (`e/`) közé nem kerül. A Teendőim (asztali PowerShell-program, a felhasználó
   gépén, `%APPDATA%\Teendoim`) küldi, ha változott (legfeljebb 3 mp-enként), csak ha a
   naplózás be van kapcsolva. A program forrása nincs a repóban (a felhasználó gépén van,
-  zipben kapja).
+  zipben kapja; a legutóbbi a projekt közös mappájában: `teendoim/Teendoim.zip`).
+  2026. november 5.: a felhasználó egy olyan változatot küldött, amelyikből ez a küldés hiányzott –
+  az idősávos változatba visszakerült.
+
+## Napi idősáv (2026. november 5., a felhasználó kérésére)
+- Cél: a naplóban látszódjon, mettől meddig mivel foglalkozott (nem csak a „Kész:” sorok).
+  A felhasználó a gép mögött dolgozik, naponta többféle dolgon, egyszerre több projekten.
+- A Teendőim órája küldi: `/api/naplo` `time_day_set` (`day`: `date`, `segments[]` = `name`,
+  `kind` – `todo` / `activity` (állandó tevékenység, első: **„Általános”**) / `break`,
+  `start`, `end` Unix ms, `end` = null, ha fut). Egy nap = egy blob `t/<YYYY-MM-DD>`, a
+  program mindig a **teljes napot** küldi (felülír – ismételt küldés sem árt). Olvasás:
+  `time_range` (max. 62 nap). A bejegyzések (`e/`) közé nem kerül.
+- A heti nézetben naponta idősáv (min. 7–16 óra), összesítés név szerint, szünet, „nem mért
+  idő” (≥ 5 perces lyuk), lenyitható „Mettől meddig” lista; a mai futó szakasz percenként frissül.
+- A Teendőim oldalán (2026. november 5.): tevékenység-gombok a lista fölött („Általános”,
+  „Szünet” – `kind` = `act` / `brk` a `teendok.json`-ban, sosem lesznek készek, nem számítanak a
+  hátralévők közé), egy kattintás = váltás (alapból egyszerre egy óra fut, menüben kikapcsolható).
+  A szakaszok helyben: `%APPDATA%\Teendoim\ido.json` (21 nap), küldés 5 mp-enként a még el nem
+  küldött napokból. A tétlenségfigyelésre épül (2 perc után kérdez); szünet alatt nem kérdez, a
+  „Folytatás” / „Maradjon szünet” válasz szünet-szakaszt ír. A program legutóbbi változata:
+  `/mnt/project-files/teendoim/Teendoim.zip` (a projekt közös mappájában, nem a repóban).
 
 ## Kinézet: üveg réteg (2026. november 4.)
 - A Valk lap és a napló stílusának végén egy **„ÜVEG RÉTEG – VILÁGOS”** blokk van: világos,

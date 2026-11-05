@@ -149,7 +149,7 @@ main {
 .hero svg { position: absolute; inset: 8% 9%; width: 82%; height: 84%; overflow: visible; color: var(--text); pointer-events: none; }
 .hero .letter { transform-box: fill-box; transform-origin: 50% 70%; }
 .hero .logo { transform-box: view-box; transform-origin: 50% 60%; }
-.hero.static { cursor: default; }
+.hero.static { cursor: pointer; }
 
 /* Szigetek */
 .islands { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px; }
@@ -604,7 +604,7 @@ function introDue() {
 }
 // A Safari nem tud átlátszó WebM-et (fekete háttér lenne) – ott a videó kimarad, csak a logó rajzolódik ki.
 const alphaVideo = () => !/^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent) && !!document.createElement('video').canPlayType('video/webm; codecs="vp9"');
-async function intro(hero) {
+async function intro(hero, force = false) {
   if (!hero) return;
   await document.fonts.load(`${LOGO_FS}px "Archivo Black"`).catch(() => {});
   if (!hero.isConnected) return;
@@ -612,21 +612,27 @@ async function intro(hero) {
   hero.appendChild(svg);
   const play = buildLogo(svg);
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (calm || !introDue()) { hero.classList.add('static'); play().forEach((a) => a.finish()); return; }
+  // kész állapotban egy koppintás újraindítja az introt
+  const replayOnTap = () => { hero.classList.add('static'); hero.addEventListener('click', () => { hero.replaceChildren(); hero.classList.remove('static'); intro(hero, true); }, { once: true }); };
+  if (!force && (calm || !introDue())) { play().forEach((a) => a.finish()); return replayOnTap(); }
   store.set('kozpont-intro', String(Date.now()));
   let anims = null, raf = 0;
   const startLogo = () => { if (!anims) anims = play(); };
-  const skip = () => { cancelAnimationFrame(raf); if (video) { video.pause(); video.style.opacity = 0; } startLogo(); anims.forEach((a) => a.finish()); hero.classList.add('static'); };
+  const skip = () => { cancelAnimationFrame(raf); if (video) { video.pause(); video.style.opacity = 0; } startLogo(); anims.forEach((a) => a.finish()); replayOnTap(); };
   hero.addEventListener('click', skip, { once: true });
   let video = null;
-  if (!alphaVideo()) return startLogo();
+  if (!alphaVideo()) {   // videó nélkül: a logó végén is koppintásra újraindul
+    startLogo();
+    Promise.all(anims.map((x) => x.finished)).then(() => { hero.removeEventListener('click', skip); if (!hero.classList.contains('static')) replayOnTap(); }, () => {});
+    return;
+  }
   video = document.createElement('video');
   Object.assign(video, { muted: true, playsInline: true, preload: 'auto', src: INTRO_SRC });
   video.setAttribute('aria-hidden', 'true');
   hero.appendChild(video);   // a videó a logó fölött: a kamion eltakarja, mögötte bukkan elő
   const watch = () => { if (!hero.isConnected) return video.pause(); if (video.currentTime >= LOGO_AT) return startLogo(); raf = requestAnimationFrame(watch); };
   video.addEventListener('error', startLogo, { once: true });
-  video.addEventListener('ended', () => { startLogo(); hero.classList.add('static'); }, { once: true });
+  video.addEventListener('ended', () => { startLogo(); hero.removeEventListener('click', skip); replayOnTap(); }, { once: true });
   video.play().then(() => { raf = requestAnimationFrame(watch); }, startLogo);
 }
 
