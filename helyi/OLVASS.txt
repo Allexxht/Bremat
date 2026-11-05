@@ -2,7 +2,7 @@ BREMAT KÖZPONT – HELYI RÉSZ (Valk fájlok)
 =========================================
 
 Mi ez
-- A BREMAT Központ gépen futó része: a Valk cellák, jigek és termékek egy helyen,
+- A BREMAT Központ gépen futó része: a Valk cellák, jigek, adapterek és termékek egy helyen,
   a hozzájuk tartozó adatokkal, jegyzetekkel és fájlokkal (rajz, STEP, PDF).
 - A fájlok a gépen maradnak, a netre nem kerülnek fel. Csak ez a gép éri el
   (http://localhost:47801/), a hálózat többi gépe és a tablet sem.
@@ -20,22 +20,26 @@ Telepítés
 
 Felépítés
 - Kezdőlap: 3 cella (1. és 2. = a robot két manipulátora, 3. = Siegmund asztal).
-- Cella → jigek (szigetek képpel) → jig oldal: a rajta lévő termékek → termék oldal.
-- Jig és termék oldalon: kép / 3D, saját Adatok (te adod meg: pl. Anyag: S235),
+- Cella → jigek (szigetek képpel) → jig oldal: a rajta lévő adapterek
+  → adapter oldal: a rajta lévő termékek → termék oldal.
+- Jig, adapter és termék oldalon: kép / 3D, saját Adatok (te adod meg: pl. Anyag: S235),
   Jegyzetek dátummal, és a hozzá kötött mappa fájljai (Rajzok, 3D, Képek, Egyéb).
-- Egy termék több jigen is lehet (Másik jig gomb) – ugyanaz a termék, nem másolat.
-- Felül a kereső: jig, termék, adat, jegyzet és fájlnév egyszerre. A "/" billentyű
+- Egy termék több adapteren is lehet (Másik adapter gomb) – ugyanaz a termék, nem másolat.
+- Felül a kereső: jig, adapter, termék, adat, jegyzet és fájlnév egyszerre. A "/" billentyű
   egyből a keresőbe ugrik. Nyilakkal és Enterrel is választhatsz.
 
-Új jig / termék
+Új jig / adapter / termék
 - Cella → "Új jig": név + a jig mappája (a manipulator mappából).
-- Jig → "Termék hozzáadása": a termék mappája a Products-ból (a név magától kitöltődik),
-  vagy egy meglévő termék másik jigről.
+- Jig → "Új adapter": név + az adapter mappája (a manipulator mappából, pl. adapter\...).
+- Adapter → "Termék hozzáadása": a termék mappája a Products-ból (a név magától
+  kitöltődik), vagy egy meglévő termék.
+- Az 1. változatban jigre tett termékek a jig oldalán "Adapter nélküli termékek" alatt
+  vannak: nyisd meg, és "Adapterre".
 - A kép magától elkészül a mappa legnagyobb STEP fájljából. Másik kép: "Kép" gomb,
   vagy a 3D nézetben "Ez legyen a kép" (abból a nézőpontból).
 
 Fájlok
-- A fájlok a helyükön maradnak, az oldal csak összeköti őket a jiggel / termékkel.
+- A fájlok a helyükön maradnak, az oldal csak összeköti őket a jiggel / adapterrel / termékkel.
 - Kattintás: előnézet (PDF, kép, STEP / STL 3D). Dupla kattintás: saját programjával.
 - Feltöltés: "Feltöltés" gomb, vagy húzd a fájlokat az oldalra. Ha már van ilyen nevű,
   rákérdez: felülírja, vagy új néven menti.
@@ -50,7 +54,7 @@ Mappák
 - Más vagy új mappa: Beállítások (fent). Az útvonalat a Fájlkezelő címsorából másold be.
 
 Adatok, mentés
-- A cellák, jigek, termékek, adatok és jegyzetek: %APPDATA%\BrematKozpont\adatok.json
+- A cellák, jigek, adapterek, termékek, adatok és jegyzetek: %APPDATA%\BrematKozpont\adatok.json
 - Naponta mentés: %APPDATA%\BrematKozpont\mentes\ (60 napig).
 - Beállítások → "Adatok letöltése": egy mentés a Letöltések mappába.
 

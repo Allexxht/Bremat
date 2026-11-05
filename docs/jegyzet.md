@@ -310,3 +310,4 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   hivatkozások követik), törlés **Lomtárba** (`Microsoft.VisualBasic.FileIO`).
 - Teszt: a Claude-környezet Chromiumában a WebGL szoftveres (swiftshader), a shader-fordítás ott fél
   percig is fogja a lapot – valódi géppel ez nem gond. A folyamat-teszthez a WebGL-t kikapcsoltuk.
+- **Adapter szint (2026. november 5., 12:40, Alex):** **Cella → Jig/ágy → Adapter → Termék**. `adapters: [{id, jig, name, folder, img, fields, notes}]`, a terméken `ads: []`. Egy adapter egy jigen, termék mindig adapteren (most nincs kivétel). A régi `p.jigs` (adapter nélkül a jigen) megmarad, a jig oldalán „Adapter nélküli termékek”; „Adapterre” átteszi. Útvonal: `#/adapter/<id>`.
