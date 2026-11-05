@@ -265,6 +265,7 @@ main {
     <a href="/naplo/" style="--i:2"><i data-lucide="notebook-pen"></i>Munkanapló</a>
     <a href="/valk/" style="--i:3"><i data-lucide="clipboard-check"></i>Valk heti lap</a>
     <a href="/valk/#/uj" style="--i:4"><i data-lucide="clipboard-pen"></i>Új heti lap kitöltése</a>
+    <a id="helyiLink" href="http://localhost:47801/" style="--i:5" hidden><i data-lucide="folder-lock"></i>Valk fájlok<i class="ext" data-lucide="monitor"></i></a>
     <a id="privLink" href="#" target="_blank" rel="noopener" style="--i:5" hidden><i data-lucide="lock"></i>Saját oldalak<i class="ext" data-lucide="arrow-up-right"></i></a>
     <span class="label">Egyéb</span>
     <a href="#/beallitasok" data-view="#/beallitasok" style="--i:6"><i data-lucide="settings"></i>Beállítások</a>
@@ -292,6 +293,18 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* nincs tárolás */ } },
   del(k) { try { localStorage.removeItem(k); } catch { /* nincs tárolás */ } },
 };
+// Valk fájlok: a gépen futó helyi Központ (helyi/Kozpont.ps1) oldala, http://localhost:47801/.
+// A fájlok sosem kerülnek fel a netre; a webes Központ csak linket ad rá, és csak azon a gépen,
+// ahol a helyi program egyszer ?helyi=1-gyel megnyitotta (vagy a Beállításokban bekapcsolták).
+const HELYI_URL = 'http://localhost:47801/';
+{
+  const q = new URLSearchParams(location.search);
+  if (q.get('helyi') === '1') {
+    store.set('kozpont-helyi', '1');
+    history.replaceState(null, '', location.href.replace(/([?&])helyi=1(&|(?=#)|$)/, (m, a, z) => (z === '&' ? a : '')).replace(/\?(?=#|$)/, ''));
+  }
+}
+const helyiOn = () => store.get('kozpont-helyi') === '1';
 const icons = () => { if (window.lucide) lucide.createIcons(); };
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, 2600); }
 
@@ -537,7 +550,12 @@ function renderHome() {
     <div class="islands">
       ${islandShell('isNaplo', 'naplo', 'notebook-pen', 'Munkanapló', 'Teendők és bejegyzések', '/naplo/', 0)}
       ${islandShell('isValk', 'valk', 'clipboard-check', 'Valk heti lap', 'Robot karbantartás', '/valk/', 1)}
+      ${helyiOn() ? islandShell('isFiles', 'valk', 'folder-lock', 'Valk fájlok', 'Rajzok, STEP, PDF – csak ezen a gépen', HELYI_URL, 2) : ''}
     </div></div>`;
+  if (helyiOn()) fillIsland($('#isFiles'), { items: [
+    { icon: 'shield-check', good: true, html: 'A fájlok a gépen maradnak, a netre nem kerülnek fel.' },
+    { icon: 'box', html: 'STEP 3D nézet, PDF előnézet, kereső.' },
+  ], foot: 'A Teendőim indítja (menü → BREMAT Központ).' });
   icons();
   intro($('#hero'));
   loadNaplo().catch(() => {});
@@ -723,12 +741,16 @@ function renderSettings() {
     <form class="card glass" id="nameForm" style="display:flex;flex-direction:column;gap:12px"><h2 style="margin:0">Név a naplóban</h2>
       <label class="field"><span>Ezzel a névvel kerülnek be a bejegyzéseid</span><input type="text" id="sName" maxlength="120" value="${esc(store.get('naplo-nev') || '')}"></label>
       <div><button class="btn primary" type="submit"><i data-lucide="check"></i>Mentés</button></div></form>
+    <div class="card glass"><h2>Valk fájlok</h2>
+      <label class="switch"><input type="checkbox" id="helyiOn" ${helyiOn() ? 'checked' : ''}> Valk fájlok a menüben és a kezdőlapon</label>
+      <p class="muted" style="margin:8px 0 0">Csak azon a gépen kapcsold be, ahol a helyi BREMAT Központ fut (a Teendőim mellett). A fájlok ott maradnak, a netre nem kerülnek fel.</p></div>
     <div class="card glass"><h2>Belépés</h2>
       <p class="muted" style="margin:0 0 12px">Ezen az eszközön be vagy lépve. Kilépés után a Központ, a napló és a heti lap is újra kéri a kódot.</p>
       <button class="btn" type="button" id="logout"><i data-lucide="log-out"></i>Kilépés ezen az eszközön</button></div>
   </div>`;
   icons();
   $('#darkBg').addEventListener('change', (e) => { store.set('kozpont-tema', e.target.checked ? 'sotet' : 'vilagos'); applyTheme(); silk.redraw(); });
+  $('#helyiOn').addEventListener('change', (e) => { if (e.target.checked) store.set('kozpont-helyi', '1'); else store.del('kozpont-helyi'); $('#helyiLink').hidden = !helyiOn(); });
   $('#nameForm').addEventListener('submit', (e) => { e.preventDefault(); const v = $('#sName').value.trim(); if (v) store.set('naplo-nev', v); else store.del('naplo-nev'); toast('Elmentve.'); });
   $('#logout').addEventListener('click', () => { store.del('km-kod'); store.del('naplo-kod'); projCache = null; renderGate(); });
 }
@@ -741,6 +763,7 @@ function route() {
   if (OLD.test(location.hash)) return location.replace('/valk/' + location.search + location.hash);
   if (!DEMO && !kmCode()) return renderGate();
   $('#menuBtn').hidden = false;
+  $('#helyiLink').hidden = !helyiOn();
   const key = VIEWS[location.hash] ? location.hash : '#/';
   $$('.nav a[data-view]').forEach((a) => a.toggleAttribute('aria-current', a.dataset.view === key));
   $$('.nav a[aria-current]').forEach((a) => a.setAttribute('aria-current', 'page'));

@@ -275,3 +275,25 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   görgethető legyen.
 - Szerveroldali változásnál a valódi functiont is érdemes helyben futtatni a
   `@netlify/blobs` `BlobsServer`-ével (a `NETLIFY_BLOBS_CONTEXT` env varral irányítva rá).
+
+## Helyi Központ – Valk fájlok (2026. november 5.)
+- Alex kérése: a Valk Welding fájljai (rajzok, STEP, PDF) egy helyen, de **titkosak, nem kerülhetnek
+  fel a netre**. Ezért a fájlokat egy gépen futó kis szerver mutatja, csak `http://localhost:47801/`-on.
+- `helyi/Kozpont.ps1` (PowerShell 5.1, `HttpListener`, egy példány – mutex), `helyi/Kozpont.bat`,
+  `helyi/web/index.html` (a Valk fájlok oldal), `helyi/OLVASS.txt`. Csomag: `helyi/csomag.sh` →
+  `helyi/dist/` (nincs a repóban): a three.js 0.160.0, occt-import-js 0.0.23 (STEP → háló, Web
+  Workerben), Lucide 0.460.0 az npm-ből a `web/lib/` alá, így net nélkül is megy.
+- Mappák: `%APPDATA%\BrematKozpont\beallitas.json` (`mappak`: `nev`, `ut`). Alapból
+  `Asztal\Alex\manipulator` és `Asztal\Alex\Products`.
+- Biztonság: Host-fejléc ellenőrzés, az API csak `X-Helyi: 1` fejléccel (idegen oldal nem tud ilyet
+  küldeni CORS nélkül), a fájlok (`/f`) csak az indításonként új kulccsal (`t=`), útvonal a mappán belül
+  marad, csak PDF / kép / szöveg megy „böngészőnek való” típussal, minden más nyers adat + `CSP: sandbox`.
+- A Teendőim indításkor a háttérben elindítja (`-NoBrowser`), a menüjében: BREMAT Központ → Központ
+  megnyitása / Valk fájlok. A BrematKozpont mappa a Teendoim mellett legyen.
+- A webes Központ (`public/index.html`): `?helyi=1` → `kozpont-helyi` localStorage → „Valk fájlok”
+  menüpont és sziget (link a localhostra), Beállításokban ki-be kapcsolható. A webes oldal nem kérdezi a
+  helyi szervert (a böngészők a https → localhost hívást egyre inkább tiltják).
+- Windows nincs a Claude-környezetben: a PowerShell részt Alex gépén kell kipróbálni. A felületet egy
+  Node-os próba-szerverrel (ugyanaz az API) teszteltük Chromiumban. A csomag:
+  `/mnt/project-files/kozpont/Teendoim-es-BrematKozpont.zip`.
+- Következő lépés (Alex jóváhagyta a tervet): **munkák** listája a gépen, fájlok hozzákötése.

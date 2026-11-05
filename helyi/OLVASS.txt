@@ -1,0 +1,41 @@
+BREMAT KÖZPONT – HELYI RÉSZ (Valk fájlok)
+=========================================
+
+Mi ez
+- A BREMAT Központ gépen futó része. A Valk fájlokat mutatja (rajzok, STEP, PDF)
+  egy helyen, kereshetően, előnézettel.
+- A fájlok a gépen maradnak, a netre nem kerülnek fel. Csak ez a gép éri el
+  (http://localhost:47801/), a hálózat többi gépe és a tablet sem.
+- A napló, a heti lap és a projektek továbbra is a webes Központban vannak
+  (https://bremat-stuff.netlify.app). Onnan a "Valk fájlok" menüpont ide hoz.
+
+Telepítés
+1. Csomagold ki a BrematKozpont mappát a Teendoim mappa MELLÉ, pl.:
+     Dokumentumok\Teendoim
+     Dokumentumok\BrematKozpont
+   (Így a Teendőim menüjéből indítható, és a Teendőimmel együtt indul.)
+2. Dupla kattintás: Kozpont.bat. Megnyílik a böngészőben a Valk fájlok oldal.
+3. A Központ gombbal a webes Központ nyílik. Ezen a gépen ott is megjelenik
+   a "Valk fájlok" menüpont és a kezdőlapon a "Valk fájlok" sziget.
+
+Mappák
+- Alapból ez a két mappa látszik:
+    Asztal\Alex\manipulator
+    Asztal\Alex\Products
+- Más mappa: az oldal alján "Mappák beállítása" (Jegyzettömbben nyílik),
+  mentés után "Frissítés". A fájl: %APPDATA%\BrematKozpont\beallitas.json
+
+Használat
+- Fent a mappák (Manipulátor, Products). Kattints egy mappára, azon belül tovább.
+- Keresés: minden mappában, a fájl nevében és útjában. Több szó = mindegyik kell.
+- Kattintás egy fájlra: előnézet jobb oldalt.
+    PDF és kép: rögtön látszik.
+    STEP / STP / STL: 3D nézet. Húzás = forgatás, jobb gomb = mozgatás,
+    görgő = nagyítás, "Alapnézet" = vissza. Nagy STEP-nél fél percig is tarthat.
+- Dupla kattintás: megnyitás a saját programjával (pl. a CAD programmal).
+- "Mappában": megnyitja a Fájlkezelőt, kijelölve a fájlt.
+
+Ha valami nem megy
+- "A helyi program nem válaszol": indítsd el újra a Kozpont.bat-ot.
+- Hibák naplója: %APPDATA%\BrematKozpont\hiba.txt
+- Leállítás: Feladatkezelő → Windows PowerShell (Kozpont), vagy kijelentkezés.

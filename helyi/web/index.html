@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Valk fájlok – BREMAT</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap">
+<script src="lib/lucide.min.js"></script>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.js" } }</script>
+<!--
+  =====================================================================
+  Valk fájlok – a BREMAT Központ helyi része (helyi/Kozpont.ps1 szolgálja ki,
+  http://localhost:47801/). A beállított mappák fája, kereső, PDF és kép
+  előnézet, STEP / STL 3D nézet. Minden a gépen marad: a fájlokat a böngésző
+  a helyi szervertől kéri, a 3D átalakítás is itt, a böngészőben fut.
+  A könyvtárak (three.js, occt-import-js, Lucide) a lib/ mappában vannak,
+  így net nélkül is működik (csak a betűtípus jön a netről).
+  =====================================================================
+-->
+<style>
+:root {
+  --bg: #eceef2;
+  --glass: rgba(255, 255, 255, .62);
+  --glass-strong: rgba(255, 255, 255, .9);
+  --glass-line: rgba(255, 255, 255, .85);
+  --line: rgba(16, 20, 28, .1);
+  --shadow: 0 12px 40px rgba(24, 30, 44, .12);
+  --text: #12151b;
+  --muted: #586070;
+  --hover: rgba(16, 20, 28, .055);
+  --active: rgba(200, 16, 46, .09);
+  --accent: #c8102e;
+  --accent-soft: rgba(200, 16, 46, .1);
+  --ok: #1e9a4e;
+  --display: 'Sora', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+  --ease: cubic-bezier(.22, .8, .24, 1);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); font: 15px/1.45 var(--body); overflow: hidden; }
+.backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.backdrop i { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; animation: drift 26s ease-in-out infinite alternate; }
+.backdrop i:nth-child(1) { width: 46vw; height: 46vw; left: -10vw; top: -14vw; background: #d9e4f5; }
+.backdrop i:nth-child(2) { width: 38vw; height: 38vw; right: -8vw; top: 10vh; background: #f3dde2; animation-delay: -9s; }
+.backdrop i:nth-child(3) { width: 42vw; height: 42vw; left: 30vw; bottom: -20vw; background: #dcefee; animation-delay: -17s; }
+@keyframes drift { to { transform: translate(4vw, 3vh) scale(1.08); } }
+.glass { background: var(--glass); border: 1px solid var(--glass-line); box-shadow: var(--shadow); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); }
+svg.lucide { width: 18px; height: 18px; stroke-width: 1.9; flex: none; }
+button { font: inherit; color: inherit; }
+
+/* ---------- Elrendezés ---------- */
+.shell { height: 100%; display: grid; grid-template-rows: auto 1fr; gap: 14px; padding: 14px 16px 16px; max-width: 1500px; margin: 0 auto; }
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+.brand .ico { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.brand h1 { margin: 0; font: 600 20px/1.15 var(--display); }
+.brand small { color: var(--muted); font-size: 12.5px; display: flex; align-items: center; gap: 5px; }
+.brand small svg { width: 13px; height: 13px; color: var(--ok); }
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass-strong); cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; color: var(--text); transition: background .2s, transform .2s var(--ease); white-space: nowrap; }
+.btn:hover { background: #fff; transform: translateY(-1px); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: #a90d27; }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: var(--hover); }
+.btn svg { width: 16px; height: 16px; }
+
+.main { min-height: 0; display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.25fr); gap: 14px; }
+.panel { min-height: 0; border-radius: 22px; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ---------- Bal: mappák ---------- */
+.bar { padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--line); }
+.roots { display: flex; gap: 6px; flex-wrap: wrap; }
+.roots button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 6px 13px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); transition: all .2s; }
+.roots button:hover { background: var(--hover); color: var(--text); }
+.roots button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.roots button.missing { text-decoration: line-through; }
+.search { position: relative; }
+.search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.search input { width: 100%; padding: 10px 36px 10px 38px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass-strong); font: inherit; color: var(--text); outline: none; }
+.search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.search .x { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; cursor: pointer; padding: 5px; border-radius: 8px; color: var(--muted); display: none; }
+.search .x svg { position: static; transform: none; }
+.search.has .x { display: block; }
+.crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; font-size: 13.5px; color: var(--muted); min-height: 24px; }
+.crumbs button { border: 0; background: transparent; cursor: pointer; padding: 2px 6px; border-radius: 7px; color: var(--muted); font-weight: 600; }
+.crumbs button:hover { background: var(--hover); color: var(--text); }
+.crumbs button:last-child { color: var(--text); }
+.crumbs svg { width: 14px; height: 14px; opacity: .6; }
+.list { flex: 1; overflow: auto; padding: 6px; }
+.row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; cursor: pointer; user-select: none; transition: background .15s; animation: in .35s var(--ease) both; animation-delay: calc(var(--i, 0) * 12ms); }
+@keyframes in { from { opacity: 0; transform: translateY(5px); } }
+.row:hover { background: var(--hover); }
+.row[aria-selected="true"] { background: var(--active); }
+.row .ti { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(16, 20, 28, .05); color: var(--muted); }
+.ti.dir { background: #fdf1d7; color: #b07900; }
+.ti.pdf { background: var(--accent-soft); color: var(--accent); }
+.ti.cad { background: #e2eefb; color: #1f62b8; }
+.ti.img { background: #e3f4ea; color: var(--ok); }
+.row .nm { min-width: 0; }
+.row .nm b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .nm small { display: block; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .meta { text-align: right; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.empty { padding: 30px 16px; text-align: center; color: var(--muted); }
+.empty svg { width: 30px; height: 30px; display: block; margin: 0 auto 8px; opacity: .6; }
+.foot { padding: 8px 12px; border-top: 1px solid var(--line); display: flex; gap: 4px; flex-wrap: wrap; font-size: 13px; }
+.foot .btn { font-size: 13px; padding: 6px 10px; }
+.foot .count { margin-left: auto; color: var(--muted); align-self: center; }
+
+/* ---------- Jobb: előnézet ---------- */
+.pv-head { padding: 14px 16px 12px; display: flex; gap: 12px; align-items: flex-start; border-bottom: 1px solid var(--line); }
+.pv-head .ti { width: 40px; height: 40px; }
+.pv-head .t { min-width: 0; flex: 1; }
+.pv-head h2 { margin: 0; font: 600 17px/1.3 var(--display); word-break: break-word; }
+.pv-head small { color: var(--muted); font-size: 12.5px; word-break: break-all; }
+.pv-actions { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.pv-actions .close { display: none; margin-left: auto; }
+.pv-body { flex: 1; min-height: 0; position: relative; background: rgba(255, 255, 255, .45); }
+.pv-body iframe, .pv-body canvas { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.pv-body img { position: absolute; inset: 0; margin: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+.pv-msg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 24px; }
+.pv-msg svg { width: 40px; height: 40px; opacity: .55; display: block; margin: 0 auto 10px; }
+.pv-msg b { color: var(--text); display: block; font-family: var(--display); font-weight: 600; margin-bottom: 4px; }
+.spin { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--accent-soft); border-top-color: var(--accent); animation: spin 0.9s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.hud { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.hud .btn { font-size: 12.5px; padding: 6px 10px; }
+.hud .info { align-self: center; font-size: 12px; color: var(--muted); background: var(--glass-strong); padding: 5px 9px; border-radius: 9px; }
+.ti { display: grid; place-items: center; border-radius: 10px; flex: none; }
+
+#toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: #12151b; color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; display: none; z-index: 50; box-shadow: var(--shadow); }
+
+/* ---------- Keskeny képernyő: az előnézet ráúszik a listára ---------- */
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+  .preview { position: fixed; inset: 10px; z-index: 20; transform: translateY(105%); transition: transform .4s var(--ease); background: var(--glass-strong); }
+  body.pv-open .preview { transform: none; }
+  .pv-actions .close { display: inline-flex; }
+}
+@media (prefers-reduced-motion: reduce) { .backdrop i, .row { animation: none; } .preview { transition: none; } }
+</style>
+</head>
+<body>
+<div class="backdrop" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="shell">
+  <header class="top">
+    <div class="brand"><span class="ico"><i data-lucide="folder-lock"></i></span>
+      <div><h1>Valk fájlok</h1><small><i data-lucide="shield-check"></i>Csak ezen a gépen – a fájlok nem kerülnek fel a netre</small></div></div>
+    <a class="btn" id="kozpontLink" href="https://bremat-stuff.netlify.app/?helyi=1"><i data-lucide="layout-grid"></i>Központ</a>
+  </header>
+  <div class="main">
+    <section class="panel glass" aria-label="Mappák">
+      <div class="bar">
+        <div class="roots" id="roots" role="group" aria-label="Mappa"></div>
+        <label class="search" id="searchBox"><i data-lucide="search"></i>
+          <input id="q" type="search" placeholder="Keresés minden mappában (név, rész a névből…)" autocomplete="off" aria-label="Keresés">
+          <button class="x" id="qx" type="button" aria-label="Keresés törlése"><i data-lucide="x"></i></button></label>
+        <nav class="crumbs" id="crumbs" aria-label="Hol vagy"></nav>
+      </div>
+      <div class="list" id="list" role="listbox" aria-label="Fájlok"></div>
+      <div class="foot">
+        <button class="btn ghost" type="button" id="openFolder" title="A mostani mappa megnyitása a Fájlkezelőben"><i data-lucide="folder-open"></i>Fájlkezelő</button>
+        <button class="btn ghost" type="button" id="settings" title="A mappák listája (Jegyzettömbben nyílik)"><i data-lucide="settings-2"></i>Mappák beállítása</button>
+        <button class="btn ghost" type="button" id="reload" title="Beállítás és fájllista újraolvasása"><i data-lucide="refresh-cw"></i>Frissítés</button>
+        <span class="count" id="count"></span>
+      </div>
+    </section>
+    <section class="panel glass preview" id="preview" aria-label="Előnézet">
+      <div class="pv-head" id="pvHead"></div>
+      <div class="pv-actions" id="pvActions" hidden></div>
+      <div class="pv-body" id="pvBody"></div>
+    </section>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+
+<script type="module">
+const $ = (s, r = document) => r.querySelector(s);
+const icons = () => { if (window.lucide) lucide.createIcons(); };
+const el = (tag, props = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids) if (k != null) e.append(k);
+  return e;
+};
+const ic = (name) => el('i', { 'data-lucide': name });
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, 2800); }
+
+/* ---------- Helyi szerver ---------- */
+async function api(path, body) {
+  const res = await fetch(path, body === undefined
+    ? { headers: { 'X-Helyi': '1' } }
+    : { method: 'POST', headers: { 'X-Helyi': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Hiba (${res.status})`);
+  return data;
+}
+let S = { token: '', roots: [], r: 0, p: '', q: '', sel: null };
+const fileUrl = (r, p) => `/f?r=${r}&p=${encodeURIComponent(p)}&t=${S.token}`;
+
+/* ---------- Formázás ---------- */
+const ext = (n) => { const i = n.lastIndexOf('.'); return i > 0 ? n.slice(i + 1).toLowerCase() : ''; };
+const CAD = ['step', 'stp', 'stl'], IMG = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'];
+function kind(e) {
+  if (e.d) return 'dir';
+  const x = ext(e.n);
+  if (x === 'pdf') return 'pdf';
+  if (CAD.includes(x)) return 'cad';
+  if (IMG.includes(x)) return 'img';
+  return 'file';
+}
+const KIND_ICON = { dir: 'folder', pdf: 'file-text', cad: 'box', img: 'image', file: 'file' };
+const fmtSize = (b) => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : b < 1073741824 ? `${(b / 1048576).toFixed(1).replace('.', ',')} MB` : `${(b / 1073741824).toFixed(2).replace('.', ',')} GB`;
+const dateFmt = new Intl.DateTimeFormat('hu-HU', { year: 'numeric', month: '2-digit', day: '2-digit' });
+const fmtDate = (ms) => dateFmt.format(new Date(ms)).replace(/\s/g, '');
+const coll = new Intl.Collator('hu', { numeric: true, sensitivity: 'base' });
+const sortEntries = (a) => a.sort((x, y) => (y.d - x.d) || coll.compare(x.n, y.n));
+
+/* ---------- Cím (a # után): mappa, út, keresés, kijelölt fájl ---------- */
+function readHash() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  S.r = Math.max(0, Math.min(S.roots.length - 1, Number(h.get('r')) || 0));
+  S.p = h.get('p') || ''; S.q = h.get('q') || ''; S.sel = h.get('f') || null; S.selR = h.has('fr') ? Number(h.get('fr')) : S.r;
+}
+function writeHash(push = true) {
+  const h = new URLSearchParams();
+  h.set('r', S.r); if (S.p) h.set('p', S.p); if (S.q) h.set('q', S.q); if (S.sel) { h.set('f', S.sel); if (S.q) h.set('fr', S.selR); }
+  const s = '#' + h.toString();
+  if (s !== location.hash) (push ? history.pushState : history.replaceState).call(history, null, '', s);
+}
+
+/* ---------- Bal oldal ---------- */
+function drawRoots() {
+  $('#roots').replaceChildren(...S.roots.map((r) => el('button', {
+    type: 'button', 'aria-pressed': String(r.i === S.r && !S.q), class: r.ok ? '' : 'missing',
+    title: r.ok ? r.name : `${r.name} – a mappa nem található (Mappák beállítása)`,
+    onclick: () => { S.r = r.i; S.p = ''; S.q = ''; S.sel = null; $('#q').value = ''; go(); },
+  }, ic(r.ok ? 'hard-drive' : 'circle-alert'), r.name)));
+}
+function drawCrumbs() {
+  const c = $('#crumbs');
+  if (S.q) { c.replaceChildren(el('span', { text: 'Találatok minden mappában' })); return; }
+  const parts = S.p ? S.p.split('/') : [];
+  const kids = [el('button', { type: 'button', text: S.roots[S.r]?.name || '', onclick: () => { S.p = ''; S.sel = null; go(); } })];
+  parts.forEach((part, i) => {
+    kids.push(ic('chevron-right'));
+    kids.push(el('button', { type: 'button', text: part, onclick: () => { S.p = parts.slice(0, i + 1).join('/'); S.sel = null; go(); } }));
+  });
+  c.replaceChildren(...kids);
+}
+let shown = [];
+function rowOf(e, i, withPath) {
+  const k = kind(e);
+  const sub = withPath ? `${S.roots[e.r]?.name || ''} / ${e.p.split('/').slice(0, -1).join(' / ') || '—'}` : null;
+  const row = el('div', {
+    class: 'row', role: 'option', style: `--i:${Math.min(i, 40)}`, tabindex: '0',
+    'aria-selected': String(!e.d && S.sel === e.p && (withPath ? e.r === S.selR : true)),
+    title: e.d ? 'Megnyitás' : 'Kattintás: előnézet · dupla kattintás: megnyitás a saját programjával',
+  },
+  el('span', { class: `ti ${k}` }, ic(KIND_ICON[k])),
+  el('span', { class: 'nm' }, el('b', { text: e.n }), sub ? el('small', { text: sub }) : null),
+  el('span', { class: 'meta', text: e.d ? '' : `${fmtSize(e.s)} · ${fmtDate(e.m)}` }));
+  const pick = () => {
+    if (e.d) { if (withPath) { S.r = e.r; S.q = ''; $('#q').value = ''; } S.p = e.p; S.sel = null; go(); return; }
+    select(withPath ? e.r : S.r, e.p, e);
+  };
+  row.addEventListener('click', pick);
+  row.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') pick(); });
+  if (!e.d) row.addEventListener('dblclick', () => openFile(withPath ? e.r : S.r, e.p));
+  return row;
+}
+function drawList(entries, withPath, more) {
+  shown = entries;
+  const list = $('#list');
+  if (!entries.length) {
+    list.replaceChildren(el('div', { class: 'empty' }, ic(S.q ? 'search-x' : 'folder-open'), S.q ? 'Nincs találat.' : 'Ez a mappa üres.'));
+  } else list.replaceChildren(...entries.map((e, i) => rowOf(e, i, withPath)));
+  const files = entries.filter((e) => !e.d).length, dirs = entries.length - files;
+  $('#count').textContent = (dirs ? `${dirs} mappa · ` : '') + `${files} fájl` + (more ? ' (az első 300)' : '');
+  icons();
+}
+async function loadList() {
+  drawRoots(); drawCrumbs();
+  $('#searchBox').classList.toggle('has', !!S.q);
+  const list = $('#list');
+  try {
+    if (S.q) {
+      const d = await api(`/api/search?q=${encodeURIComponent(S.q)}`);
+      if (S.q !== $('#q').value.trim()) return;   // közben tovább gépelt
+      drawList(d.hits.map((h) => ({ ...h })).sort((x, y) => (y.d - x.d) || coll.compare(x.n, y.n)), true, d.more);
+    } else {
+      if (!S.roots[S.r]?.ok) {
+        list.replaceChildren(el('div', { class: 'empty' }, ic('circle-alert'), `A mappa nem található. Állítsd be: Mappák beállítása.`));
+        $('#count').textContent = ''; icons(); return;
+      }
+      const d = await api(`/api/list?r=${S.r}&p=${encodeURIComponent(S.p)}`);
+      drawList(sortEntries(d.entries.map((e) => ({ ...e, p: S.p ? `${S.p}/${e.n}` : e.n }))), false, false);
+    }
+  } catch (err) {
+    list.replaceChildren(el('div', { class: 'empty' }, ic('triangle-alert'), err.message));
+    icons();
+  }
+}
+function go(push = true) { writeHash(push); loadList(); if (!S.sel) clearPreview(); }
+
+/* ---------- Jobb oldal: előnézet ---------- */
+let viewer = null;
+function disposeViewer() { if (viewer) { viewer.dispose(); viewer = null; } }
+function clearPreview() {
+  disposeViewer();
+  document.body.classList.remove('pv-open');
+  $('#pvHead').replaceChildren(el('span', { class: 'ti row-ti', style: 'width:40px;height:40px;background:var(--accent-soft);color:var(--accent)' }, ic('mouse-pointer-click')),
+    el('div', { class: 't' }, el('h2', { text: 'Válassz egy fájlt' }), el('small', { text: 'Kattintás: előnézet · dupla kattintás: megnyitás a saját programjával' })));
+  $('#pvActions').hidden = true;
+  $('#pvBody').replaceChildren(msg('files', 'PDF, kép, STEP és STL', 'Ezeknek itt látszik az előnézete. Minden más fájlt a saját programja nyit meg.'));
+  icons();
+}
+function msg(icon, title, text, spin) {
+  return el('div', { class: 'pv-msg' }, el('div', {}, spin ? el('div', { class: 'spin' }) : ic(icon), el('b', { text: title }), text ? el('span', { text }) : null));
+}
+async function openFile(r, p, mode = 'open') {
+  try { await api('/api/open', { r, p, mode }); toast(mode === 'folder' ? 'Megnyitva a Fájlkezelőben.' : 'Megnyitás a saját programjával…'); }
+  catch (err) { toast(err.message); }
+}
+function select(r, p, e) {
+  S.sel = p; S.selR = r; writeHash(false);
+  document.querySelectorAll('.row').forEach((row, i) => row.setAttribute('aria-selected', String(shown[i] && !shown[i].d && shown[i].p === p && (shown[i].r === undefined || shown[i].r === r))));
+  showPreview(r, p, e);
+}
+function showPreview(r, p, e) {
+  disposeViewer();
+  document.body.classList.add('pv-open');
+  const name = p.split('/').pop(), k = e ? kind(e) : kind({ n: name }), x = ext(name);
+  const where = `${S.roots[r]?.name || ''} / ${p.split('/').slice(0, -1).join(' / ')}`.replace(/ \/ $/, '');
+  $('#pvHead').replaceChildren(el('span', { class: `ti row-ti ${k}`, style: 'width:40px;height:40px' }, ic(KIND_ICON[k])),
+    el('div', { class: 't' }, el('h2', { text: name }), el('small', { text: where + (e ? ` · ${fmtSize(e.s)} · ${fmtDate(e.m)}` : '') })));
+  // a .row .ti színei a fejlécben is
+  $('#pvHead .ti').classList.add(k);
+  const acts = [
+    el('button', { class: 'btn primary', type: 'button', onclick: () => openFile(r, p) }, ic('external-link'), 'Megnyitás a saját programjával'),
+    el('button', { class: 'btn', type: 'button', onclick: () => openFile(r, p, 'folder') }, ic('folder-search'), 'Mappában'),
+  ];
+  if (k === 'pdf' || k === 'img') acts.push(el('a', { class: 'btn', href: fileUrl(r, p), target: '_blank', rel: 'noopener' }, ic('square-arrow-out-up-right'), 'Új lapon'));
+  acts.push(el('button', { class: 'btn ghost close', type: 'button', onclick: () => { S.sel = null; writeHash(false); clearPreview(); document.querySelectorAll('.row[aria-selected="true"]').forEach((r) => r.setAttribute('aria-selected', 'false')); } }, ic('x'), 'Bezárás'));
+  $('#pvActions').replaceChildren(...acts); $('#pvActions').hidden = false;
+  const body = $('#pvBody');
+  if (k === 'pdf') body.replaceChildren(el('iframe', { src: fileUrl(r, p), title: name }));
+  else if (k === 'img') body.replaceChildren(el('img', { src: fileUrl(r, p), alt: name }));
+  else if (k === 'cad') show3d(body, r, p, x, e);
+  else body.replaceChildren(msg('file-question', 'Ehhez nincs előnézet', 'Nyisd meg a saját programjával (dupla kattintás a listában is jó).'));
+  icons();
+}
+
+/* ---------- 3D nézet (STEP / STL) ---------- */
+let THREE = null, Orbit = null, STLLoader = null;
+async function lib3d() {
+  if (!THREE) {
+    THREE = await import('three');
+    ({ OrbitControls: Orbit } = await import('./lib/OrbitControls.js'));
+    ({ STLLoader } = await import('./lib/STLLoader.js'));
+  }
+}
+function readStep(buf) {
+  // Külön szálon (Web Worker) alakítja át, hogy az oldal ne fagyjon le közben.
+  return new Promise((resolve, reject) => {
+    const w = new Worker('lib/occt-import-js-worker.js');
+    w.onmessage = (ev) => { w.terminate(); ev.data && ev.data.success ? resolve(ev.data) : reject(new Error('A STEP fájlt nem sikerült beolvasni.')); };
+    w.onerror = (ev) => { w.terminate(); reject(new Error(ev.message || 'A STEP beolvasása nem sikerült.')); };
+    w.postMessage({ format: 'step', buffer: new Uint8Array(buf), params: { linearUnit: 'millimeter', linearDeflectionType: 'bounding_box_ratio', linearDeflection: 0.001, angularDeflection: 0.5 } });
+  });
+}
+const BIG = 80 * 1048576;
+async function show3d(body, r, p, x, e, force) {
+  if (e && e.s > BIG && !force) {
+    body.replaceChildren(el('div', { class: 'pv-msg' }, el('div', {}, ic('box'), el('b', { text: `Nagy fájl (${fmtSize(e.s)})` }),
+      el('span', { text: 'A 3D nézet beolvasása sokáig tarthat. ' }),
+      el('div', { style: 'margin-top:12px' }, el('button', { class: 'btn', type: 'button', onclick: () => show3d(body, r, p, x, e, true) }, ic('play'), 'Mégis betöltöm')))));
+    icons(); return;
+  }
+  const token = {}; show3d.cur = token;
+  body.replaceChildren(msg(null, x === 'stl' ? 'STL betöltése…' : 'STEP beolvasása…', 'Nagyobb fájlnál ez fél percig is tarthat.', true));
+  try {
+    const [buf] = await Promise.all([fetch(fileUrl(r, p)).then((res) => { if (!res.ok) throw new Error('A fájl nem olvasható.'); return res.arrayBuffer(); }), lib3d()]);
+    if (show3d.cur !== token) return;
+    const group = new THREE.Group();
+    let parts = 0, tris = 0;
+    if (x === 'stl') {
+      const g = new STLLoader().parse(buf); g.computeVertexNormals();
+      group.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xb9c2cf, metalness: .25, roughness: .55 })));
+      parts = 1; tris = g.index ? g.index.count / 3 : g.attributes.position.count / 3;
+    } else {
+      const res = await readStep(buf);
+      if (show3d.cur !== token) return;
+      for (const m of res.meshes) {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(m.attributes.position.array, 3));
+        if (m.attributes.normal) g.setAttribute('normal', new THREE.Float32BufferAttribute(m.attributes.normal.array, 3));
+        if (m.index) g.setIndex(new THREE.Uint32BufferAttribute(m.index.array, 1));
+        if (!m.attributes.normal) g.computeVertexNormals();
+        const col = m.color ? new THREE.Color(m.color[0], m.color[1], m.color[2]) : new THREE.Color(0xb9c2cf);
+        group.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: col, metalness: .25, roughness: .55, side: THREE.DoubleSide })));
+        parts++; tris += (m.index ? m.index.array.length : m.attributes.position.array.length / 3) / 3;
+      }
+      if (!parts) throw new Error('A fájlban nincs megjeleníthető test.');
+    }
+    viewer = makeViewer(body, group, `${parts} test · ${Math.round(tris).toLocaleString('hu-HU')} háromszög`);
+  } catch (err) {
+    if (show3d.cur !== token) return;
+    body.replaceChildren(msg('triangle-alert', 'Nem sikerült megjeleníteni', `${err.message} A saját programjával megnyitható.`));
+    icons();
+  }
+}
+function makeViewer(body, group, info) {
+  const canvas = el('canvas');
+  body.replaceChildren(canvas);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a93a3, 1.1));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1, 1.6, 1.2); scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xffffff, .5); fill.position.set(-1.2, -.4, -1); scene.add(fill);
+  // CAD-ben a Z a felfelé irány: a modellt úgy fordítjuk, hogy a Z álljon felfelé
+  group.rotation.x = -Math.PI / 2;
+  scene.add(group);
+  const box = new THREE.Box3().setFromObject(group), size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+  const radius = Math.max(size.length() / 2, 1e-6);
+  const camera = new THREE.PerspectiveCamera(35, 1, radius / 100, radius * 100);
+  const controls = new Orbit(camera, canvas);
+  controls.enableDamping = true; controls.dampingFactor = .12;
+  const home = () => {
+    const dir = new THREE.Vector3(1, .75, 1.15).normalize();
+    // a keskenyebb látószög (függőleges vagy vízszintes) szerint, hogy keskeny ablakban is beférjen
+    const v = camera.fov * Math.PI / 180, h = 2 * Math.atan(Math.tan(v / 2) * camera.aspect);
+    camera.position.copy(center).addScaledVector(dir, radius / Math.sin(Math.min(v, h) / 2) * 1.12);
+    controls.target.copy(center); camera.updateProjectionMatrix(); controls.update();
+  };
+  const grid = new THREE.GridHelper(radius * 4, 20, 0xc4cad4, 0xdde1e7);
+  grid.position.set(center.x, box.min.y, center.z); scene.add(grid);
+  const resize = () => {
+    const w = body.clientWidth, h = body.clientHeight; if (!w || !h) return;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  };
+  const ro = new ResizeObserver(resize); ro.observe(body);
+  resize(); home();
+  let raf = 0, alive = true;
+  const loop = () => { if (!alive) return; controls.update(); renderer.render(scene, camera); raf = requestAnimationFrame(loop); };
+  loop();
+  const hud = el('div', { class: 'hud' },
+    el('button', { class: 'btn', type: 'button', onclick: home }, ic('rotate-ccw'), 'Alapnézet'),
+    el('span', { class: 'info', text: `${info} · húzás: forgatás · jobb gomb: mozgatás · görgő: nagyítás` }));
+  body.append(hud); icons();
+  return { dispose() {
+    alive = false; cancelAnimationFrame(raf); ro.disconnect(); controls.dispose();
+    scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    renderer.dispose();
+  } };
+}
+
+/* ---------- Kereső, gombok ---------- */
+let qTimer = 0;
+$('#q').addEventListener('input', () => {
+  clearTimeout(qTimer);
+  qTimer = setTimeout(() => { S.q = $('#q').value.trim(); S.sel = null; writeHash(false); loadList(); }, 220);
+  $('#searchBox').classList.toggle('has', !!$('#q').value);
+});
+$('#qx').addEventListener('click', () => { $('#q').value = ''; S.q = ''; go(false); $('#q').focus(); });
+$('#openFolder').addEventListener('click', () => openFile(S.r, S.p, 'folder'));
+$('#settings').addEventListener('click', async () => {
+  try { await api('/api/settings', {}); toast('A beállítás a Jegyzettömbben nyílt meg. Mentés után: Frissítés.'); } catch (err) { toast(err.message); }
+});
+$('#reload').addEventListener('click', async () => {
+  try { await api('/api/reload', {}); await init(); toast('Frissítve.'); } catch (err) { toast(err.message); }
+});
+addEventListener('popstate', () => { readHash(); $('#q').value = S.q; loadList(); if (S.sel) showPreview(S.q ? S.selR : S.r, S.sel); else clearPreview(); });
+addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && document.body.classList.contains('pv-open') && innerWidth <= 900) { S.sel = null; writeHash(false); clearPreview(); } });
+
+async function init() {
+  try {
+    const d = await api('/api/init');
+    S.token = d.token; S.roots = d.roots;
+    if (d.kozpont) $('#kozpontLink').href = d.kozpont;
+  } catch (err) {
+    $('#list').replaceChildren(el('div', { class: 'empty' }, ic('plug-zap'), 'A helyi program nem válaszol. Indítsd el újra (Kozpont.bat).'));
+    icons(); return;
+  }
+  if (!S.roots.length) {
+    $('#list').replaceChildren(el('div', { class: 'empty' }, ic('folder-plus'), 'Nincs beállítva mappa. Mappák beállítása.'));
+    icons(); return;
+  }
+  readHash(); $('#q').value = S.q;
+  writeHash(false); loadList();
+  if (S.sel) showPreview(S.q ? S.selR : S.r, S.sel); else clearPreview();
+}
+icons();
+init();
+</script>
+</body>
+</html>
