@@ -150,6 +150,7 @@ main {
 .hero .letter { transform-box: fill-box; transform-origin: 50% 70%; }
 .hero .logo { transform-box: view-box; transform-origin: 0 0; }
 .hero.static { cursor: pointer; }
+.hero canvas.fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
 
 /* Szigetek */
 .islands { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px; }
@@ -550,8 +551,7 @@ function renderHome() {
 // Máskor csak a kész logó látszik. Koppintásra átugorható.
 const INTRO_SRC = '/kozpont/intro.webm', LOGO_AT = 8.5;   // a videóban ekkor indul el a kamion
 const LOGO_FROM = { x: 0.5, y: 0.47, w: 0.34 };   // kicsiben középen, a plató mögött bújik elő, onnan nő fel a helyére
-const LOGO_FS = 236, LOGO_Y = 322, LOGO_X0 = 64;
-const LOGO_FRAME = 'M1246,300 L1250,334 L96,390 L22,52 L1240,52 L1244,92';
+const LOGO_FS = 236, LOGO_Y = 238, LOGO_X0 = 64;
 const LOGO_PATHS = {   // a betűk vázvonala a betű „tinta-dobozában” (0–1): ezen fut a kígyó
   B: 'M.2,1 L.2,0 L.62,0 Q.94,0 .94,.25 Q.94,.48 .62,.48 L.2,.48 L.66,.48 Q1,.5 1,.75 Q1,1 .66,1 L.2,1',
   R: 'M.2,1 L.2,0 L.62,0 Q.95,0 .95,.27 Q.95,.52 .62,.52 L.2,.52 L.55,.52 L.95,1',
@@ -572,9 +572,11 @@ function buildLogo(svg) {
   meas.textContent = 'BREMAT';
   const c = document.createElement('canvas').getContext('2d'); c.font = `${LOGO_FS}px "Archivo Black"`;
   const cap = c.measureText('B').actualBoundingBoxAscent;
+  let inkL = Infinity, inkR = -Infinity;
   const reveals = [...'BREMAT'].map((ch, i) => {
     const x = meas.getStartPositionOfChar(i).x, ink = c.measureText(ch);
     const lx = x - ink.actualBoundingBoxLeft, lw = ink.actualBoundingBoxRight + ink.actualBoundingBoxLeft;
+    inkL = Math.min(inkL, lx); inkR = Math.max(inkR, lx + lw);
     const d = LOGO_PATHS[ch].replace(/(-?[\d.]+),(-?[\d.]+)/g, (_, u, v) => `${(lx + u * lw).toFixed(1)},${(LOGO_Y - cap + v * cap).toFixed(1)}`);
     const mask = el('mask', { id: 'lgM' + i, maskUnits: 'userSpaceOnUse', x: -100, y: -100, width: 1500, height: 600 }, defs);
     const reveal = el('path', { d, fill: 'none', stroke: '#fff', 'stroke-width': lw * 0.62, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', pathLength: 1, 'stroke-dasharray': 1, 'stroke-dashoffset': 1 }, mask);
@@ -586,7 +588,11 @@ function buildLogo(svg) {
   const clip = el('clipPath', { id: 'lgClip' }, defs);
   el('text', { x: LOGO_X0, y: LOGO_Y, 'font-family': FONT, 'font-size': LOGO_FS }, clip).textContent = 'BREMAT';
   const glint = el('rect', { x: -420, y: 40, width: 420, height: 320, fill: 'url(#lgGlint)', opacity: 0 }, el('g', { 'clip-path': 'url(#lgClip)' }, logo));
-  const frame = el('path', { d: LOGO_FRAME, fill: 'none', stroke: 'currentColor', 'stroke-width': 18, 'stroke-linejoin': 'miter', pathLength: 1, 'stroke-dasharray': '1 2', 'stroke-dashoffset': 1 }, svg);
+  // a keret az eredeti logó arányai szerint (h = betűmagasság): a felső vonal épp a betűk fölött,
+  // a jobb oldal végig lemegy, az alsó vonal ferdén a bal alsó sarokba, onnan a bal oldal vissza fel
+  const h = cap, top = LOGO_Y - cap - 0.17 * h, n = (v) => v.toFixed(1);
+  const FRAME = `M${n(inkL)},${n(top)} L${n(inkR + 0.09 * h)},${n(top)} L${n(inkR + 0.12 * h)},${n(LOGO_Y + 0.19 * h)} L${n(inkL + 0.58 * h)},${n(LOGO_Y + 0.77 * h)} Z`;
+  const frame = el('path', { d: FRAME, fill: 'none', stroke: 'currentColor', 'stroke-width': n(0.115 * h), 'stroke-linejoin': 'miter', pathLength: 1, 'stroke-dasharray': '1 2', 'stroke-dashoffset': 1 }, svg);
   return () => {   // a lejátszás; visszaadja az animációkat (finish() = azonnal kész állapot)
     const A = (n, kf, delay, dur, easing = 'cubic-bezier(.65,0,.35,1)') => n.animate(kf, { delay: delay * 1000, duration: dur * 1000, easing, fill: 'both' });
     const per = 0.42, gap = 0.15, end = (reveals.length - 1) * gap + per, out = 'cubic-bezier(.2,.9,.2,1)';
@@ -597,13 +603,82 @@ function buildLogo(svg) {
     const k = m ? (LOGO_FROM.w * r.width) / (bb.width * m.a) : 0.45;
     const cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
     const small = `translate(${(p.x - k * cx).toFixed(1)}px, ${(p.y - k * cy).toFixed(1)}px) scale(${k.toFixed(3)})`;
-    return [
+    const list = [
       ...reveals.map((r, i) => A(r, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], i * gap, per)),
       A(logo, [{ transform: small }, { transform: 'translate(0px, 0px) scale(1)' }], end + 0.15, 1.0, 'cubic-bezier(.45,0,.15,1)'),
       A(frame, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], end + 0.95, 0.95, 'cubic-bezier(.7,0,.25,1)'),
       A(glint, [{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(1800px)', opacity: 1 }], end + 1.85, 0.9, 'cubic-bezier(.5,0,.3,1)'),
     ];
+    list.frame = list[reveals.length + 1];
+    // a keret bal felső sarka (itt zárul be a vonal) a hero arányában – ide jön a „hegesztési” szikra
+    list.corner = () => {
+      const m2 = svg.getScreenCTM(), r2 = svg.parentNode.getBoundingClientRect(); if (!m2) return null;
+      const q = svg.createSVGPoint(); q.x = inkL; q.y = top; const c = q.matrixTransform(m2);
+      return { x: (c.x - r2.left) / r2.width, y: (c.y - r2.top) / r2.height };
+    };
+    return list;
   };
+}
+
+// --- Kis effektek a videó fölött: hegesztési szikra, ahol a váz eleme a helyére kerül; por a nehéz
+// lemezeknél, a konténer leérkezésénél és a kamion indulásánál. A helyek és idők a 3D jelenetből
+// vannak kiszámolva (t mp, x/y a hero arányában; s = szikra, p = por, l = leérkezés, d = kerék pora).
+const FX_EVENTS = [[0.567,0.3999,0.7849,'s'],[0.7,0.429,0.7269,'s'],[0.967,0.218,0.7699,'s'],[1.0,0.2571,0.716,'s'],[1.067,0.5948,0.825,'s'],[1.1,0.2475,0.6734,'s'],[1.133,0.6107,0.7641,'s'],[1.167,0.2839,0.678,'s'],[1.267,0.3209,0.7296,'s'],[1.333,0.358,0.6876,'s'],[1.433,0.3959,0.7399,'s'],[1.5,0.434,0.6974,'s'],[1.6,0.4728,0.7504,'s'],[1.667,0.512,0.7074,'s'],[1.767,0.3997,0.7025,'s'],[1.767,0.5517,0.7612,'s'],[1.833,0.4287,0.6038,'s'],[1.833,0.5921,0.7178,'s'],[1.933,0.259,0.7637,'s'],[2.0,0.3227,0.7119,'s'],[2.067,0.3427,0.7758,'s'],[2.133,0.2214,0.7609,'s'],[2.133,0.402,0.7225,'s'],[2.2,0.2614,0.7061,'s'],[2.2,0.429,0.7883,'s'],[2.233,0.3272,0.7762,'s'],[2.267,0.3608,0.7195,'s'],[2.267,0.4836,0.7335,'s'],[2.3,0.3698,0.7824,'s'],[2.3,0.5178,0.8011,'s'],[2.367,0.4007,0.7248,'s'],[2.367,0.5674,0.7447,'s'],[2.4,0.4502,0.794,'s'],[2.433,0.476,0.735,'s'],[2.467,0.5018,0.8015,'s'],[2.533,0.5242,0.7414,'s'],[2.567,0.59,0.8142,'s'],[2.6,0.6066,0.7525,'s'],[2.633,0.3991,0.5187,'s'],[2.767,0.4284,0.4785,'s'],[3.233,0.2156,0.5162,'s'],[3.267,0.2552,0.4783,'s'],[3.3,0.5957,0.555,'s'],[3.333,0.6116,0.5121,'s'],[3.5,0.415,0.7798,'p'],[4.0,0.2384,0.6262,'p'],[4.133,0.6021,0.6702,'p'],[4.367,0.5584,0.4956,'p'],[6.167,0.3714,0.4722,'p'],[8.3,0.2146,0.6111,'l'],[8.3,0.5946,0.6562,'l'],[8.5,0.2463,0.7887,'d'],[8.5,0.5687,0.8358,'d'],[8.5,0.6251,0.8442,'d']];
+function makeFx(hero) {
+  const cv = document.createElement('canvas'); cv.className = 'fx'; cv.setAttribute('aria-hidden', 'true'); hero.appendChild(cv);
+  const ctx = cv.getContext('2d'); let W = 0, H = 0;
+  const size = () => {
+    const r = hero.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    if (Math.abs(r.width - W) < 1 && Math.abs(r.height - H) < 1) return;
+    W = r.width; H = r.height; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  const P = []; let last = 0, raf = 0;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const tick = (now) => {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; size(); ctx.clearRect(0, 0, W, H);
+    const u = W / 760;
+    for (let i = P.length - 1; i >= 0; i--) {
+      const p = P[i]; p.t += dt;
+      if (p.t >= p.life) { P.splice(i, 1); continue; }
+      const q = p.t / p.life;
+      if (p.k === 'f') {          // villanás
+        const R = p.r * (1 + q), g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, R);
+        g.addColorStop(0, `rgba(255,236,190,${0.95 * (1 - q)})`); g.addColorStop(0.35, `rgba(255,140,30,${0.6 * (1 - q)})`); g.addColorStop(1, 'rgba(255,110,0,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, 7); ctx.fill();
+      } else if (p.k === 's') {   // szikra: rövid, izzó csík, ami lehull
+        p.vy += 560 * u * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+        ctx.strokeStyle = `rgba(255,${Math.round(175 - 95 * q)},${Math.round(45 - 35 * q)},${1 - q * q})`;
+        ctx.lineWidth = Math.max(1, 1.7 * u); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); ctx.stroke();
+      } else {                    // por: puha, táguló, halványuló folt
+        p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; p.vy *= 0.96;
+        const R = p.r + p.g * p.t, a = p.a * (1 - q) * (1 - q);
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, R);
+        g.addColorStop(0, `rgba(150,148,150,${a})`); g.addColorStop(1, 'rgba(150,148,150,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, 7); ctx.fill();
+      }
+    }
+    raf = P.length && hero.isConnected ? requestAnimationFrame(tick) : 0;
+  };
+  const spawn = (type, fx, fy, big = 1) => {
+    size(); const x = fx * W, y = fy * H, u = W / 760 * big;
+    if (type === 's') {
+      P.push({ k: 'f', x, y, r: 9 * u, life: 0.16, t: 0 });
+      for (let i = 0; i < 12 * big; i++) {
+        const a = rnd(-Math.PI * 0.92, -Math.PI * 0.08), v = rnd(70, 230) * u;
+        P.push({ k: 's', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(0.28, 0.6), t: 0 });
+      }
+    } else {
+      const n = type === 'l' ? 8 : type === 'p' ? 6 : 4;
+      for (let i = 0; i < n; i++) {
+        const side = type === 'd' ? -1 : (i % 2 ? 1 : -1);
+        P.push({ k: 'd', x: x + rnd(-6, 6) * u, y: y - rnd(0, 4) * u, vx: side * rnd(14, 50) * u, vy: -rnd(4, 16) * u,
+          r: rnd(7, 12) * u, g: rnd(22, 40) * u, a: type === 'd' ? 0.16 : 0.22, life: rnd(0.7, 1.0), t: 0 });
+      }
+    }
+    if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
+  };
+  return { spawn };
 }
 function introDue() {
   const last = Number(store.get('kozpont-intro')) || 0, now = Date.now();
@@ -624,9 +699,16 @@ async function intro(hero, force = false) {
   const replayOnTap = () => { hero.classList.add('static'); hero.addEventListener('click', () => { hero.replaceChildren(); hero.classList.remove('static'); intro(hero, true); }, { once: true }); };
   if (!force && (calm || !introDue())) { play().forEach((a) => a.finish()); return replayOnTap(); }
   store.set('kozpont-intro', String(Date.now()));
-  let anims = null, raf = 0;
-  const startLogo = () => { if (!anims) anims = play(); };
-  const skip = () => { cancelAnimationFrame(raf); if (video) { video.pause(); video.style.opacity = 0; } startLogo(); anims.forEach((a) => a.finish()); replayOnTap(); };
+  let anims = null, raf = 0, skipped = false;
+  const fx = makeFx(hero);
+  const startLogo = () => {
+    if (anims) return;
+    anims = play();
+    anims.frame.finished.then(() => {   // a keret bezárul: szikra a sarkánál
+      const c = anims.corner(); if (c && !skipped) fx.spawn('s', c.x, c.y, 1.5);
+    }, () => {});
+  };
+  const skip = () => { skipped = true; cancelAnimationFrame(raf); if (video) { video.pause(); video.style.opacity = 0; } startLogo(); anims.forEach((a) => a.finish()); replayOnTap(); };
   hero.addEventListener('click', skip, { once: true });
   let video = null;
   if (!alphaVideo()) {   // videó nélkül: a logó végén is koppintásra újraindul
@@ -638,7 +720,16 @@ async function intro(hero, force = false) {
   Object.assign(video, { muted: true, playsInline: true, preload: 'auto', src: INTRO_SRC });
   video.setAttribute('aria-hidden', 'true');
   hero.appendChild(video);   // a videó a logó fölött: a kamion eltakarja, mögötte bukkan elő
-  const watch = () => { if (!hero.isConnected) return video.pause(); if (video.currentTime >= LOGO_AT) return startLogo(); raf = requestAnimationFrame(watch); };
+  let ei = 0;
+  const watch = () => {
+    if (!hero.isConnected) return video.pause();
+    const t = video.currentTime;
+    while (ei < FX_EVENTS.length && FX_EVENTS[ei][0] <= t) {   // a lemaradt (> 0,3 mp) effekteket kihagyja
+      const [et, x, y, k] = FX_EVENTS[ei++]; if (t - et < 0.3) fx.spawn(k, x, y);
+    }
+    if (t >= LOGO_AT) startLogo();
+    if (!video.ended && !video.paused) raf = requestAnimationFrame(watch);
+  };
   video.addEventListener('error', startLogo, { once: true });
   video.addEventListener('ended', () => { startLogo(); hero.removeEventListener('click', skip); replayOnTap(); }, { once: true });
   video.play().then(() => { raf = requestAnimationFrame(watch); }, startLogo);
