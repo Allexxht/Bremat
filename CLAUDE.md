@@ -251,7 +251,9 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 ## Munkamódszer
 - A magyarázatok magyarul szóljanak, de a menü- és beállításneveket angolul írd
   (az eszközök angol felületűek).
-- Közvetlenül a `main`-re megy (a felhasználó így kérte); a Netlify a pusht azonnal kiteszi.
+- **2026. november 5. óta: előbb terv, és a `main`-re semmi nem megy közvetlenül** (a felhasználó
+  kérése). Minden változás külön ágra kerül, PR-ral, és a merge-et a felhasználó végzi. A `main`
+  minden pusha éles deploy (a Netlify azonnal kiteszi). Korábban közvetlenül a `main`-re ment.
 - **Netlify (2026. október 1. óta): külön Netlify fiók, csak ennek az oldalnak.** Az új oldal
   címe `https://bremat-stuff.netlify.app` (új fiók, saját Free kerete: 300 kredit/hó, egy éles
   deploy 15 kredit). `KM_ACCESS_CODE` ott beállítva, minden deploy contextre. A régi oldal
