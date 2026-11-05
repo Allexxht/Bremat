@@ -320,6 +320,8 @@ function DoMkdir($b) {
   if (-not [IO.Directory]::Exists($dirFull)) { throw 'NOTFOUND' }
   $name = CheckName $b.name
   $target = Join-Path $dirFull $name
+  # exist = true: ha már van ilyen mappa, az is jó (mappa feltöltésnél)
+  if ($b.exist -and [IO.Directory]::Exists($target)) { return [ordered]@{ ok = $true; p = (RelOf (RootOf $b.r).path $target) } }
   if ([IO.File]::Exists($target) -or [IO.Directory]::Exists($target)) { throw 'BAD:Ilyen nevű fájl vagy mappa már van.' }
   [void][IO.Directory]::CreateDirectory($target)
   $script:index = $null
