@@ -666,6 +666,7 @@ function minOfDay(ms, ymd) {
 }
 function fmtDur(ms) {
   const m = Math.round(ms / 60000);
+  if (m < 1) return '<1 p';
   if (m < 60) return `${m} p`;
   return `${Math.floor(m / 60)} ó${m % 60 ? ` ${m % 60} p` : ''}`;
 }
