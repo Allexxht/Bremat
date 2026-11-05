@@ -296,4 +296,17 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Windows nincs a Claude-környezetben: a PowerShell részt Alex gépén kell kipróbálni. A felületet egy
   Node-os próba-szerverrel (ugyanaz az API) teszteltük Chromiumban. A csomag:
   `/mnt/project-files/kozpont/Teendoim-es-BrematKozpont.zip`.
-- Következő lépés (Alex jóváhagyta a tervet): **munkák** listája a gépen, fájlok hozzákötése.
+- **2. változat (2026. november 5. délután, Alex terve):** szigetes felület, **Cella → Jig → Termék**.
+  3 cella (1–2 = a robot két manipulátora, 3 = Siegmund asztal). Jig és termék: kép (magától a mappa
+  legnagyobb STEP-jéből, vagy választott kép / 3D nézet), szabad Adatok (kulcs–érték, nincs előre
+  megadott mező), Jegyzetek dátummal, a hozzá kötött mappa fájljai csoportosítva. Egy termék több
+  jigen is lehet (`jigs` lista, hivatkozás). Felül kereső: cella, jig, termék, adat, jegyzet és fájlnév
+  (a fájl a legmélyebb hozzárendelt mappa jigjéhez / termékéhez kötődik).
+- Adatok: `%APPDATA%\BrematKozpont\adatok.json` (`cells`, `jigs` – `cell`, `products` – `jigs[]`;
+  mindkettőben `folder` = `{ r: gyökér-id, p: relatív út }`, `img`, `thumb`, `fields[]`, `notes[]`). A böngésző a
+  teljes JSON-t küldi, `X-Rev` véd az elavult felülírás ellen; napi mentés a `mentes\` alá (60 nap). Képek:
+  `kepek\<id>.png`. A gyökérmappáknak állandó `id`-je van (`manipulator`, `products`), az adatok erre hivatkoznak.
+- Fájlműveletek: feltöltés (`/api/upload`, ütközésnél kérdez), új mappa, átnevezés, áthelyezés (a
+  hivatkozások követik), törlés **Lomtárba** (`Microsoft.VisualBasic.FileIO`).
+- Teszt: a Claude-környezet Chromiumában a WebGL szoftveres (swiftshader), a shader-fordítás ott fél
+  percig is fogja a lapot – valódi géppel ez nem gond. A folyamat-teszthez a WebGL-t kikapcsoltuk.

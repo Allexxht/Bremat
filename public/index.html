@@ -550,11 +550,11 @@ function renderHome() {
     <div class="islands">
       ${islandShell('isNaplo', 'naplo', 'notebook-pen', 'Munkanapló', 'Teendők és bejegyzések', '/naplo/', 0)}
       ${islandShell('isValk', 'valk', 'clipboard-check', 'Valk heti lap', 'Robot karbantartás', '/valk/', 1)}
-      ${helyiOn() ? islandShell('isFiles', 'valk', 'folder-lock', 'Valk fájlok', 'Rajzok, STEP, PDF – csak ezen a gépen', HELYI_URL, 2) : ''}
+      ${helyiOn() ? islandShell('isFiles', 'valk', 'folder-lock', 'Valk fájlok', 'Cellák, jigek, termékek – csak ezen a gépen', HELYI_URL, 2) : ''}
     </div></div>`;
   if (helyiOn()) fillIsland($('#isFiles'), { items: [
     { icon: 'shield-check', good: true, html: 'A fájlok a gépen maradnak, a netre nem kerülnek fel.' },
-    { icon: 'box', html: 'STEP 3D nézet, PDF előnézet, kereső.' },
+    { icon: 'box', html: 'Rajzok, STEP 3D, jegyzetek – egy kereső mindenre.' },
   ], foot: 'A Teendőim indítja (menü → BREMAT Központ).' });
   icons();
   intro($('#hero'));
