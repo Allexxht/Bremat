@@ -148,7 +148,7 @@ main {
 .hero video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; z-index: 1; transition: opacity .5s var(--ease); }
 .hero svg { position: absolute; inset: 8% 9%; width: 82%; height: 84%; overflow: visible; color: var(--text); pointer-events: none; }
 .hero .letter { transform-box: fill-box; transform-origin: 50% 70%; }
-.hero .logo { transform-box: view-box; transform-origin: 50% 60%; }
+.hero .logo { transform-box: view-box; transform-origin: 0 0; }
 .hero.static { cursor: pointer; }
 
 /* Szigetek */
@@ -548,7 +548,8 @@ function renderHome() {
 // A napi első megnyitáskor (utána legfeljebb 2,5 óránként) lemegy a videó: a konténer felépül,
 // felkerül a kamionra, a kamion elhúz – és mögötte a kígyós vonal kirajzolja a BREMAT logót.
 // Máskor csak a kész logó látszik. Koppintásra átugorható.
-const INTRO_SRC = '/kozpont/intro.webm', LOGO_AT = 8.6;   // a videóban ekkor indul el a kamion
+const INTRO_SRC = '/kozpont/intro.webm', LOGO_AT = 8.5;   // a videóban ekkor indul el a kamion
+const LOGO_FROM = { x: 0.42, y: 0.47, w: 0.34 };   // a plató helye a videóban (a hero arányában): itt bújik elő kicsiben
 const LOGO_FS = 236, LOGO_Y = 322, LOGO_X0 = 64;
 const LOGO_FRAME = 'M1246,300 L1250,334 L96,390 L22,52 L1240,52 L1244,92';
 const LOGO_PATHS = {   // a betűk vázvonala a betű „tinta-dobozában” (0–1): ezen fut a kígyó
@@ -580,20 +581,27 @@ function buildLogo(svg) {
     el('text', { x, y: LOGO_Y, 'font-family': FONT, 'font-size': LOGO_FS, fill: 'currentColor', mask: `url(#lgM${i})` }, logo).textContent = ch;
     return reveal;
   });
+  const bb = meas.getBBox();
   meas.remove();
   const clip = el('clipPath', { id: 'lgClip' }, defs);
   el('text', { x: LOGO_X0, y: LOGO_Y, 'font-family': FONT, 'font-size': LOGO_FS }, clip).textContent = 'BREMAT';
   const glint = el('rect', { x: -420, y: 40, width: 420, height: 320, fill: 'url(#lgGlint)', opacity: 0 }, el('g', { 'clip-path': 'url(#lgClip)' }, logo));
-  const frame = el('path', { d: LOGO_FRAME, fill: 'none', stroke: 'currentColor', 'stroke-width': 18, 'stroke-linejoin': 'miter', pathLength: 1, 'stroke-dasharray': 1, 'stroke-dashoffset': 1 }, svg);
+  const frame = el('path', { d: LOGO_FRAME, fill: 'none', stroke: 'currentColor', 'stroke-width': 18, 'stroke-linejoin': 'miter', pathLength: 1, 'stroke-dasharray': '1 2', 'stroke-dashoffset': 1 }, svg);
   return () => {   // a lejátszás; visszaadja az animációkat (finish() = azonnal kész állapot)
     const A = (n, kf, delay, dur, easing = 'cubic-bezier(.65,0,.35,1)') => n.animate(kf, { delay: delay * 1000, duration: dur * 1000, easing, fill: 'both' });
     const per = 0.42, gap = 0.15, end = (reveals.length - 1) * gap + per, out = 'cubic-bezier(.2,.9,.2,1)';
+    // kezdetben kicsi, a plató mögött (a kamion takarja); ahogy előbukkant, felnő a helyére
+    const r = svg.parentNode.getBoundingClientRect(), pt = svg.createSVGPoint();
+    pt.x = r.left + LOGO_FROM.x * r.width; pt.y = r.top + LOGO_FROM.y * r.height;
+    const m = svg.getScreenCTM(), p = m ? pt.matrixTransform(m.inverse()) : { x: 640, y: 200 };
+    const k = m ? (LOGO_FROM.w * r.width) / (bb.width * m.a) : 0.45;
+    const cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
+    const small = `translate(${(p.x - k * cx).toFixed(1)}px, ${(p.y - k * cy).toFixed(1)}px) scale(${k.toFixed(3)})`;
     return [
       ...reveals.map((r, i) => A(r, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], i * gap, per)),
-      A(logo, [{ transform: 'translateY(0) scale(1)' }, { transform: 'translateY(-12px) scale(1.03)' }], end + 0.1, 0.6, out),
-      A(frame, [{ transform: 'translateY(0)' }, { transform: 'translateY(-12px)' }], end + 0.1, 0.6, out),
-      A(frame, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], end + 0.35, 0.95, 'cubic-bezier(.7,0,.25,1)'),
-      A(glint, [{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(1800px)', opacity: 1 }], end + 1.25, 0.9, 'cubic-bezier(.5,0,.3,1)'),
+      A(logo, [{ transform: small }, { transform: 'translate(0px, 0px) scale(1)' }], end + 0.15, 1.0, 'cubic-bezier(.45,0,.15,1)'),
+      A(frame, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], end + 0.95, 0.95, 'cubic-bezier(.7,0,.25,1)'),
+      A(glint, [{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(1800px)', opacity: 1 }], end + 1.85, 0.9, 'cubic-bezier(.5,0,.3,1)'),
     ];
   };
 }
