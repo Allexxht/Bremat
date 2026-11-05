@@ -170,7 +170,11 @@ h2.sec .acts { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
 .chip svg { width: 13px; height: 13px; }
 .card.cell .pic { aspect-ratio: auto; height: 150px; background: radial-gradient(circle at 30% 20%, #fff, #e9ecf2 70%); }
 .card.cell .pic svg { width: 54px; height: 54px; color: var(--accent); stroke-width: 1.3; }
-.card.cell .num { position: absolute; left: 16px; top: 12px; font: 700 46px/1 var(--display); color: rgba(200, 16, 46, .12); }
+.card.cell .num { position: absolute; left: 16px; top: 12px; font: 700 46px/1 var(--display); color: rgba(200, 16, 46, .12); z-index: 1; }
+.card.cell .pic.has-img .num { color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, .45); }
+.cellhead { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.cellpic { width: 240px; max-width: 100%; aspect-ratio: 16 / 10; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); position: relative; flex: none; outline: 3px solid color-mix(in srgb, var(--lv-cell) 30%, transparent); outline-offset: -3px; }
+.cellpic img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .card.add { border: 2px dashed rgba(16, 20, 28, .14); background: rgba(255, 255, 255, .35); box-shadow: none; align-items: center; justify-content: center; min-height: 190px; color: var(--muted); font-weight: 600; gap: 8px; }
 .card.add svg { width: 28px; height: 28px; }
 .card.add:hover { color: var(--accent); border-color: var(--accent); }
@@ -667,22 +671,56 @@ async function openFile(r, p, mode = 'open') {
   try { await api('/api/open', { r, p, mode }); toast(mode === 'folder' ? 'Megnyitva a Fájlkezelőben.' : 'Megnyitás a saját programjával…'); }
   catch (err) { toast(err.message); }
 }
+// Feltöltés. files: File-ok, vagy { file, rel } (rel = út a mappán belül, pl. „Új mappa/sub/a.step”):
+// ilyenkor a mappaszerkezetet is létrehozza a célhelyen.
 async function uploadFiles(r, p, files) {
-  files = [...files]; let n = 0; const got = [];
-  for (const f of files) {
-    n++; toast(`Feltöltés ${n}/${files.length}: ${f.name}`, 60000);
-    const send = (mode) => fetch(`/api/upload?r=${encodeURIComponent(r)}&p=${encodeURIComponent(p)}&name=${encodeURIComponent(f.name)}&mode=${mode}`, { method: 'POST', headers: { 'X-Helyi': '1' }, body: f });
+  const items = [...files].map((f) => f instanceof File ? { file: f, rel: f.webkitRelativePath || f.name } : f);
+  const made = new Set(); let n = 0, policy = null; const got = [];
+  for (const { file: f, rel } of items) {
+    n++; toast(`Feltöltés ${n}/${items.length}: ${rel}`, 60000);
+    const parts = rel.split('/').filter(Boolean), name = parts.pop();
+    let dir = p;
+    for (const part of parts) {            // almappák (ha még nincsenek)
+      const next = (dir ? dir + '/' : '') + part;
+      if (!made.has(next)) {
+        try { await api('/api/mkdir', { r, p: dir, name: part, exist: true }); } catch (err) { toast(`${part}: ${err.message}`); return got.length ? got : false; }
+        made.add(next);
+      }
+      dir = next;
+    }
+    const send = (mode) => fetch(`/api/upload?r=${encodeURIComponent(r)}&p=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}&mode=${mode}`, { method: 'POST', headers: { 'X-Helyi': '1' }, body: f });
     let res = await send('fail');
     if (res.status === 409) {
-      const over = confirm(`„${f.name}” már van ebben a mappában.\n\nOK = felülírom\nMégse = új néven mentem (pl. „név (2)”)`);
-      res = await send(over ? 'overwrite' : 'rename');
+      let mode = policy;
+      if (!mode) {
+        mode = confirm(`„${rel}” már van ott.\n\nOK = felülírom\nMégse = új néven mentem (pl. „név (2)”)${items.length > 1 ? '\n\n(A többi ütközésnél is ugyanígy.)' : ''}`) ? 'overwrite' : 'rename';
+        policy = mode;
+      }
+      res = await send(mode);
     }
     const d = await res.json().catch(() => ({}));
-    if (!res.ok) { toast(`${f.name}: ${d.error || 'nem sikerült'}`); return got.length ? got : false; }
-    got.push({ r, p: (p ? p + '/' : '') + (d.name || f.name) });
+    if (!res.ok) { toast(`${rel}: ${d.error || 'nem sikerült'}`); return got.length ? got : false; }
+    got.push({ r, p: (dir ? dir + '/' : '') + (d.name || name) });
   }
-  toast(files.length > 1 ? `${files.length} fájl feltöltve.` : 'Feltöltve.');
+  toast(items.length > 1 ? `${items.length} fájl feltöltve.` : 'Feltöltve.');
   return got;
+}
+// Behúzott fájlok és mappák (a mappákat bejárja). Az elemeket rögtön, a drop alatt kell elkérni.
+async function droppedItems(dt) {
+  const entries = [...(dt.items || [])].map((i) => i.webkitGetAsEntry?.()).filter(Boolean);
+  if (!entries.length) return [...dt.files];
+  const out = [];
+  const walk = async (en, base) => {
+    if (en.isFile) { const f = await new Promise((ok, no) => en.file(ok, no)); out.push({ file: f, rel: base + f.name }); return; }
+    const rd = en.createReader();
+    for (;;) {
+      const batch = await new Promise((ok, no) => rd.readEntries(ok, no));
+      if (!batch.length) break;
+      for (const c of batch) await walk(c, base + en.name + '/');
+    }
+  };
+  for (const en of entries) await walk(en, '');
+  return out;
 }
 function fileActions(e, r, refresh, owner) {
   const k = kind(e);
@@ -719,6 +757,7 @@ function fixLinks(r, from, to, toR = r) {
     else if (ref.p.startsWith(from + '/')) { ref.p = to + ref.p.slice(from.length); ref.r = toR; changed = true; }
   };
   for (const it of allItems()) { mv(it.folder); mv(it.img); it.files.forEach(mv); }
+  for (const c of D.cells) mv(c.img);
   if (changed) save();
 }
 
@@ -952,7 +991,8 @@ function renderHome() {
   const cards = D.cells.map((c, i) => {
     const jigs = jigsIn(c.id), ads = jigs.flatMap((j) => adsOn(j.id)), prods = new Set(jigs.flatMap((j) => [...prodsOfJig(j.id)]));
     return el('a', { class: 'card cell glass', href: `#/cella/${c.id}`, style: `--i:${i}` },
-      el('div', { class: 'pic' }, el('span', { class: 'num', text: String(i + 1) }), ic(CELL_ICON[c.id] || 'layout-grid')),
+      el('div', { class: 'pic' + (c.img ? ' has-img' : '') }, el('span', { class: 'num', text: String(i + 1) }), ic(CELL_ICON[c.id] || 'layout-grid'),
+        c.img ? el('img', { src: fileUrl(c.img.r, c.img.p), alt: '', loading: 'lazy', onerror: (ev) => ev.target.remove() }) : null),
       el('div', { class: 'tx' }, el('b', { text: c.name }), el('small', { text: c.sub || '' }),
         el('div', { class: 'chips' }, el('span', { class: 'chip' }, ic('grip'), `${jigs.length} jig`), el('span', { class: 'chip' }, ic('puzzle'), `${ads.length} adapter`), el('span', { class: 'chip' }, ic('package'), `${prods.size} termék`))));
   });
@@ -979,17 +1019,41 @@ function renderCell(id) {
   const jigs = jigsIn(id);
   setWhere([HOME, ['cell', c.name, `#/cella/${c.id}`]]);
   $('#app').replaceChildren(el('div', { class: 'page' },
-    el('div', { class: 'head' }, el('div', {}, el('h1', { text: c.name }), el('p', { text: c.sub || '' })),
-      el('div', { class: 'acts' }, el('button', { class: 'btn ghost', type: 'button', onclick: async () => {
-        const name = prompt('A cella neve:', c.name); if (name == null) return;
-        const sub = prompt('Alcím (pl. Manipulátor 1):', c.sub || ''); if (sub == null) return;
-        c.name = name.trim() || c.name; c.sub = sub.trim(); await save(); route();
-      } }, ic('pencil'), 'Átnevezés'))),
+    el('div', { class: 'head' }, el('div', { class: 'cellhead' },
+        c.img ? el('div', { class: 'cellpic' }, el('img', { src: fileUrl(c.img.r, c.img.p), alt: '' })) : null,
+        el('div', {}, el('h1', { text: c.name }), el('p', { text: c.sub || '' }))),
+      el('div', { class: 'acts' },
+        el('button', { class: 'btn ghost', type: 'button', onclick: (ev) => popMenu(ev.currentTarget, [
+          { icon: 'image', label: 'Kép választása (a mappákból)…', act: () => cellImage(c, 'pick') },
+          { icon: 'upload', label: 'Kép feltöltése a gépről…', act: () => cellImage(c, 'upload') },
+          ...(c.img ? [{ icon: 'image-off', label: 'Kép levétele', act: async () => { c.img = null; await save(); route(); } }] : []),
+        ]) }, ic('image'), 'Kép'),
+        el('button', { class: 'btn ghost', type: 'button', onclick: async () => {
+          const name = prompt('A cella neve:', c.name); if (name == null) return;
+          const sub = prompt('Alcím (pl. Manipulátor 1):', c.sub || ''); if (sub == null) return;
+          c.name = name.trim() || c.name; c.sub = sub.trim(); await save(); route();
+        } }, ic('pencil'), 'Átnevezés'))),
     el('h2', { class: 'sec' }, el('span', { class: 'lvi lv-jig' }, ic('grip')), 'Jigek', el('span', { class: 'n', text: jigs.length })),
     el('div', { class: 'grid' }, jigs.map((j, i) => itemCard(j, i)), addCard('Új jig', () => newJig(c), jigs.length))));
   icons();
 }
 
+// Cella képe: kiválasztás a mappákból, vagy feltöltés (egy választott mappába)
+async function cellImage(c, how) {
+  let ref = null;
+  if (how === 'pick') {
+    const refs = await pickFiles(`Kép: ${c.name}`, c.img ? { r: c.img.r, p: c.img.p.split('/').slice(0, -1).join('/') } : null); if (!refs) return;
+    ref = refs.find((f) => IMG.includes(ext(f.p)));
+    if (!ref) { toast('Képet válassz (PNG, JPG…).'); return; }
+  } else {
+    const file = await new Promise((ok) => { const inp = el('input', { type: 'file', accept: 'image/*' }); inp.addEventListener('change', () => ok(inp.files[0] || null)); inp.click(); });
+    if (!file) return;
+    const to = await pickFolder(`Hová mentsem a képet? (${c.name})`, { r: ROOTS[0]?.id, p: '' }); if (!to) return;
+    const got = await uploadFiles(to.r, to.p, [file]); if (!got || !got.length) return;
+    ref = got[0];
+  }
+  c.img = { r: ref.r, p: ref.p }; await save(); route(); toast('A cella képe beállítva.');
+}
 // A fejléc „hol vagyok” sávja. list: [[szint, név, link], …]; az utolsó az aktuális oldal.
 const LV = { home: ['house', ''], cell: ['layout-grid', 'Cella'], jig: ['grip', 'Jig'], ad: ['puzzle', 'Adapter'], prod: ['package', 'Termék'], files: ['folder-tree', 'Fájlok'], set: ['settings', 'Beállítások'] };
 const HOME = ['home', 'Kezdőlap', '#/'];
@@ -1123,15 +1187,18 @@ function fileRow(e, r, refresh, owner, withPath, base) {
   return row;
 }
 function dropZone(box, target, after) {
-  box.append(el('div', { class: 'drop-hint', text: 'Engedd el: ide kerül' }));
+  box.append(el('div', { class: 'drop-hint', text: 'Engedd el: ide kerül (fájl vagy mappa)' }));
   let n = 0;
   box.addEventListener('dragenter', (ev) => { if (!ev.dataTransfer.types.includes('Files')) return; ev.preventDefault(); n++; box.classList.add('drag'); });
   box.addEventListener('dragover', (ev) => { if (ev.dataTransfer.types.includes('Files')) ev.preventDefault(); });
   box.addEventListener('dragleave', () => { if (--n <= 0) { n = 0; box.classList.remove('drag'); } });
   box.addEventListener('drop', async (ev) => {
     ev.preventDefault(); n = 0; box.classList.remove('drag');
+    let items;
+    try { items = await droppedItems(ev.dataTransfer); } catch { items = [...ev.dataTransfer.files]; }
+    if (!items.length) return;
     const t = await target(); if (!t) return;
-    const got = ev.dataTransfer.files.length && await uploadFiles(t.r, t.p, ev.dataTransfer.files);
+    const got = await uploadFiles(t.r, t.p, items);
     if (got) after(got);
   });
 }
@@ -1142,7 +1209,16 @@ function uploadButton(target, after, cls = 'btn sm primary') {
     const t = files.length && await target(); if (!t) return;
     const got = await uploadFiles(t.r, t.p, files); if (got) after(got);
   });
-  return [inp, el('button', { class: cls, type: 'button', onclick: () => inp.click() }, ic('upload'), 'Feltöltés')];
+  // Egész mappa (a mappaszerkezettel együtt)
+  const dinp = el('input', { type: 'file', webkitdirectory: true, multiple: true, hidden: true });
+  dinp.addEventListener('change', async () => {
+    const files = [...dinp.files]; dinp.value = '';
+    const t = files.length && await target(); if (!t) return;
+    const got = await uploadFiles(t.r, t.p, files); if (got) after(got);
+  });
+  return [inp, dinp,
+    el('button', { class: cls, type: 'button', title: 'Fájlok feltöltése', onclick: () => inp.click() }, ic('upload'), 'Feltöltés'),
+    el('button', { class: cls.replace(' primary', ''), type: 'button', title: 'Egy egész mappa feltöltése, az almappáival együtt', onclick: () => dinp.click() }, ic('folder-up'), 'Mappa feltöltése')];
 }
 // Egy elem fájljai: a kiválasztott fájlok (it.files), és ha van, a régi mappás kötés fájljai.
 async function itemEntries(it) {
@@ -1348,7 +1424,7 @@ async function renderFiles(params) {
   const refresh = () => route();
   setWhere([HOME, ['files', 'Fájlok', '#/fajlok']]);
   $('#app').replaceChildren(el('div', { class: 'page' },
-    el('div', { class: 'head' }, el('div', {}, el('h1', { text: 'Fájlok' }), el('p', { text: 'Minden fájl, mappák szerint. Ide is húzhatsz fájlokat.' }))),
+    el('div', { class: 'head' }, el('div', {}, el('h1', { text: 'Fájlok' }), el('p', { text: 'Minden fájl, mappák szerint. Ide húzhatsz fájlokat és egész mappákat is.' }))),
     el('div', { class: 'bar' },
       el('div', { class: 'roots' }, ROOTS.map((x) => el('button', { type: 'button', 'aria-pressed': String(x.id === r), title: x.ok ? x.path : `Nem található: ${x.path}`, onclick: () => go(x.id, '') }, ic(x.ok ? 'hard-drive' : 'circle-alert'), x.name))),
       el('span', { style: 'flex:1' }),

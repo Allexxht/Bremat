@@ -20,6 +20,7 @@ Telepítés
 
 Felépítés
 - Kezdőlap: 3 cella (1. és 2. = a robot két manipulátora, 3. = Siegmund asztal).
+  A cellának is lehet képe: cella oldal → "Kép" (választás vagy feltöltés).
 - Cella → jigek (szigetek képpel) → jig oldal: a rajta lévő adapterek
   → adapter oldal: a rajta lévő termékek → termék oldal.
 - Jig, adapter és termék oldalon: kép / 3D, saját Adatok (te adod meg: pl. Anyag: S235),
@@ -46,6 +47,8 @@ Fájlok
 - Kattintás: előnézet (PDF, kép, STEP / STL 3D). Dupla kattintás: saját programjával.
 - Feltöltés: "Feltöltés" gomb, vagy húzd a fájlokat az oldalra. Az első kiválasztott fájl
   mappájába kerül, és magától hozzá is adódik. Ha már van ilyen nevű, rákérdez.
+- "Mappa feltöltése": egy egész mappa a gép bármely helyéről, az almappáival együtt
+  (a Fájlok oldalon a kiválasztott helyre). Mappát be is húzhatsz az oldalra.
 - A sor végén a ⋯ gomb: átnevezés, áthelyezés, megmutatás a mappában,
   törlés (a Lomtárba kerül, onnan visszaállítható).
 - Fent a "Fájlok" gomb: minden mappa, a megszokott mappaszerkezetben.
