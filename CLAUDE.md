@@ -200,6 +200,19 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - A GitHub-repó **nyilvános** – a `lib/projektek.mjs` címei ott látszanak. Javasolt: priváttá tenni.
 - Előnézet a Claude-ban (privát, mintaszámokkal, a régebbi sötét alap): https://claude.ai/artifact/KpD1RSVY3BP8a3z74ME1b5
 
+## Nyitó animáció (2026. november 5.)
+- A Központ kezdőlapján a köszönés fölött (`#hero`, 3:1): `public/kozpont/intro.webm` (VP9 + alfa,
+  960×320, 30 kép/mp) – a BREMAT FT3 konténer felépül, felkerül a kamionra, a kamion elhúz –, és
+  a videó `LOGO_AT` (8,45 mp, a kamion indulása) idejétől SVG-ben kirajzolódik a BREMAT logó
+  (Archivo Black, betűnként kígyós maszk-felfedés, felemelkedés, keret, fénycsík). A felhasználó
+  kérése: nincs színes „vezető fej”, és a betűk nem ugranak meg. A logó utána ott marad.
+- Lejátszás a napi első megnyitáskor, utána legfeljebb 2,5 óránként (`kozpont-intro` localStorage);
+  máskor és `prefers-reduced-motion`-nál csak a kész logó. Koppintásra átugorható. Safari (nincs
+  átlátszó WebM) és hibás videó esetén csak a logó-animáció megy.
+- A 3D jelenet forrása nincs a repóban (Blender-program a Claude-munkamenetben; a felhasználó
+  otthon nagy felbontásban rendereli). Új render: PNG-kockákból
+  `ffmpeg -framerate 30 -i w_%04d.png -c:v libvpx-vp9 -pix_fmt yuva420p -crf 34 -b:v 0 intro.webm`.
+
 ## Teendőim állapot (2026. november 4.)
 - `/api/naplo` `todo_status_set` (`status`: `open`, `starred`, `doing[]` = `text`, `spent_ms`,
   `started_at`) és `todo_status`. Egy blob: `status/teendoim` (felülírja, `store.set`), a
