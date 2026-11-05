@@ -23,26 +23,29 @@ Felépítés
 - Cella → jigek (szigetek képpel) → jig oldal: a rajta lévő adapterek
   → adapter oldal: a rajta lévő termékek → termék oldal.
 - Jig, adapter és termék oldalon: kép / 3D, saját Adatok (te adod meg: pl. Anyag: S235),
-  Jegyzetek dátummal, és a hozzá kötött mappa fájljai (Rajzok, 3D, Képek, Egyéb).
+  Jegyzetek dátummal, és a kiválasztott fájlok (Rajzok, 3D, Képek, Egyéb).
+- Fent a sáv mutatja, hol vagy: Kezdőlap › Cella › Jig › Adapter › Termék, színnel,
+  az aktuális kiemelve. Rákattintva visszaugrasz. Mellette ← → gomb: vissza / előre.
 - Egy termék több adapteren is lehet (Másik adapter gomb) – ugyanaz a termék, nem másolat.
 - Felül a kereső: jig, adapter, termék, adat, jegyzet és fájlnév egyszerre. A "/" billentyű
   egyből a keresőbe ugrik. Nyilakkal és Enterrel is választhatsz.
 
 Új jig / adapter / termék
-- Cella → "Új jig": név + a jig mappája (a manipulator mappából).
-- Jig → "Új adapter": név + az adapter mappája (a manipulator mappából, pl. adapter\...).
-- Adapter → "Termék hozzáadása": a termék mappája a Products-ból (a név magától
-  kitöltődik), vagy egy meglévő termék.
+- Cella → "Új jig", Jig → "Új adapter", Adapter → "Termék hozzáadása":
+  név + "Fájlok kiválasztása": magukat a fájlokat jelölöd ki (pl. csak az adapter STEP-jét),
+  nem a mappát. Többet is kijelölhetsz, több mappából is. A név magától kitöltődik.
+- Később: "Fájl hozzáadása" gomb. A ⋯ menüben "Leválasztás": a fájl a helyén marad.
+- A régi, mappával kötött elemeknél a mappa összes fájlja látszik; "Mappa leválasztása".
 - Az 1. változatban jigre tett termékek a jig oldalán "Adapter nélküli termékek" alatt
   vannak: nyisd meg, és "Adapterre".
-- A kép magától elkészül a mappa legnagyobb STEP fájljából. Másik kép: "Kép" gomb,
+- A kép magától elkészül a kiválasztott fájlok legnagyobb STEP-jéből. Másik kép: "Kép" gomb,
   vagy a 3D nézetben "Ez legyen a kép" (abból a nézőpontból).
 
 Fájlok
 - A fájlok a helyükön maradnak, az oldal csak összeköti őket a jiggel / adapterrel / termékkel.
 - Kattintás: előnézet (PDF, kép, STEP / STL 3D). Dupla kattintás: saját programjával.
-- Feltöltés: "Feltöltés" gomb, vagy húzd a fájlokat az oldalra. Ha már van ilyen nevű,
-  rákérdez: felülírja, vagy új néven menti.
+- Feltöltés: "Feltöltés" gomb, vagy húzd a fájlokat az oldalra. Az első kiválasztott fájl
+  mappájába kerül, és magától hozzá is adódik. Ha már van ilyen nevű, rákérdez.
 - A sor végén a ⋯ gomb: átnevezés, áthelyezés, megmutatás a mappában,
   törlés (a Lomtárba kerül, onnan visszaállítható).
 - Fent a "Fájlok" gomb: minden mappa, a megszokott mappaszerkezetben.
@@ -51,7 +54,8 @@ Mappák
 - Alapból ez a két mappa látszik:
     Asztal\Alex\manipulator
     Asztal\Alex\Products
-- Más vagy új mappa: Beállítások (fent). Az útvonalat a Fájlkezelő címsorából másold be.
+- Más mappa bekötése: Beállítások → "Újabb gyökérmappa bekötése" (ez NEM hoz létre
+  mappát a gépen). Új mappát a gépen: Fájlok oldal → "Új mappa" (kiírja a teljes útvonalat).
 
 Adatok, mentés
 - A cellák, jigek, adapterek, termékek, adatok és jegyzetek: %APPDATA%\BrematKozpont\adatok.json
