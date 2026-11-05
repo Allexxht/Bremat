@@ -109,7 +109,7 @@ input:hover, textarea:hover { border-color: var(--muted); }
 .tl-head { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; font-size: 14px; color: var(--muted); }
 .tl-head b { color: var(--text); font-size: 15px; }
 .tl-bar { position: relative; height: 26px; margin: 10px 0 4px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
-.tl-bar i { position: absolute; top: 0; bottom: 0; min-width: 2px; }
+.tl-bar i { position: absolute; min-width: 2px; }
 .tl-bar i.brk { background: repeating-linear-gradient(135deg, rgba(120,128,140,.35) 0 5px, rgba(120,128,140,.15) 5px 10px) !important; }
 .tl-bar i.run { animation: tlpulse 2s ease-in-out infinite; }
 @keyframes tlpulse { 50% { opacity: .55; } }
@@ -365,7 +365,7 @@ function createApiAdapter() {
 }
 
 function createDemoAdapter() {
-  const KEY = 'naplo-demo-v2';
+  const KEY = 'naplo-demo-v3';
   let mem = null;
   const save = () => store.set(KEY, JSON.stringify(mem));
   const load = () => {
@@ -402,7 +402,7 @@ function createDemoAdapter() {
       seg(d, 'Általános', 'activity', '11:05', '11:40'),
       seg(d, 'Szünet', 'break', '11:40', '12:10'),
       seg(d, 'Adapter tervezés', 'todo', '12:25', live ? null : '14:40'),
-      ...(live ? [] : [seg(d, 'Általános', 'activity', '14:40', '15:35')]),
+      ...(live ? [] : [seg(d, 'Bremat központ', 'todo', '13:10', '14:00'), seg(d, 'Általános', 'activity', '14:40', '15:35')]),
     ] });
     days.push(day1(addDays(m, -7), false));
     days.push(day1(m, false));
@@ -666,6 +666,7 @@ function minOfDay(ms, ymd) {
 }
 function fmtDur(ms) {
   const m = Math.round(ms / 60000);
+  if (m < 1) return '<1 p';
   if (m < 60) return `${m} p`;
   return `${Math.floor(m / 60)} ó${m % 60 ? ` ${m % 60} p` : ''}`;
 }
@@ -673,30 +674,50 @@ const TL_COLORS = ['#0e8ea3', '#6d5bd0', '#d9822b', '#2f9e5b', '#c2417a', '#3b6f
 const tlColor = (name) => { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0; return TL_COLORS[h % TL_COLORS.length]; };
 // A futó szakasz vége: ma most, korábbi napon a nap vége (elfelejtett leállítás).
 const segEnd = (g, ymd) => g.end ?? (ymd === today() ? Date.now() : Math.max(g.start, Date.parse(addDays(ymd, 1) + 'T00:00:00+01:00') - 1));
-function tlStats(segs, ymd) {
-  let work = 0, brk = 0;
-  const by = new Map();
-  for (const g of segs) {
-    const d = Math.max(0, segEnd(g, ymd) - g.start);
-    if (g.kind === 'break') { brk += d; continue; }
-    work += d;
-    by.set(g.name, (by.get(g.name) || 0) + d);
+// Átfedő szakaszok (egyszerre több óra fut) összes ideje: amit egyszerre csináltál, csak egyszer számít.
+function unionMs(list) {
+  const iv = list.map(([a, b]) => [a, Math.max(a, b)]).sort((x, y) => x[0] - y[0]);
+  let sum = 0, cs = null, ce = null;
+  for (const [a, b] of iv) {
+    if (ce == null || a > ce) { if (ce != null) sum += ce - cs; cs = a; ce = b; } else ce = Math.max(ce, b);
   }
-  return { work, brk, by: [...by].sort((a, b) => b[1] - a[1]) };
+  return ce == null ? sum : sum + ce - cs;
+}
+function tlStats(segs, ymd) {
+  const by = new Map();
+  const w = [], br = [], all = [];
+  for (const g of segs) {
+    const e = segEnd(g, ymd);
+    all.push([g.start, e]);
+    if (g.kind === 'break') { br.push([g.start, e]); continue; }
+    w.push([g.start, e]);
+    by.set(g.name, (by.get(g.name) || 0) + Math.max(0, e - g.start));
+  }
+  const work = unionMs(w);
+  // a szünetből csak az számít, ami alatt nem ment munka
+  const brk = unionMs(all) - work;
+  return { work, brk, covered: unionMs(all), by: [...by].sort((a, b) => b[1] - a[1]) };
 }
 function timelineHtml(day) {
   const ymd = day.date;
   const segs = day.segments.map((g) => ({ ...g, e: segEnd(g, ymd) }));
   const first = segs[0].start, last = Math.max(...segs.map((g) => g.e));
   const st = tlStats(day.segments, ymd);
+  // A napon belül minden név más színt kap (a leghosszabb az első színt)
+  const cmap = new Map(st.by.map(([nm], i) => [nm, TL_COLORS[i % TL_COLORS.length]]));
+  const col = (nm) => cmap.get(nm) || tlColor(nm);
   // A sáv legalább 7:00–16:00, de kitágul, ha korábban kezdtél vagy tovább maradtál.
   const a = Math.min(7 * 60, Math.floor(minOfDay(first, ymd) / 60) * 60);
   const b = Math.max(16 * 60, Math.ceil(minOfDay(last, ymd) / 60) * 60);
   const pct = (min) => ((min - a) / (b - a)) * 100;
-  const bars = segs.map((g) => {
+  // Egyszerre futó szakaszok külön sávba (egymás alá) kerülnek
+  const laneEnd = [];
+  const lane = segs.map((g) => { let i = laneEnd.findIndex((e) => e <= g.start); if (i < 0) { i = laneEnd.length; laneEnd.push(0); } laneEnd[i] = g.e; return i; });
+  const nl = Math.max(1, laneEnd.length);
+  const bars = segs.map((g, k) => {
     const x = pct(minOfDay(g.start, ymd)), w = Math.max(0, pct(minOfDay(g.e, ymd)) - x);
     const tip = `${fmtHM(g.start)}–${g.end == null ? 'most' : fmtHM(g.e)} · ${g.name} (${fmtDur(g.e - g.start)})`;
-    return `<i class="${g.kind === 'break' ? 'brk' : ''}${g.end == null ? ' run' : ''}" style="left:${x}%;width:${w}%;background:${tlColor(g.name)}" title="${esc(tip)}"></i>`;
+    return `<i class="${g.kind === 'break' ? 'brk' : ''}${g.end == null ? ' run' : ''}" style="left:${x}%;width:${w}%;top:${(lane[k] * 100) / nl}%;height:${100 / nl}%;background:${col(g.name)}" title="${esc(tip)}"></i>`;
   }).join('');
   const ticks = [];
   const step = b - a > 12 * 60 ? 180 : 120;
@@ -712,10 +733,10 @@ function timelineHtml(day) {
   const span = last - first;
   return `
     <div class="tl" data-d="${ymd}">
-      <div class="tl-head"><b>Munka: ${fmtDur(st.work)}</b><span>${fmtHM(first)} – ${segs.some((g) => g.end == null) && ymd === today() ? 'most' : fmtHM(last)}</span>${st.brk ? `<span>szünet: ${fmtDur(st.brk)}</span>` : ''}${span - st.work - st.brk >= 5 * 60000 ? `<span>nem mért: ${fmtDur(span - st.work - st.brk)}</span>` : ''}</div>
-      <div class="tl-bar" role="img" aria-label="Napi idősáv">${bars}</div>
+      <div class="tl-head"><b>Munka: ${fmtDur(st.work)}</b><span>${fmtHM(first)} – ${segs.some((g) => g.end == null) && ymd === today() ? 'most' : fmtHM(last)}</span>${st.brk ? `<span>szünet: ${fmtDur(st.brk)}</span>` : ''}${span - st.covered >= 5 * 60000 ? `<span>nem mért: ${fmtDur(span - st.covered)}</span>` : ''}</div>
+      <div class="tl-bar" role="img" aria-label="Napi idősáv" style="height:${nl > 1 ? 14 + 14 * nl : 26}px">${bars}</div>
       <div class="tl-axis" aria-hidden="true">${ticks.join('')}</div>
-      <div class="tl-sum">${st.by.map(([n, d]) => `<span><em style="background:${tlColor(n)}"></em>${esc(n)} <b>${fmtDur(d)}</b></span>`).join('')}</div>
+      <div class="tl-sum">${st.by.map(([n, d]) => `<span><em style="background:${col(n)}"></em>${esc(n)} <b>${fmtDur(d)}</b></span>`).join('')}</div>
       <details><summary>Mettől meddig</summary><table>${rowsHtml.join('')}</table></details>
     </div>`;
 }
