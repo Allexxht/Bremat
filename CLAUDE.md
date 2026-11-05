@@ -1,274 +1,42 @@
-# BREMAT – Valk robot heti karbantartási lap – projektjegyzet
+# BREMAT – projektjegyzet (rövid)
+
+A teljes háttér a `docs/jegyzet.md`-ben van, szakaszonként. Csak azt a szakaszt olvasd el,
+amelyik részhez nyúlsz (Fájlok, Feladatok, Adatmodell, Munkanapló, Központ, Nyitó animáció,
+Teendőim, Napi idősáv, Kinézet, Munkamódszer).
 
 ## Mi ez
-A BREMAT saját, belső eszköze: online heti karbantartási ellenőrzőlap a Valk Welding /
-Panasonic TAWERS TM-2000WGH4 hegesztőrobothoz. A gépkezelő minden hétfőn tabletről tölti ki,
-a lapok archiválódnak és visszakereshetők.
-
-**Teljesen külön van az AndonWork (munkakövetés) terméktől** – a felhasználó kifejezett kérése.
-Semmilyen kódot, táblát, Supabase projektet vagy Netlify oldalt ne ossz meg vele, és ne
-hivatkozz rá. Az AndonWork a `Allexxht/astro-platform-starter` repóban él, ahhoz ebből a
-projektből nem nyúlunk.
-
-**Nincs Supabase** – a felhasználónak nem lehet több Supabase projektje. Az adatok a Netlify
-oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást csak kérésre vezess be.
+- A BREMAT belső eszközei egy Netlify oldalon (`https://bremat-stuff.netlify.app`, saját
+  Netlify fiók, Free keret: 300 kredit/hó, egy éles deploy 15 kredit):
+  - `/` – **Központ** (`public/index.html`, `/api/kozpont`): kezdőlap, menü, Munkanapló és Valk sziget.
+  - `/valk/` – heti karbantartási lap a Valk Welding / Panasonic TAWERS TM-2000WGH4 robothoz.
+  - `/naplo/` – Alex munkanaplója (Teendőim állapot, napi idősáv). Szándékosan külön a Valk laptól.
+- **Semmi köze az AndonWork-höz** (`Allexxht/astro-platform-starter`): nem osztunk meg vele
+  kódot, táblát, Supabase-t, Netlify oldalt, és nem hivatkozunk rá.
+- **Nincs Supabase, nincs új külső szolgáltatás kérés nélkül.** Az adatok a Netlify Blobs-ban:
+  `km-checks` (heti lap), `naplo` (napló).
+- A Teendőim (PowerShell asztali program) forrása nincs a repóban:
+  `/mnt/project-files/teendoim/Teendoim.zip`.
 
 ## Fájlok
-- `public/tasks.js` – **a feladatok közös katalógusa**: a böngésző (`import` az
-  index.html-ből) és a szerver (`lib/km-core.mjs`) is ezt tölti be, tiszta adat. Benne:
-  `FORM_VERSION`, `LOCAL` (huzalátmérő, gáz irányérték, hűtőfolyadék, üzembe helyezés napja),
-  `ROUTES` (A–E útvonal), `KINDS`, `WHO`, és a `TASKS` lista. Egy feladat mezői: `key`, `title`,
-  `route`, `kind` (`look` = szemrevételezés, `do` = beavatkozás), `freq` (`{d}` vagy `{m}` +
-  `label`), `who` (`karbantarto` / `szerviz`, üres = kezelő), `src`, `tools`, `steps`, `bad`,
-  `more` és `figs` (a lenyitható „Bővebben” rész), `nk` (általános gyakorlat), `pending`
-  (pontosítás alatt), `freqNote`, `extra: 'gas'`. A „Bővebben” szakaszok egy része a korábbi,
-  ellenőrzött szövegből jön (`OLD` + `pick()`). Minden állítás mellett forrás (Valk fejezet /
-  napi pont, Panasonic R/V/P); ami nem a kézikönyvből való, az `NK` jelölést kap („Általános
-  gyakorlat – nem a kézikönyvből”). Ezt a szabályt tartsd meg: a felhasználó a gyártó
-  előírását akarja, nem általános tanácsot.
-- `public/valk/index.html` – a heti lap (2026. november 4. óta a `/valk/` címen; előtte a
-  gyökérben volt, a régi `/#/uj`, `/#/lap/<id>` linkeket a Központ átirányítja). Egyfájlos
-  felület (vanilla JS, nincs build), a feladatokat a `/tasks.js`-ből importálja (abszolút
-  út, a képek is: `/img/...`). Elején a `CONFIG` (API, robotok, START_DATE). Adatréteg:
-  `createApiAdapter()` (éles, `/api/km`) és `createDemoAdapter()` (`?demo`, localStorage)
-  azonos interfésszel (`ping`, `list`, `get`, `submit`, `approve`, `remove`, `idleList`,
-  `idleMark`, `idleUnmark`) – új funkciót mindkettőbe.
-- `public/img/*.jpg` – a kézikönyv-fotókból vágott, kiegyenesített ábrák (1200 px széles,
-  JPEG 80). A zárt `<details>` miatt csak lenyitáskor töltődnek. Koppintásra nagyító ablak.
-- `netlify/functions/km.mjs` – Netlify Function v2 (`/api/km`, csak POST). Vékony réteg:
-  a Blobs tárolót (`km-checks`, `consistency: 'strong'`) adja át a `lib/km-core.mjs`-nek.
-- `lib/km-core.mjs` – a teljes szerveroldali logika, tárolófüggetlen (`memoryStore()` a
-  tesztekhez). Kódellenőrzés (sha256 + `timingSafeEqual`), `validateSubmit()` minden mezőre,
-  ISO hét és „ma” Europe/Budapest szerint.
-- `tests/km-core.test.mjs` – `npm test` (Node 22-ben a `node --test tests/` mappát nem fogad
-  el, a fájlokat kell megadni; a `package.json` mindkét tesztfájlt felsorolja).
-- **Központ** (2026. november 4.): `public/index.html` (a bremat-stuff kezdőlapja),
-  `netlify/functions/kozpont.mjs` (`/api/kozpont`), `lib/kozpont-core.mjs`, `lib/projektek.mjs`,
-  `tests/kozpont-core.test.mjs`. Lásd lent a „Központ” részt.
-- **Munkanapló** (2026. november 4., a felhasználó kérésére): `public/naplo/index.html`,
-  `netlify/functions/naplo.mjs` (`/api/naplo`), `lib/naplo-core.mjs`, `tests/naplo-core.test.mjs`.
-  Lásd lent a „Munkanapló” részt.
+- `public/tasks.js` – a feladatok katalógusa (böngésző és szerver is ezt tölti).
+- `public/valk/index.html`, `public/naplo/index.html`, `public/index.html` – egyfájlos felületek, vanilla JS, nincs build.
+- `netlify/functions/{km,naplo,kozpont}.mjs` – vékony réteg; a logika a `lib/*-core.mjs`-ben (tárolófüggetlen, `memoryStore()` a tesztekhez).
+- `tests/*.test.mjs` – `npm test` (a `package.json` sorolja fel a fájlokat).
 
-## A feladatok – 3. változat (2026. október 1.)
-- A felhasználó által jóváhagyott lista. **Útvonal szerint** (hogy ne kelljen ide-oda
-  szaladgálni): A = elöl, leállított robottal; B = hátul, leállított robottal; C = bekapcsolva
-  hátul (ott van a bekapcsolás); D = bekapcsolva elöl; E = szerviz-emlékeztetők. Azon belül
-  előbb a szemrevételezések, utána a beavatkozások.
-- A cella: elöl a robot, a forgató jig (pozicionáló), a fénykapuk; hátul a robot sínje, a
-  vízhűtés, a szűrők (vezérlő), a levegőegység, a gázpalack. Egy műszak, a vezérlő csak
-  használatkor megy (kb. napi 4 óra) – ezért a Panasonic óraközeinél a naptár jön el előbb.
-  1,0 mm-es huzal. Új gép (2026. szeptember), a garanciás szervizfeltételek nem ismertek.
-- **Hetente 24 feladat**; a ritkábbak (kétheti, havi, 2 havi, negyedéves, féléves, éves,
-  több éves) **csak akkor kerülnek a lapra, amikor esedékesek**: utolsó elvégzés (vagy, ha még
-  nem volt, `LOCAL.COMMISSIONING_DATE`) + időköz, ha ez a lap hetének vasárnapjáig eljön.
-  Lejárt = a hét hétfője előtt volt esedékes. Az Áttekintés „Ütemezés” fülén mind látszik.
-- **Három állapot:** Rendben / Beavatkozás kellett / Nem csináltam meg. Az utóbbi kettőhöz
-  kötelező megjegyzés (mit csinált / miért maradt el) – a szerver is ellenőrzi. Az elmaradt
-  nem számít elvégzésnek: a ritkább feladat a következő lapon is ott marad; minden feladatnál
-  „Legutóbb elmaradt” jelzés, az Áttekintésen „Elmaradt feladatok” panel.
-- „Mit vigyél magaddal”: a lapon lévő feladatok `tools` mezőiből, egyszer.
-- Kivéve: füstelszívás (nem férnek hozzá, a szűrő a Valk dolga – csak megjegyzés az éves
-  szerviznél). A sín feladatai `nk` (nincs rá gyártói leírás, nincs adattábla, kenőpont).
-- **Ami a cellában nincs, az a lapon sem szerepel** (2026. október 1.): hegesztési fényvédő
-  függöny nincs (a Valk 6.6/14 kimaradt, a feladat neve „Fénykapuk és kerítés”), ipari porszívó
-  nincs (seprű, lapát, ecset). A PFA-olaj (WWPFAOIL, Valk napi B3) sem heti teendő: a
-  felhasználó szerint a gépet évente kenik – az a „Huzaladagoló zsírzása” (csigahajtás, Alvania
-  S2), ami más dolog, mint a PFA olaja. Ha kiderül, hogy van PFA olajtartállyal, ritkább
-  szemrevételezésként visszajöhet.
-- **O-gyűrűk** (Valk 6.6/5 „check O rings if necessary”, 6.8, 6.10): a pisztoly és a gyorscserélő
-  csatlakozófelületén, csak levett pisztolynál látszanak – ezért nincs heti tétel rájuk; a
-  „Bővebben” rész (mi ez, hol van, mikor nézd meg) a pisztolynál és az áramátadónál, a 6.10
-  fotójával (`torch-orings.jpg`).
-- **Pontosítás alatt** (`pending`), amíg nincs fotó/adat: a huzaladagoló fedelének nyitása,
-  a gas check helye a teach pendanton, a hűtővíz-csere lépései (SMC kézikönyv).
-- Gáz: van gáztesztelőjük (kézi gázáramlás-mérő), hátul tartják – a hátsó körben veszik
-  magukhoz, elöl a pisztolynál mérnek vele (gas check közben). Irányérték 10–12 l/min (EWM
-  ökölszabály, 10–12 × huzalátmérő), `nk`, amíg nincs hegesztési utasítás szerinti érték.
-
-## Korábbi változatok
-- **2. változat (2026. szeptember 30.)**: a Valk 6.6 heti lista szó szerinti fordítása
-  (1. változat) a felhasználónak zavaros és értelmetlen volt. Most minden tétel egy konkrét,
-  hétfőn elvégezhető feladat: lépések + „Ha nincs rendben”. Sorrend: A = leállított cellánál,
-  B = bekapcsolás után. Forrás minden tételnél (`src`): Valk 6.6 / napi 6.5 A–C, Panasonic
-  R (robotkar) / V (vezérlő).
-- **Rendben** = elvégezte, a leírt rutinmunkán (tisztítás, heti áramátadó-csere) felül nem kellett
-  semmi. **Beavatkozás** = ezen felül csere, javítás, utántöltés vagy hiba.
-- **2026. szeptember 30., „Bővebben”:** a szöveget egy külön ellenőrző kör vetette össze a
-  kézikönyv-fotókkal (~170 állítás); a talált eltérések javítva. Kiemelt tanulság: a gáz
-  gyorscsatlakozója a kézikönyv képe szerint **a robotkaron, a huzaladagoló alatt** van
-  (GAS/AIR felirat), nem a robot talpán, ahogy a korábbi papíros útmutató írta.
-- Tudatos eltérések a Valk listától: a vezérlő **belső** kifúvatása kimaradt (lakat + kondenzátor
-  kisülés kell hozzá, karbantartói munka); a „change coil inside” állapot szerinti spirálcsere
-  lett; a 6 havi hűtővízcsere nem tétel, hanem külön pipa + Áttekintés-kártya.
-- **Feladatváltoztatás: `FORM_VERSION` + 1 a `tasks.js`-ben** (a szerver is innen veszi).
-  A szerver csak az aktuális változatot fogadja el (409 „Töltsd újra”). A 3. változattól a
-  tételek kulccsal és címmel tárolódnak, így a régi lapok maguktól olvashatók; az 1–2.
-  változatú lapok tételei sorszámmal (`no`) vannak, azok címei a `LEGACY_TITLES`-ben. A CSV-ben
-  a régi lapok tételei az utolsó oszlopba kerülnek. Egy régebbi változatú piszkozatot a kliens
-  eldob. Egy feladat kulcsát ne nevezd át (az esedékesség a kulcs szerinti előzményből jön).
-  **Csak szövegváltozásnál** (cím, lépés, eszköz, „Bővebben”) nem kell a változatot emelni: a
-  kulcsok és a heti feladatok köre ugyanaz, a régi lapokon a beküldéskori cím marad, az újakra
-  a szerver a katalógus mostani címét írja. Emelni akkor kell, ha a heti kulcsok köre vagy az
-  ellenőrzés szabálya változik.
-
-## Adatmodell és biztonság
-- Egy lap = egy blob: `check/<uuid>` kulcs, JSON: `form_version`, `check_date`, `iso_year`/`iso_week`
-  (szerveren számolva), `robot`, `inspector`, `items` (3. változat: `key`, `title` – a szerver
-  írja a katalógusból –, `status` = `ok`|`action`|`skip`, `note` – Rendben tételnél `null`),
-  `action_count`, `skip_count`, `cooling_water_changed` (a lap dátuma, ha a „Hűtővíz cseréje”
-  feladat megvolt, különben `null`), `gas_flow_lpm`, `remarks`, `parts_used`,
-  `escalate`/`escalate_to`, `approved_by`/`approved_at`, `created_at`.
-- A szerver ellenőrzi: minden heti feladat ott van, nincs ismeretlen vagy kétszer szereplő
-  kulcs, a Beavatkozáshoz és az elmaradáshoz van megjegyzés. Hogy egy ritkább feladat épp
-  esedékes-e, azt nem a szerver dönti el (a kliens teszi a lapra).
-- Beküldés `onlyIfNew`, jóváhagyás `onlyIfMatch` (etag) – így két eszköz egyszerre sem tud
-  kétszer jóváhagyni. Beküldött lap nem módosítható.
-- **Törlés** (2026. október 1. óta, a felhasználó kérésére; korábban szándékosan nem volt):
-  a lap oldalán „Lap törlése”, és az Archívum minden sorának végén „Törlés” (a táblázat jobb
-  szélére tapadó oszlop, hogy tableten is látsszon), a törlő nevével (`delete` művelet). A lap nem vész el
-  nyomtalanul: előbb `deleted/<id>` kulcsra másolódik `deleted_by`/`deleted_at`-tel
-  (`onlyIfNew`, egy félbemaradt korábbi törlés másolata is jó), csak utána törlődik a
-  `check/<id>`. A `list` csak a `check/` alatt keres, így a törölt lap az archívumból és az
-  esedékesség-számításból is kiesik. Visszaállítás felülete nincs: tévedésnél a Netlify →
-  **Blobs** → `km-checks` alatt a `deleted/` kulcsból kell kézzel visszamásolni.
-- Hozzáférési kód: `KM_ACCESS_CODE` Netlify env var, normalizálva (csak betű/szám, nagybetűsítve)
-  legalább 12 karakter, különben a function 500-at ad. A kliens localStorage-ban tárolja
-  (`km-kod`), `?kod=` linkből átveszi és kiveszi a címsorból. `Referrer-Policy: no-referrer`.
-- **„Nem üzemelt” hét** (2026. október 19., a felhasználó kérésére): ha a robot egész héten
-  nem ment, a lap nélküli hét (hiányzó vagy az aktuális) az Archívum sorának végén a „Nem
-  üzemelt” gombbal (az aktuális hétnél a kártyán is) megjelölhető, opcionális okkal és a jelölő
-  nevével. Külön blob: `idle/<év>-<hét>-<sha256(robot) 16 hex>` (`robot`, `iso_year`,
-  `iso_week`, `reason`, `marked_by`, `created_at`), `onlyIfNew` – egy hétre egy jelölés.
-  Műveletek: `idle_list`, `idle_mark` (nem jövőbeli, max. ~1 éves hét; nem jelölhető, ha arra
-  a hétre már van lap), `idle_unmark` (visszavonás, nyom nélkül törli – csak egy jelölés).
-  A jelölt hét nem számít kimaradtnak; ha utólag mégis kitöltenek rá lapot, a lap számít
-  (a kitöltésnél figyelmeztetés). A ritkább feladatok esedékessége ettől **nem** változik,
-  továbbra is naptár szerint számol.
-- A `list` minden lapot teljes tartalommal ad vissza (hetente egy lap, évente ~52 blob –
-  sok év után is kicsi). Ha valaha lassú lenne, akkor jöhet egy összesítő index-blob.
-
-## Munkanapló (2026. november 4.)
-- A felhasználó saját naplója: melyik héten, melyik nap mit csinált, visszakövethetően.
-  **Külön oldal** (`/naplo/`) ugyanazon a Netlify oldalon (bremat-stuff) – a felhasználó
-  kifejezett kérése: „ne szúrjuk össze a Valk welding naplóval”. A heti lapról nincs rá link,
-  és fordítva sem; saját Blobs tároló (`naplo`), saját függvény. Közös csak a kódellenőrzés és a
-  dátumkezelés (a `naplo-core` a `km-core`-ból importálja). Nem külön Netlify oldal, mert az a
-  fiók kreditkeretén osztozna, és a felhasználó a keret miatt aggódik.
-- Bejegyzés kulcsa `e/<YYYY-MM-DD>/<uuid>` (a dátum a kulcsban, így egy hét lekéréséhez csak a
-  kulcsokat listázzuk, és csak azokat olvassuk be). Mezők: `id`, `date`, `iso_year`/`iso_week`,
-  `text`, `area` (gép/terület, nem kötelező), `hours` (0–24, nem kötelező), `author`,
-  `created_at`, `version`, `updated_at`/`updated_by`.
-- Módosítás: a régi változat `h/<uuid>/<változat>` alá kerül `onlyIfNew`-val – ez egyben zár:
-  ugyanarra a változatra épülő második módosítás 409. Ha a nap változik, az új kulcsra írás után
-  törlődik a régi. Törlés: `d/<uuid>` másolat, utána törlés (mint a heti lapnál).
-- Műveletek: `ping`, `range` (max. 62 nap), `all` (keresés, CSV), `create`, `update`,
-  `history`, `delete`. A kliens `createApiAdapter()`/`createDemoAdapter()` – új funkciót mindkettőbe.
-- Kód: `NAPLO_ACCESS_CODE`, ha be van állítva, különben `KM_ACCESS_CODE`. A kliens `naplo-kod`
-  localStorage kulcsot használ, és ha az nincs, a heti lap `km-kod`-ját próbálja.
-- Kinézet: világos üveg, **kékeszöld** kiemelés (a heti lap piros), hogy ne lehessen
-  összetéveszteni. Lásd „Kinézet: üveg réteg”.
-
-## Központ (2026. november 4., 2. változat)
-- A felhasználó kérése: egy hely, ahol minden megvan. **Üveghatású, letisztult, animált**
-  dizájn (a felhasználónak az 1. változat – fülek, egyszerű kártyák – „büdös szar” volt).
-  Felül középen cím, bal oldalt lenyitható üveg menü (Kezdőlap, Projektek, Munkanapló, Valk
-  heti lap, Új heti lap, Saját oldalak, Beállítások), a cím alatt **két sziget**: Munkanapló
-  és Valk heti lap, mindegyiken értesítés-jelvény. Ikonok: Lucide (`unpkg.com/lucide@0.460.0`).
-  Betűk: Sora (cím) + Manrope.
-- **Háttér:** WebGL shader (2026. november 4. óta; előtte 2D canvas – pixeles, szögletes volt), animált „selyemszalagok” (a felhasználó egy sötét, hajlított
-  szalagos képet küldött mintának). **Alapból világos** (gyöngyház, halvány kék/kékeszöld/
-  rózsás) – a felhasználó kérése: egyik oldal se legyen sötét, mert az üzemben nem látszik.
-  A Beállításokban sötétre váltható (`kozpont-tema` = `sotet`). Teljes felbontás (max. 2× DPR), 4 mintás élsimítás (`fwidth`), 60 kép/mp, WebGL nélkül sima háttérszín,
-  rejtett lapnál áll, `prefers-reduced-motion`-nál álló kép.
-- **Munkanapló sziget:** a heti „Kész: …” bejegyzések száma (a Teendőimből jönnek) + a
-  **Teendőim állapota** (`/api/naplo` `todo_status`): hátralévő, folyamatban (névvel, élő
-  idővel a `started_at`-ból), fontos (★). Haladás-sáv: kész / (hátralévő + folyamatban).
-  **Jelvény = fontos, még nem kész teendők száma** (szándékosan nem az összes hátralévő –
-  az mindig ott lenne, és elveszítené a jelentését).
-- **Valk sziget:** e heti lap (kitöltve / nem üzemelt / nincs kitöltve), jóváhagyásra vár,
-  nyitott továbbjelzés. Jelvény = nincs kitöltve (1) + jóváhagyásra vár + nyitott továbbjelzés.
-  Ha a lap nincs kitöltve, a sziget egyből a `/valk/#/uj`-ra visz.
-- A Központ **nem tárol semmit**: a meglévő függvényeket hívja (`/api/naplo` `range`,
-  `todo_status`; `/api/km` `list`, `idle_list`). Saját függvénye csak a `ping` és a `projects`
-  (a projektkörök listája, `lib/projektek.mjs`) – a lista **csak kóddal** jön. A személyes
-  oldalak (Jarvis, mellékjövedelem…) a privát Claude-oldalon vannak (Műhelyindex,
-  https://claude.ai/artifact/PFjAFQubRT1fs7gy63H4aR), a menü „Saját oldalak” linkje oda visz.
-- Új Claude-oldal a projektek közé: egy sor a `lib/projektek.mjs` megfelelő `items` listájába
-  (a projektkör ikonja a `PICONS`-ban a `key` szerint).
-- Kód: a Központ a `km-kod`-ot használja (KM_ACCESS_CODE). Ha a napló külön kódot kap, a
-  napló sziget nem léptet ki, csak jelzi.
-- A GitHub-repó **nyilvános** – a `lib/projektek.mjs` címei ott látszanak. Javasolt: priváttá tenni.
-- Előnézet a Claude-ban (privát, mintaszámokkal, a régebbi sötét alap): https://claude.ai/artifact/KpD1RSVY3BP8a3z74ME1b5
-
-## Nyitó animáció (2026. november 5.)
-- A Központ kezdőlapján a köszönés fölött (`#hero`, 3:1): `public/kozpont/intro.webm` (VP9 + alfa,
-  960×320, 30 kép/mp) – a BREMAT FT3 konténer felépül, felkerül a kamionra, a kamion elhúz –, és
-  a videó `LOGO_AT` (8,6 mp, a kamion indulása) idejétől SVG-ben kirajzolódik a BREMAT logó
-  (a videó alatt, így a kamion eltakarja; Archivo Black, betűnként kígyós maszk-felfedés, felemelkedés, keret, fénycsík). A felhasználó
-  kérése: nincs színes „vezető fej”, és a betűk nem ugranak meg. A logó utána ott marad.
-- Lejátszás a napi első megnyitáskor, utána legfeljebb 2,5 óránként (`kozpont-intro` localStorage);
-  máskor és `prefers-reduced-motion`-nál csak a kész logó. Koppintásra átugorható, kész állapotban koppintásra újraindul. Safari (nincs
-  átlátszó WebM) és hibás videó esetén csak a logó-animáció megy.
-- A 3D jelenet forrása nincs a repóban (Blender-program a Claude-munkamenetben; a felhasználó
-  otthon nagy felbontásban rendereli). Új render: PNG-kockákból
-  `ffmpeg -framerate 30 -i w_%04d.png -c:v libvpx-vp9 -pix_fmt yuva420p -crf 34 -b:v 0 intro.webm`.
-
-## Teendőim állapot (2026. november 4.)
-- `/api/naplo` `todo_status_set` (`status`: `open`, `starred`, `doing[]` = `text`, `spent_ms`,
-  `started_at`) és `todo_status`. Egy blob: `status/teendoim` (felülírja, `store.set`), a
-  bejegyzések (`e/`) közé nem kerül. A Teendőim (asztali PowerShell-program, a felhasználó
-  gépén, `%APPDATA%\Teendoim`) küldi, ha változott (legfeljebb 3 mp-enként), csak ha a
-  naplózás be van kapcsolva. A program forrása nincs a repóban (a felhasználó gépén van,
-  zipben kapja; a legutóbbi a projekt közös mappájában: `teendoim/Teendoim.zip`).
-  2026. november 5.: a felhasználó egy olyan változatot küldött, amelyikből ez a küldés hiányzott –
-  az idősávos változatba visszakerült.
-
-## Napi idősáv (2026. november 5., a felhasználó kérésére)
-- Cél: a naplóban látszódjon, mettől meddig mivel foglalkozott (nem csak a „Kész:” sorok).
-  A felhasználó a gép mögött dolgozik, naponta többféle dolgon, egyszerre több projekten.
-- A Teendőim órája küldi: `/api/naplo` `time_day_set` (`day`: `date`, `segments[]` = `name`,
-  `kind` – `todo` / `activity` (állandó tevékenység, első: **„Általános”**) / `break`,
-  `start`, `end` Unix ms, `end` = null, ha fut). Egy nap = egy blob `t/<YYYY-MM-DD>`, a
-  program mindig a **teljes napot** küldi (felülír – ismételt küldés sem árt). Olvasás:
-  `time_range` (max. 62 nap). A bejegyzések (`e/`) közé nem kerül.
-- A heti nézetben naponta idősáv (min. 7–16 óra), összesítés név szerint, szünet, „nem mért
-  idő” (≥ 5 perces lyuk), lenyitható „Mettől meddig” lista; a mai futó szakasz percenként frissül.
-- A Teendőim oldalán (2026. november 5.): tevékenység-gombok a lista fölött („Általános”,
-  „Szünet” – `kind` = `act` / `brk` a `teendok.json`-ban, sosem lesznek készek, nem számítanak a
-  hátralévők közé), egy kattintás = váltás (alapból egyszerre egy óra fut, menüben kikapcsolható).
-  A szakaszok helyben: `%APPDATA%\Teendoim\ido.json` (21 nap), küldés 5 mp-enként a még el nem
-  küldött napokból. A tétlenségfigyelésre épül (2 perc után kérdez); szünet alatt nem kérdez, a
-  „Folytatás” / „Maradjon szünet” válasz szünet-szakaszt ír. A program legutóbbi változata:
-  `/mnt/project-files/teendoim/Teendoim.zip` (a projekt közös mappájában, nem a repóban).
-
-## Kinézet: üveg réteg (2026. november 4.)
-- A Valk lap és a napló stílusának végén egy **„ÜVEG RÉTEG – VILÁGOS”** blokk van: világos,
-  áttetsző felületek, lassan úszó halvány színfoltok (`.backdrop`), Sora/Manrope, finom
-  beúszás (`#app > *`). A saját szín marad: Valk = fehér-fekete-piros, napló = kékeszöld.
-  A rögzített fejléc és a Beküldés-sáv majdnem tömör (`.97`), hogy a szöveg ne lássék át.
-  A működéshez nem nyúl – kinézet-változásnál ezt a blokkot szerkeszd.
+## Szabályok, amiket ne szegj meg
+- **Forrás minden állításnál** (Valk fejezet / napi pont, Panasonic R/V/P). Ami nem a
+  kézikönyvből van, `nk` jelölést kap („Általános gyakorlat – nem a kézikönyvből”).
+- **Ami a cellában nincs, az a lapon sem szerepel.**
+- Feladatkör vagy ellenőrzési szabály változik → `FORM_VERSION` + 1 a `tasks.js`-ben.
+  Csak szövegváltozásnál nem kell. Feladat **kulcsát ne nevezd át**.
+- Az adatréteg két adapterből áll (`createApiAdapter()` éles, `createDemoAdapter()` `?demo`):
+  új funkciót **mindkettőbe**.
+- Beküldött lap nem módosítható; törlés előtt másolat (`deleted/`, napló: `d/`).
+- Hozzáférési kód: `KM_ACCESS_CODE` (napló: `NAPLO_ACCESS_CODE`, ha van). Titkot ne írj a repóba – **a repó nyilvános**.
 
 ## Munkamódszer
-- A magyarázatok magyarul szóljanak, de a menü- és beállításneveket angolul írd
-  (az eszközök angol felületűek).
-- Közvetlenül a `main`-re megy (a felhasználó így kérte); a Netlify a pusht azonnal kiteszi.
-- **Netlify (2026. október 1. óta): külön Netlify fiók, csak ennek az oldalnak.** Az új oldal
-  címe `https://bremat-stuff.netlify.app` (új fiók, saját Free kerete: 300 kredit/hó, egy éles
-  deploy 15 kredit). `KM_ACCESS_CODE` ott beállítva, minden deploy contextre. A régi oldal
-  (`brematkarbantartas.netlify.app`) az AndonWork-kel közös fiókban van, annak a kerete
-  2026. október 1-jén elfogyott – ezt az oldalt le kell választani a repóról (**Stop builds**),
-  hogy ne fogyassza az AndonWork keretét. Nyitott kérdések az átköltözéskor (2026. október 1.,
-  ellenőrizd a felhasználóval): (1) a belépés az új oldalon az első próbánál „Hibás
-  hozzáférési kód”-ot adott – **megoldva** (2026. október 19.: a felhasználó be van lépve, a lapok
-  látszanak); (2) az új oldal **Private** volt
-  (Netlify-sáv), a tablethez **Make public** kell; (3) a régi oldal **Stop builds**; (4) a #1 PR
-  (`elonezet` branch, ideiglenes előnézet a régi oldalon) lezárandó merge nélkül, a branch
-  törölhető. A változásokat továbbra is egy pushba gyűjtsd (minden push a `main`-re egy éles
-  deploy).
-- Módosítás után: `npm test`, majd DEMÓ módban (`/valk/?demo`, `/naplo/?demo`, `/?demo`) végigkattintani: új lap üresen beküldve
-  (hibák jelennek meg) → kitöltés beavatkozással → újratöltés (piszkozat megmarad) → beküldés →
-  jóváhagyás → áttekintés (a hét kitöltve, hűtővíz-kártya frissült) → lap törlése (eltűnik
-  az archívumból). Telefon-szélességen is, és a lap alja (Továbbjelzés) a Beküldés-sáv fölé
-  görgethető legyen.
-- Szerveroldali változásnál a valódi functiont is érdemes helyben futtatni a
-  `@netlify/blobs` `BlobsServer`-ével (a `NETLIFY_BLOBS_CONTEXT` env varral irányítva rá).
+- **Előbb terv, Alex jóváhagyja. A `main`-re soha nem pusholunk és nem merge-elünk**
+  (2026. november 5. óta): külön ág + PR, a merge Alexé. Minden `main`-push éles deploy és keretet fogyaszt.
+- Magyarul magyarázz, de a menü- és beállításneveket angolul írd.
+- Módosítás után: `npm test`, majd demó módban (`/valk/?demo`, `/naplo/?demo`, `/?demo`)
+  végigkattintani, telefon-szélességen is. A teljes lista: `docs/jegyzet.md` → Munkamódszer.
