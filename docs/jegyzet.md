@@ -202,6 +202,14 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   napló sziget nem léptet ki, csak jelzi.
 - A GitHub-repó **nyilvános** – a `lib/projektek.mjs` címei ott látszanak. Javasolt: priváttá tenni.
 - Előnézet a Claude-ban (privát, mintaszámokkal, a régebbi sötét alap): https://claude.ai/artifact/KpD1RSVY3BP8a3z74ME1b5
+- **3. változat (2026. november 6., Alex):** a menüben csak Kezdőlap és Beállítások (az „Oldalak” rész
+  kikerült). A kezdőlapon négy sziget: Munkanapló, Valk heti lap, **Ötletek**, **Projektek** (+ Valk fájlok,
+  ha be van kapcsolva). A „Saját oldalak” gomb a Projektek oldal tetején.
+- **Ötletek (`#/otletek`):** Alex felírja, amit meg akar csinálni. Állapot: `nyitott`, `folyamatban`,
+  `kesz` (pipa, áthúzva), `elvetve` („Nem lett belőle” + **miért**, a `reason` mezőben; a többinél
+  megjegyzés). Szűrők, szerkesztés, törlés (előtte másolat `d/<id>`). Tárolás: Netlify Blobs `kozpont`
+  tároló, `o/<id>` kulcs (`lib/kozpont-core.mjs`: `idea_list`, `idea_add`, `idea_update`, `idea_delete`).
+  Ez az első adat, amit a Központ maga tárol. Demóban (`?demo`) memóriában, mintaötletekkel.
 
 ## Nyitó animáció (2026. november 5.)
 - A Központ kezdőlapján a köszönés fölött (`#hero`, 3:1): `public/kozpont/intro.webm` (VP9 + alfa,
@@ -313,3 +321,4 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - **Adapter szint (2026. november 5., 12:40, Alex):** **Cella → Jig/ágy → Adapter → Termék**. `adapters: [{id, jig, name, folder, img, fields, notes}]`, a terméken `ads: []`. Egy adapter egy jigen, termék mindig adapteren (most nincs kivétel). A régi `p.jigs` (adapter nélkül a jigen) megmarad, a jig oldalán „Adapter nélküli termékek”; „Adapterre” átteszi. Útvonal: `#/adapter/<id>`.
 - **Fájlok mappa helyett (2026. november 5., 13:25, Alex):** jig / adapter / termék a kiválasztott fájlokat köti (`files: [{r, p}]`), nem a mappát; a régi `folder` kötés megmarad, leválasztható. Feltöltés az első fájl mappájába, és magától hozzáadódik. Fejlécben „hol vagyok” sáv (szintenként szín, az aktuális kiemelve) és vissza / előre gomb.
 - **Mappa feltöltés, cella kép (13:40):** „Mappa feltöltése” gomb (`webkitdirectory`) és mappák behúzása (bejárja, almappákat `/api/mkdir` `exist: true`-val hoz létre); ütközésnél egyszer kérdez. A cellának `img: {r, p}`.
+- **3. cella adapter nélkül, cella kép gomb (2026. november 6., Alex):** a 3. cellában Siegmund asztal van, oda nem jön adapter: a cella `direct: true` (alapból a `c3`, a cella oldalán átkapcsolható), a jig oldalán egyből „Termékek ezen a jigen” (a termék `jigs[]`-ben). A kezdőlap cella-kártyáin kamera gomb → kép választása / feltöltése.
