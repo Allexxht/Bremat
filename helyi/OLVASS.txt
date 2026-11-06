@@ -20,7 +20,9 @@ Telepítés
 
 Felépítés
 - Kezdőlap: 3 cella (1. és 2. = a robot két manipulátora, 3. = Siegmund asztal).
-  A cellának is lehet képe: cella oldal → "Kép" (választás vagy feltöltés).
+  A cellának is lehet képe: a cella kártyáján a kamera gomb, vagy cella oldal → "Kép".
+- A 3. cellában (Siegmund asztal) nincs adapter: a jig alatt egyből a termékek vannak.
+  A cella oldalán átkapcsolható ("Adapter nélkül" / "Adapterek bekapcsolása").
 - Cella → jigek (szigetek képpel) → jig oldal: a rajta lévő adapterek
   → adapter oldal: a rajta lévő termékek → termék oldal.
 - Jig, adapter és termék oldalon: kép / 3D, saját Adatok (te adod meg: pl. Anyag: S235),

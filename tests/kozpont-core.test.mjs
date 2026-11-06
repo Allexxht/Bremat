@@ -31,3 +31,30 @@ test('a projektlista adatai rendben vannak', () => {
     }
   }
 });
+
+test('ötletek: felvétel, állapot, miért, törlés (másolattal)', async () => {
+  const { memoryStore } = await import('../lib/km-core.mjs');
+  const store = memoryStore();
+  let n = 0;
+  const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'];
+  const c = (o, now = new Date('2026-11-06T08:00:00Z')) => handle(JSON.stringify({ code: CODE, ...o }), { accessCode: CODE, store, now, newId: () => ids[n++] });
+  await assert.rejects(c({ action: 'idea_add', text: '   ' }), (e) => e.status === 400);
+  const a = await c({ action: 'idea_add', text: 'Új befogó a 3100-hoz' });
+  assert.equal(a.status, 'nyitott');
+  await c({ action: 'idea_add', text: 'Második' }, new Date('2026-11-06T09:00:00Z'));
+  let list = await c({ action: 'idea_list' });
+  assert.deepEqual(list.map((x) => x.text), ['Második', 'Új befogó a 3100-hoz']);
+  const done = await c({ action: 'idea_update', id: a.id, status: 'kesz' });
+  assert.equal(done.status, 'kesz'); assert.ok(done.done_at);
+  const no = await c({ action: 'idea_update', id: ids[1], status: 'elvetve', reason: 'Túl drága' });
+  assert.equal(no.reason, 'Túl drága');
+  await assert.rejects(c({ action: 'idea_update', id: a.id, status: 'rossz' }), (e) => e.status === 400);
+  await assert.rejects(c({ action: 'idea_update', id: 'nem-uuid', status: 'kesz' }), (e) => e.status === 404);
+  const back = await c({ action: 'idea_update', id: a.id, status: 'nyitott' });
+  assert.equal(back.done_at, null);
+  await c({ action: 'idea_delete', id: a.id });
+  list = await c({ action: 'idea_list' });
+  assert.equal(list.length, 1);
+  assert.ok(await store.get(`d/${a.id}`), 'törlés előtt másolat');
+  await assert.rejects(handle(JSON.stringify({ code: 'rossz', action: 'idea_list' }), { accessCode: CODE, store }), (e) => e.status === 401);
+});

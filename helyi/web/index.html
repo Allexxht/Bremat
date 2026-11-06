@@ -171,6 +171,9 @@ h2.sec .acts { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
 .card.cell .pic { aspect-ratio: auto; height: 150px; background: radial-gradient(circle at 30% 20%, #fff, #e9ecf2 70%); }
 .card.cell .pic svg { width: 54px; height: 54px; color: var(--accent); stroke-width: 1.3; }
 .card.cell .num { position: absolute; left: 16px; top: 12px; font: 700 46px/1 var(--display); color: rgba(200, 16, 46, .12); z-index: 1; }
+.card.cell .camera { position: absolute; right: 10px; top: 10px; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 99px; border: 1px solid var(--line); background: rgba(255, 255, 255, .9); font-size: 12.5px; font-weight: 700; color: var(--text); cursor: pointer; opacity: .85; transition: opacity .2s, transform .2s; }
+.card.cell .camera:hover { opacity: 1; transform: translateY(-1px); }
+.card.cell .camera svg, .card.cell .pic .camera svg { width: 15px; height: 15px; color: var(--accent); stroke-width: 2; }
 .card.cell .pic.has-img .num { color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, .45); }
 .cellhead { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
 .cellpic { width: 240px; max-width: 100%; aspect-ratio: 16 / 10; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); position: relative; flex: none; outline: 3px solid color-mix(in srgb, var(--lv-cell) 30%, transparent); outline-offset: -3px; }
@@ -391,6 +394,8 @@ async function loadData() {
   REV = String(d.rev);
   D = d.data || DEFAULT();
   for (const k of ['cells', 'jigs', 'adapters', 'products']) D[k] = Array.isArray(D[k]) ? D[k] : [];
+  // A Siegmund asztalon (3. cella) nincs adapter: jig → termékek
+  for (const c of D.cells) if (c.direct === undefined) c.direct = c.id === 'c3';
   for (const it of allItems()) { it.fields ||= []; it.notes ||= []; it.files ||= []; }
   // p.ads: melyik adapteren van; p.jigs: régi, adapter nélküli kötés (az 1. változatból)
   for (const p of D.products) { p.ads ||= []; p.jigs ||= []; }
@@ -428,6 +433,7 @@ const itemHref = (it) => `#/${T[itemType(it)].path}/${it.id}`;
 // Teljes Windows-útvonal (üzenetekhez)
 const fullPath = (r, p) => { const x = ROOTS.find((y) => y.id === r); return x ? x.path + (p ? '\\' + p.replace(/\//g, '\\') : '') : p; };
 const sameRef = (a, b) => a.r === b.r && a.p === b.p;
+const isDirect = (jig) => !!cellOf(jig?.cell)?.direct;
 const adWhere = (a) => { const j = jigOf(a.jig); return j ? `${j.name} · ${cellOf(j.cell)?.name || ''}` : 'Nincs jighez kötve'; };
 const imgUrl = (it) => it.img ? fileUrl(it.img.r, it.img.p) : it.thumb ? `/kep?id=${it.id}&t=${TOKEN}&v=${it.thumb}` : null;
 function remember(it) {
@@ -971,7 +977,7 @@ function pic(it, icon) {
 function itemCard(it, i) {
   const t = itemType(it);
   const chips = [];
-  if (t === 'jig') chips.push(el('span', { class: 'chip' }, ic('puzzle'), `${adsOn(it.id).length} adapter`), el('span', { class: 'chip' }, ic('package'), `${prodsOfJig(it.id).size} termék`));
+  if (t === 'jig') chips.push(isDirect(it) ? null : el('span', { class: 'chip' }, ic('puzzle'), `${adsOn(it.id).length} adapter`), el('span', { class: 'chip' }, ic('package'), `${prodsOfJig(it.id).size} termék`));
   else if (t === 'ad') chips.push(el('span', { class: 'chip' }, ic('package'), `${prodsOn(it.id).length} termék`));
   else if (it.ads.length > 1) chips.push(el('span', { class: 'chip' }, ic('puzzle'), `${it.ads.length} adapteren`));
   const f = it.fields.find((x) => x.v);
@@ -992,9 +998,10 @@ function renderHome() {
     const jigs = jigsIn(c.id), ads = jigs.flatMap((j) => adsOn(j.id)), prods = new Set(jigs.flatMap((j) => [...prodsOfJig(j.id)]));
     return el('a', { class: 'card cell glass', href: `#/cella/${c.id}`, style: `--i:${i}` },
       el('div', { class: 'pic' + (c.img ? ' has-img' : '') }, el('span', { class: 'num', text: String(i + 1) }), ic(CELL_ICON[c.id] || 'layout-grid'),
-        c.img ? el('img', { src: fileUrl(c.img.r, c.img.p), alt: '', loading: 'lazy', onerror: (ev) => ev.target.remove() }) : null),
+        c.img ? el('img', { src: fileUrl(c.img.r, c.img.p), alt: '', loading: 'lazy', onerror: (ev) => ev.target.remove() }) : null,
+        el('button', { class: 'camera', type: 'button', title: 'A cella képe', onclick: (ev) => { ev.preventDefault(); ev.stopPropagation(); popMenu(ev.currentTarget, cellImgMenu(c)); } }, ic('camera'), c.img ? 'Kép csere' : 'Kép')),
       el('div', { class: 'tx' }, el('b', { text: c.name }), el('small', { text: c.sub || '' }),
-        el('div', { class: 'chips' }, el('span', { class: 'chip' }, ic('grip'), `${jigs.length} jig`), el('span', { class: 'chip' }, ic('puzzle'), `${ads.length} adapter`), el('span', { class: 'chip' }, ic('package'), `${prods.size} termék`))));
+        el('div', { class: 'chips' }, el('span', { class: 'chip' }, ic('grip'), `${jigs.length} jig`), c.direct ? null : el('span', { class: 'chip' }, ic('puzzle'), `${ads.length} adapter`), el('span', { class: 'chip' }, ic('package'), `${prods.size} termék`))));
   });
   let recent = []; try { recent = JSON.parse(store.get('valk-recent') || '[]'); } catch { /* üres */ }
   const rec = recent.map((id) => jigOf(id) || adOf(id) || prodOf(id)).filter(Boolean).slice(0, 6);
@@ -1023,11 +1030,11 @@ function renderCell(id) {
         c.img ? el('div', { class: 'cellpic' }, el('img', { src: fileUrl(c.img.r, c.img.p), alt: '' })) : null,
         el('div', {}, el('h1', { text: c.name }), el('p', { text: c.sub || '' }))),
       el('div', { class: 'acts' },
-        el('button', { class: 'btn ghost', type: 'button', onclick: (ev) => popMenu(ev.currentTarget, [
-          { icon: 'image', label: 'Kép választása (a mappákból)…', act: () => cellImage(c, 'pick') },
-          { icon: 'upload', label: 'Kép feltöltése a gépről…', act: () => cellImage(c, 'upload') },
-          ...(c.img ? [{ icon: 'image-off', label: 'Kép levétele', act: async () => { c.img = null; await save(); route(); } }] : []),
-        ]) }, ic('image'), 'Kép'),
+        el('button', { class: 'btn', type: 'button', onclick: (ev) => popMenu(ev.currentTarget, cellImgMenu(c)) }, ic('camera'), c.img ? 'Kép csere' : 'Kép hozzáadása'),
+        el('button', { class: 'btn ghost', type: 'button', title: 'Van-e adapter ebben a cellában', onclick: async () => {
+          if (!confirm(c.direct ? 'Ebben a cellában legyenek adapterek (jig → adapter → termék)?' : 'Ebben a cellában ne legyenek adapterek (jig → termékek közvetlenül)?')) return;
+          c.direct = !c.direct; await save(); route();
+        } }, ic(c.direct ? 'puzzle' : 'package'), c.direct ? 'Adapterek bekapcsolása' : 'Adapter nélkül'),
         el('button', { class: 'btn ghost', type: 'button', onclick: async () => {
           const name = prompt('A cella neve:', c.name); if (name == null) return;
           const sub = prompt('Alcím (pl. Manipulátor 1):', c.sub || ''); if (sub == null) return;
@@ -1038,6 +1045,11 @@ function renderCell(id) {
   icons();
 }
 
+const cellImgMenu = (c) => [
+  { icon: 'image', label: 'Kép választása (a mappákból)…', act: () => cellImage(c, 'pick') },
+  { icon: 'upload', label: 'Kép feltöltése a gépről…', act: () => cellImage(c, 'upload') },
+  ...(c.img ? [{ icon: 'image-off', label: 'Kép levétele', act: async () => { c.img = null; await save(); route(); } }] : []),
+];
 // Cella képe: kiválasztás a mappákból, vagy feltöltés (egy választott mappába)
 async function cellImage(c, how) {
   let ref = null;
@@ -1098,13 +1110,15 @@ function renderItem(it, t) {
             if (!confirm(`Leveszed a(z) „${a.name}” adapterről? (A termék és a fájlok megmaradnak.)`)) return;
             it.ads = it.ads.filter((x) => x !== aid); await save(); route();
           } }, ic('x'))) : null; }),
-          it.jigs.map((jid) => { const j = jigOf(jid); return j ? el('span', { class: 'chip', title: 'Régi kötés: adapter nélkül a jigen. Tedd adapterre: „Adapterre”.' },
-            el('a', { href: `#/jig/${j.id}`, text: `${j.name} (adapter nélkül)`, style: 'text-decoration:none' }),
+          it.jigs.map((jid) => { const j = jigOf(jid); return j ? el('span', isDirect(j) ? { class: 'chip red' } : { class: 'chip', title: 'Régi kötés: adapter nélkül a jigen. Tedd adapterre: „Adapterre”.' },
+            el('a', { href: `#/jig/${j.id}`, text: isDirect(j) ? `${j.name} · ${cellOf(j.cell)?.name || ''}` : `${j.name} (adapter nélkül)`, style: 'text-decoration:none' }),
             el('button', { type: 'button', title: 'Levétel erről a jigről', onclick: async () => {
               if (!confirm(`Leveszed a(z) „${j.name}” jigről? (A termék és a fájlok megmaradnak.)`)) return;
               it.jigs = it.jigs.filter((x) => x !== jid); await save(); route();
             } }, ic('x'))) : null; }),
-          el('button', { class: 'chip', type: 'button', style: 'border:0;cursor:pointer', onclick: () => addToAd(it) }, ic('plus'), it.ads.length ? 'Másik adapter' : 'Adapterre')) : null,
+          it.jigs.some((jid) => isDirect(jigOf(jid))) && !it.ads.length
+            ? el('button', { class: 'chip', type: 'button', style: 'border:0;cursor:pointer', onclick: () => addToJig(it) }, ic('plus'), 'Másik jig')
+            : el('button', { class: 'chip', type: 'button', style: 'border:0;cursor:pointer', onclick: () => addToAd(it) }, ic('plus'), it.ads.length ? 'Másik adapter' : 'Adapterre')) : null,
         el('div', { class: 'acts' },
           el('button', { class: 'btn', type: 'button', onclick: async () => { const n = prompt('Új név:', it.name); if (!n || !n.trim()) return; it.name = n.trim(); await save(); route(); } }, ic('pencil'), 'Átnevezés'),
           el('button', { class: 'btn', type: 'button', onclick: () => linkFiles(it, () => route()) }, ic('file-plus'), 'Fájl hozzáadása'),
@@ -1113,9 +1127,11 @@ function renderItem(it, t) {
             { icon: 'image', label: 'Kép választása a fájlok közül…', act: () => chooseImage(it) },
           ]) }, ic('image'), 'Kép'),
           el('button', { class: 'btn ghost danger', type: 'button', onclick: () => removeItem(it, t) }, ic('trash-2'), 'Eltávolítás')))),
-    isJig ? el('div', {}, el('h2', { class: 'sec' }, el('span', { class: 'lvi lv-ad' }, ic('puzzle')), 'Adapterek ezen a jigen', el('span', { class: 'n', text: adsOn(it.id).length })),
+    isJig && isDirect(it) ? el('div', {}, el('h2', { class: 'sec' }, el('span', { class: 'lvi lv-prod' }, ic('package')), 'Termékek ezen a jigen', el('span', { class: 'n', text: prodsDirect(it.id).length })),
+      el('div', { class: 'grid' }, prodsDirect(it.id).map((p, i) => itemCard(p, i)), addCard('Termék hozzáadása', () => newProduct(it), prodsDirect(it.id).length))) : null,
+    isJig && (!isDirect(it) || adsOn(it.id).length) ? el('div', {}, el('h2', { class: 'sec' }, el('span', { class: 'lvi lv-ad' }, ic('puzzle')), 'Adapterek ezen a jigen', el('span', { class: 'n', text: adsOn(it.id).length })),
       el('div', { class: 'grid' }, adsOn(it.id).map((a, i) => itemCard(a, i)), addCard('Új adapter', () => newAdapter(it), adsOn(it.id).length))) : null,
-    isJig && prodsDirect(it.id).length ? el('div', {}, el('h2', { class: 'sec' }, 'Adapter nélküli termékek', el('span', { class: 'n', text: prodsDirect(it.id).length })),
+    isJig && !isDirect(it) && prodsDirect(it.id).length ? el('div', {}, el('h2', { class: 'sec' }, 'Adapter nélküli termékek', el('span', { class: 'n', text: prodsDirect(it.id).length })),
       el('p', { class: 'muted', style: 'margin:-6px 0 12px;font-size:13.5px', text: 'Ezek még az előző változatból vannak közvetlenül a jigen. Nyisd meg, és: „Adapterre”.' }),
       el('div', { class: 'grid' }, prodsDirect(it.id).map((p, i) => itemCard(p, i)))) : null,
     isAd ? el('div', {}, el('h2', { class: 'sec' }, el('span', { class: 'lvi lv-prod' }, ic('package')), 'Termékek ezen az adapteren', el('span', { class: 'n', text: prodsOn(it.id).length })),
@@ -1382,10 +1398,13 @@ function putOnAd(p, ad) {
   if (!p.ads.includes(ad.id)) p.ads.push(ad.id);
   p.jigs = p.jigs.filter((x) => x !== ad.jig);
 }
+// Termék közvetlenül egy jigre (adapter nélküli cellában)
+function putOnJig(p, jig) { if (!p.jigs.includes(jig.id)) p.jigs.push(jig.id); }
 function newProduct(ad) {
   const state = {};
+  const onJig = D.jigs.includes(ad);   // adapter nélküli cella: a „szülő” maga a jig
   const name = el('input', { class: 'input', placeholder: 'pl. Konzol A12' });
-  const others = D.products.filter((p) => !p.ads.includes(ad.id)).sort(byName);
+  const others = D.products.filter((p) => !(onJig ? p.jigs : p.ads).includes(ad.id)).sort(byName);
   const sel = el('select', { class: 'input' }, el('option', { value: '', text: '— válassz —' }), others.map((p) => el('option', { value: p.id, text: p.name })));
   formSheet(`Termék – ${ad.name}`, 'package', 'prod', [
     el('label', { class: 'field' }, 'Név', name),
@@ -1396,12 +1415,19 @@ function newProduct(ad) {
     others.length ? el('div', { class: 'or', text: 'vagy egy meglévő termék' }) : null,
     others.length ? el('label', { class: 'field' }, 'Meglévő termék', sel) : null,
   ], async () => {
-    if (sel.value) { putOnAd(prodOf(sel.value), ad); await save(); route(); return; }
+    if (sel.value) { (onJig ? putOnJig : putOnAd)(prodOf(sel.value), ad); await save(); route(); return; }
     const n = name.value.trim(); if (!n) throw new Error('Adj nevet, vagy válassz meglévő terméket.');
-    const p = { id: uid(), name: n, folder: null, files: state.files, img: null, ads: [ad.id], jigs: [], fields: [], notes: [], created: Date.now() };
+    const p = { id: uid(), name: n, folder: null, files: state.files, img: null, ads: onJig ? [] : [ad.id], jigs: onJig ? [ad.id] : [], fields: [], notes: [], created: Date.now() };
     D.products.push(p); await save(); location.hash = `#/termek/${p.id}`;
   }, 'Hozzáadás');
   setTimeout(() => name.focus(), 50);
+}
+function addToJig(p) {
+  const opts = D.cells.filter((c) => c.direct).flatMap((c) => jigsIn(c.id).filter((j) => !p.jigs.includes(j.id)).map((j) => el('option', { value: j.id, text: `${c.name} – ${j.name}` })));
+  if (!opts.length) { toast('Nincs több jig adapter nélküli cellában.', 4000); return; }
+  const sel = el('select', { class: 'input' }, opts);
+  formSheet(`„${p.name}” másik jigre is`, 'grip', 'jig', [el('label', { class: 'field' }, 'Jig', sel), el('p', { class: 'muted', style: 'margin:0;font-size:13.5px', text: 'Ugyanaz a termék lesz ott is (nem másolat).' })],
+    async () => { putOnJig(p, jigOf(sel.value)); await save(); route(); }, 'Hozzáadás');
 }
 function addToAd(p) {
   const opts = D.cells.flatMap((c) => jigsIn(c.id).flatMap((j) => adsOn(j.id).filter((a) => !p.ads.includes(a.id)).map((a) => el('option', { value: a.id, text: `${c.name} – ${j.name} – ${a.name}` }))));
