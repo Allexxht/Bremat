@@ -74,3 +74,14 @@ BREMAT Központ és Valk fájlok
     Központ megnyitása = a webes Központ, benne a Valk fájlok menüponttal;
     Valk fájlok (ezen a gépen) = a rajzok, STEP és PDF fájlok, előnézettel.
 - Részletek: a BrematKozpont mappában az OLVASS.txt.
+
+Frissítés (magától)
+- A Teendőim induláskor és 3 óránként megnézi, van-e új változat
+  (https://bremat-stuff.netlify.app/frissites/). Ha van, letölti, és amikor a panel csukva van
+  (vagy 1 perce nem nyúltál a géphez), pár másodpercre eltűnik és újraindul. A futó órák nem állnak meg.
+- A mellette lévő BrematKozpont mappát (Valk fájlok) is frissíti.
+- Csak programkód jön le, ellenőrző összeggel. A teendők, a napló, a Valk fájlok a gépen maradnak,
+  semmi nem megy fel.
+- A lecserélt fájlok: %APPDATA%\Teendoim\frissites\regi\. Ha az új változat nem indul el,
+  magától visszaáll a régire, és azt a változatot kihagyja.
+- Kézzel: menü → Frissítés → Frissítés keresése most. Ott látszik az utolsó frissítés ideje is.

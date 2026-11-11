@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# A helyi BREMAT Központ csomagja: dist/BrematKozpont/ és dist/BrematKozpont.zip.
+# A helyi BREMAT Központ csomagja: dist/BrematKozpont/, dist/Teendoim/ és a zipek
+# (dist/Teendoim-es-BrematKozpont.zip = a kézi telepítéshez).
 # A könyvtárakat (three.js, occt-import-js, Lucide) az npm-ből veszi, pontos változattal,
 # így a csomag net nélkül is működik, és nem kell a repóba tenni a ~10 MB-ot.
 set -euo pipefail
@@ -16,11 +17,9 @@ cp "$M/occt-import-js/LICENSE.md" "$OUT/web/lib/LICENSE-occt-import-js.txt"
 cp "$M/occt-import-js/dist/license.occt.txt" "$OUT/web/lib/LICENSE-occt.txt"
 cp "$M/three/LICENSE" "$OUT/web/lib/LICENSE-three.txt"
 cp "$M/lucide/LICENSE" "$OUT/web/lib/LICENSE-lucide.txt" 2>/dev/null || true
-cp web/index.html "$OUT/web/"
-# A Windows PowerShell 5.1 csak BOM-mal olvassa jól az ékezetes szöveget; a .bat és az OLVASS CRLF.
-printf '\xEF\xBB\xBF' > "$OUT/Kozpont.ps1"; cat Kozpont.ps1 >> "$OUT/Kozpont.ps1"
-sed 's/$/\r/' Kozpont.bat > "$OUT/Kozpont.bat"
-{ printf '\xEF\xBB\xBF'; sed 's/$/\r/' OLVASS.txt; } > "$OUT/OLVASS.txt"
 rm -rf "$TMP"
-( cd dist && zip -qr BrematKozpont.zip BrematKozpont )
-ls -la dist/BrematKozpont.zip
+# A kód (Teendoim + BrematKozpont) ugyanazzal az átalakítással, mint az önfrissítő csomag
+# (BOM, CRLF) – így a frissen kicsomagolt változat ellenőrző összege egyezik a manifesttel.
+node ../scripts/frissites.mjs --out dist
+( cd dist && zip -qr BrematKozpont.zip BrematKozpont && zip -qr Teendoim-es-BrematKozpont.zip Teendoim BrematKozpont )
+ls -la dist/*.zip

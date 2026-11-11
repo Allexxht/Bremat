@@ -71,3 +71,6 @@ Ha valami nem megy
 - "A helyi program nem válaszol": indítsd el újra a Kozpont.bat-ot.
 - Hibák naplója: %APPDATA%\BrematKozpont\hiba.txt
 - Leállítás: Feladatkezelő → Windows PowerShell (Kozpont), vagy kijelentkezés.
+
+Frissítés
+- A Teendőim magától frissíti ezt a mappát is (menü → Frissítés). Kézzel letölteni nem kell.

@@ -1,6 +1,8 @@
 # Teendőim – lenyitható asztali fül időméréssel (Windows 10/11, PowerShell 5.1 + WPF, telepítés nélkül)
 # Indítás: Teendoim.bat. Adatok: %APPDATA%\Teendoim\teendok.json, beállítások: beallitas.json,
 # a napi idősáv szakaszai: ido.json
+# Önfrissítés: lásd lent, „Önfrissítés”. A -Frissult kapcsolóval a frissítés utáni újraindítás indítja.
+param([switch]$Frissult)
 
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 $script:idleOk = $true
@@ -35,6 +37,10 @@ function Fail($msg) {
 # Egyszerre csak egy példány fusson
 $isNew = $false
 $mutex = New-Object System.Threading.Mutex($true, 'Local\Teendoim-ful', [ref]$isNew)
+if (-not $isNew -and $Frissult) {
+  # frissítés utáni újraindítás: a régi példány pár másodperc múlva elengedi
+  try { $isNew = $mutex.WaitOne(20000) } catch [System.Threading.AbandonedMutexException] { $isNew = $true }
+}
 if (-not $isNew) { exit }
 
 # ---------- Színek: grafit + hegesztőív-narancs, a Windows világos/sötét beállítása szerint ----------
@@ -1052,6 +1058,7 @@ function Tick {
   }
   if ($now - $script:lastSeenSave -gt 30000) { $script:set.lastSeen = $now; SaveSet; $script:lastSeenSave = $now }
   try { NaploPump } catch { NaploLog "$_" }
+  try { UpdPump } catch { UpdLog "$_" }
 }
 
 # ---------- Automatikus szünet tétlenségnél ----------
@@ -1143,7 +1150,7 @@ function OnStar($id) {
 }
 $script:undo = @(); $script:undoGen = 0
 function ShowUndo($text) {
-  $U.UndoText.Text = $text; $U.Undo.Visibility = 'Visible'
+  $U.UndoText.Text = $text; $U.Undo.Visibility = 'Visible'; $U.UndoBtn.Visibility = 'Visible'
   Anim $U.Undo $OP 0 1 220
   $script:undoGen++
   Later 6000 $script:undoGen { param($g) if ($g -eq $script:undoGen) { $U.Undo.Visibility = 'Collapsed' } }
@@ -1164,6 +1171,13 @@ function ClearDone {
   $script:undo = $d
   foreach ($x in $d) { RemoveItem $x.id }
   Commit; ShowUndo "$($d.Count) kész tétel törölve"
+}
+# Rövid értesítés ugyanazon a helyen, visszavonás gomb nélkül
+function ShowNote($text) {
+  $U.UndoText.Text = $text; $U.UndoText.ToolTip = $text; $U.Undo.Visibility = 'Visible'; $U.UndoBtn.Visibility = 'Collapsed'
+  Anim $U.Undo $OP 0 1 220
+  $script:undoGen++
+  Later 9000 $script:undoGen { param($g) if ($g -eq $script:undoGen) { $U.Undo.Visibility = 'Collapsed' } }
 }
 $U.UndoBtn.add_MouseLeftButtonUp({
   foreach ($x in $script:undo) { if (-not (FindItem $x.id)) { [void]$script:items.Add($x); $script:fresh += $x.id } }
@@ -1666,6 +1680,206 @@ function KozpontStart($browser) {
   try { Start-Process (Join-Path $PSHOME 'powershell.exe') -ArgumentList $args2 -WindowStyle Hidden } catch {}
 }
 
+# ---------- Önfrissítés ----------
+# A Teendőim (és a mellette lévő BrematKozpont) kódja magától frissül a bremat-stuff oldalról:
+# induláskor és 3 óránként megnézi a /frissites/manifest.json-t, és letölti azt, ami változott.
+# Csak programkód jön le (SHA-256 ellenőrző összeggel); a Valk fájlok és az adatok a gépen
+# maradnak, semmi nem megy fel. A lecserélt fájlok a %APPDATA%\Teendoim\frissites\regi\ alá
+# kerülnek; ha az új változat nem indul el, visszaáll a régire, és azt a változatot kihagyja.
+$updBase  = 'https://bremat-stuff.netlify.app/frissites/'
+$updDir   = Join-Path $dir 'frissites'
+$updState = Join-Path $updDir 'allapot.json'
+$kpBase   = 'http://localhost:47801/'
+$script:upd = @{ phase = 'idle'; next = (NowMs) + 20000; task = $null; man = $null; files = @(); msg = ''; force = $false
+                 note = $null; kpCheck = $null; kpEnd = 0; kpTask = $null }
+$script:updRestart = $false
+$script:kpHttp = $null
+try {
+  $kpH = New-Object System.Net.Http.HttpClientHandler; $kpH.UseProxy = $false   # a localhost ne menjen proxyn át
+  $script:kpHttp = New-Object System.Net.Http.HttpClient($kpH); $script:kpHttp.Timeout = [TimeSpan]::FromSeconds(4)
+} catch {}
+function UpdLog($m) { try { [IO.File]::AppendAllText((Join-Path $dir 'hiba.txt'), "$(Get-Date -Format s) Frissítés: $m`r`n", $utf8) } catch {} }
+function UpdRead { try { if (Test-Path -LiteralPath $updState) { return (ConvertFrom-Json ([IO.File]::ReadAllText($updState, $utf8))) } } catch {}; $null }
+function UpdWrite($o) {
+  try { New-Item -ItemType Directory -Force -Path $updDir | Out-Null; [IO.File]::WriteAllText($updState, (ConvertTo-Json -InputObject $o -Depth 5), $utf8) } catch { UpdLog "állapot: $_" }
+}
+function UpdSet($o, $name, $value) { $o | Add-Member -NotePropertyName $name -NotePropertyValue $value -Force }
+function Sha($bytes) {
+  $h = [Security.Cryptography.SHA256]::Create()
+  try { -join ($h.ComputeHash([byte[]]$bytes) | ForEach-Object { $_.ToString('x2') }) } finally { $h.Dispose() }
+}
+# A manifest útvonala → a helyi fájl ($null, ha az a rész nincs ezen a gépen vagy gyanús az út)
+function UpdLocal($p) {
+  if ($p -notmatch '^(Teendoim|BrematKozpont)/[A-Za-z0-9][A-Za-z0-9._/-]*$' -or $p -match '\.\.') { return $null }
+  $root = $(if ($p.StartsWith('Teendoim/')) { $here } elseif ($kozpontPs) { Split-Path $kozpontPs } else { $null })
+  if (-not $root) { return $null }
+  Join-Path $root ($p.Substring($p.IndexOf('/') + 1).Replace('/', '\'))
+}
+function KozpontStop {
+  if (-not $script:kpHttp) { return }
+  try {
+    $rq = New-Object System.Net.Http.HttpRequestMessage([System.Net.Http.HttpMethod]::Post, ($kpBase + 'api/stop'))
+    $rq.Headers.Add('X-Helyi', '1')
+    $rq.Content = New-Object System.Net.Http.StringContent('{}', [Text.Encoding]::UTF8, 'application/json')
+    [void]$script:kpHttp.SendAsync($rq).Result
+  } catch {}
+  Start-Sleep -Milliseconds 1200   # a szerver elengedi a portot
+}
+# Visszaállítás a mentésből (csak a megadott előtagú fájlok, pl. 'BrematKozpont/')
+function UpdRestore($files, $prefix = '') {
+  foreach ($f in @($files)) {
+    if (-not $f -or -not ([string]$f.p).StartsWith($prefix)) { continue }
+    try {
+      if ($f.backup -and (Test-Path -LiteralPath $f.backup)) { Copy-Item -LiteralPath $f.backup -Destination $f.local -Force }
+      elseif (-not $f.backup -and (Test-Path -LiteralPath $f.local)) { Remove-Item -LiteralPath $f.local -Force }
+    } catch { UpdLog "visszaállítás ($($f.p)): $_" }
+  }
+}
+function UpdPump {
+  $u = $script:upd
+  if (-not $script:nHttp -or -not $here) { return }
+  if ($u.note -and $script:open) { ShowNote $u.note; $u.note = $null }
+  # A frissített helyi Központ elindult-e (különben vissza a régire)
+  if ($u.kpCheck -and (NowMs) -ge $u.kpCheck -and $script:kpHttp) {
+    if (-not $u.kpTask) { $u.kpTask = $script:kpHttp.GetAsync($kpBase) }
+    elseif ($u.kpTask.IsCompleted) {
+      $t = $u.kpTask; $u.kpTask = $null
+      $good = $false; try { $good = -not $t.IsFaulted -and -not $t.IsCanceled -and [int]$t.Result.StatusCode -eq 200 } catch {}
+      if ($good) {
+        $u.kpCheck = $null; $st = UpdRead
+        if ($st) { UpdSet $st 'kozpontOk' $true; UpdSet $st 'phase' 'kesz'; UpdWrite $st }
+      } elseif ((NowMs) -ge $u.kpEnd) {
+        $u.kpCheck = $null; UpdLog 'a frissített helyi Központ nem indult el, visszaállok a régire'
+        $st = UpdRead
+        if ($st) { KozpontStop; UpdRestore $st.files 'BrematKozpont/'; UpdSet $st 'bad' $st.version; UpdSet $st 'phase' 'kesz'; UpdWrite $st }
+        KozpontStart $false
+        $u.note = 'A Valk fájlok frissítése nem sikerült, maradt a régi változat.'
+      } else { $u.kpCheck = (NowMs) + 3000 }
+    }
+  }
+  switch ($u.phase) {
+    'idle' {
+      if ((NowMs) -lt $u.next) { return }
+      $u.next = (NowMs) + 3 * 3600000
+      $u.task = $script:nHttp.GetStringAsync($updBase + 'manifest.json?t=' + (NowMs)); $u.phase = 'manifest'
+    }
+    'manifest' {
+      if (-not $u.task.IsCompleted) { return }
+      $t = $u.task; $u.task = $null; $u.phase = 'idle'
+      if ($t.IsFaulted -or $t.IsCanceled) { $u.msg = 'Most nem értem el, később újra megnézem.'; return }
+      try { $m = ConvertFrom-Json $t.Result } catch { $u.msg = 'Hibás frissítés-lista.'; return }
+      if (-not $m.version -or -not $m.files) { $u.msg = 'Hibás frissítés-lista.'; return }
+      $st = UpdRead
+      if ($st -and $st.bad -eq $m.version -and -not $u.force) { $u.msg = 'Az utolsó változat nálad nem indult el, kihagytam.'; return }
+      $u.force = $false
+      $todo = @()
+      foreach ($f in @($m.files)) {
+        $loc = UpdLocal ([string]$f.p)
+        if (-not $loc -or [string]$f.sha256 -notmatch '^[0-9a-f]{64}$' -or [string]$f.u -notmatch '^f/[0-9a-f]{64}$') { continue }
+        $cur = ''; try { if ([IO.File]::Exists($loc)) { $cur = Sha ([IO.File]::ReadAllBytes($loc)) } } catch {}
+        if ($cur -ne [string]$f.sha256) {
+          $todo += [pscustomobject]@{ p = [string]$f.p; sha = [string]$f.sha256; local = $loc; task = $script:nHttp.GetByteArrayAsync($updBase + [string]$f.u); bytes = $null }
+        }
+      }
+      if (-not $todo.Count) { $u.msg = 'Naprakész.'; return }
+      $u.man = $m; $u.files = $todo; $u.phase = 'files'
+    }
+    'files' {
+      foreach ($f in $u.files) { if (-not $f.task.IsCompleted) { return } }
+      $u.phase = 'idle'
+      foreach ($f in $u.files) {
+        if ($f.task.IsFaulted -or $f.task.IsCanceled) { $u.msg = 'A letöltés megszakadt, később újra próbálom.'; $u.next = (NowMs) + 600000; return }
+        $f.bytes = $f.task.Result
+        if ((Sha $f.bytes) -ne $f.sha) { UpdLog "rossz ellenőrző összeg: $($f.p)"; $u.msg = 'A letöltött fájl hibás volt, kihagytam.'; return }
+      }
+      $u.phase = 'ready'
+    }
+    'ready' {
+      # Ne használat közben cserélje: becsukott panel (vagy 1 perce nem nyúltál a géphez), nincs nyitott ablak, küldés
+      $busy = $script:open -and (-not $script:idleOk -or [TeendoimIdle]::IdleMs() -lt 60000)
+      if ($busy -or $script:modal -or $script:drag -or $script:editing -or $script:nReq) { return }
+      UpdApply
+    }
+  }
+}
+function UpdApply {
+  $u = $script:upd; $u.phase = 'idle'
+  $bdir = Join-Path $updDir 'regi'
+  $list = @()
+  try {
+    if (Test-Path -LiteralPath $bdir) { Remove-Item -LiteralPath $bdir -Recurse -Force }
+    foreach ($f in $u.files) {
+      $b = Join-Path $bdir ($f.p.Replace('/', '\'))
+      $had = [IO.File]::Exists($f.local)
+      if ($had) { New-Item -ItemType Directory -Force -Path (Split-Path $b) | Out-Null; Copy-Item -LiteralPath $f.local -Destination $b -Force }
+      $list += [pscustomobject]@{ p = $f.p; local = $f.local; backup = $(if ($had) { $b } else { $null }) }
+    }
+  } catch { UpdLog "a régi változat mentése: $_"; $u.msg = 'Nem tudtam elmenteni a régi változatot, kihagytam.'; return }
+  $self = @($u.files | Where-Object { $_.p.StartsWith('Teendoim/') -and $_.p -like '*.ps1' }).Count -gt 0
+  $kp = @($u.files | Where-Object { $_.p -eq 'BrematKozpont/Kozpont.ps1' }).Count -gt 0
+  $prev = UpdRead
+  UpdWrite ([ordered]@{ version = [string]$u.man.version; at = (Get-Date -Format s); phase = 'proba'; files = $list
+    teendoim = $(if ($self) { 'var' } else { 'ok' }); kozpont = $kp; kozpontOk = $false; bad = $(if ($prev) { $prev.bad } else { $null }) })
+  if ($kp) { KozpontStop }
+  try {
+    foreach ($f in $u.files) {
+      New-Item -ItemType Directory -Force -Path (Split-Path $f.local) | Out-Null
+      [IO.File]::WriteAllBytes("$($f.local).uj", [byte[]]$f.bytes)
+      Move-Item -LiteralPath "$($f.local).uj" -Destination $f.local -Force
+    }
+  } catch {
+    UpdLog "a fájlok cseréje: $_"; UpdRestore $list
+    $st = UpdRead; if ($st) { UpdSet $st 'phase' 'kesz'; UpdWrite $st }
+    if ($kp) { KozpontStart $false }
+    $u.msg = 'A fájlok cseréje nem sikerült, maradt a régi változat.'; return
+  }
+  $u.files = @(); $u.msg = 'Frissítve.'
+  if ($self) { $script:updRestart = $true; $win.Close(); return }   # a folytatás a program végén
+  if ($kp) {
+    KozpontStart $false
+    $u.kpCheck = (NowMs) + 3000; $u.kpEnd = (NowMs) + 60000
+  } else { $st = UpdRead; if ($st) { UpdSet $st 'phase' 'kesz'; UpdWrite $st } }
+  $u.note = 'Frissítve: új változat.'
+}
+# Az új példány indulás után jelzi, hogy rendben elindult (a régi példány erre vár)
+function UpdStartup {
+  $st = UpdRead; if (-not $st) { return }
+  if ($st.phase -eq 'proba') {
+    UpdSet $st 'teendoim' 'ok'
+    if ($st.kozpont -and -not $st.kozpontOk) { $script:upd.kpCheck = (NowMs) + 3000; $script:upd.kpEnd = (NowMs) + 60000 }
+    else { UpdSet $st 'phase' 'kesz' }
+    UpdWrite $st
+    $script:upd.note = 'Frissítve: új változat.'; $script:upd.msg = 'Frissítve.'
+  } elseif ($st.phase -eq 'visszaallitva') {
+    UpdSet $st 'phase' 'kesz'; UpdWrite $st
+    $script:upd.note = 'A frissítés nem sikerült, maradt a régi változat.'; $script:upd.msg = $script:upd.note
+  }
+}
+# A régi példány (az ablak már bezárult): elindítja az újat, és ha az 60 mp alatt nem jelez, visszaáll
+function UpdRelaunch {
+  try { $mutex.Dispose() } catch {}
+  $ps = Join-Path $PSHOME 'powershell.exe'
+  $a = "-NoProfile -STA -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$PSCommandPath`" -Frissult"
+  $p = $null
+  try { $p = Start-Process $ps -ArgumentList $a -WindowStyle Hidden -PassThru } catch { UpdLog "újraindítás: $_" }
+  $end = (Get-Date).AddSeconds(60)
+  while ($p -and (Get-Date) -lt $end) {
+    Start-Sleep -Milliseconds 500
+    $st = UpdRead
+    if ($st -and $st.teendoim -eq 'ok') { return }
+    if ($p.HasExited) { break }
+  }
+  UpdLog 'az új változat nem indult el, visszaállok a régire'
+  try { if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force } } catch {}
+  $st = UpdRead
+  if ($st) {
+    if ($st.kozpont) { KozpontStop }
+    UpdRestore $st.files
+    UpdSet $st 'bad' $st.version; UpdSet $st 'phase' 'visszaallitva'; UpdWrite $st
+  }
+  try { Start-Process $ps -ArgumentList $a -WindowStyle Hidden } catch {}
+}
+
 $script:menu = New-Object Windows.Controls.ContextMenu
 function AddMenu($header, [scriptblock]$click) {
   $m = New-Object Windows.Controls.MenuItem; $m.Header = $header; $m.add_Click($click)
@@ -1698,6 +1912,12 @@ $kmFiles = New-Object Windows.Controls.MenuItem; $kmFiles.Header = 'Valk fájlok
 $kmFiles.add_Click({ KozpontStart $true })
 foreach ($m in $kmWeb, $kmFiles) { [void]$kozMenu.Items.Add($m) }
 [void]$script:menu.Items.Add($kozMenu)
+$updMenu = New-Object Windows.Controls.MenuItem; $updMenu.Header = 'Frissítés'
+$umNow = New-Object Windows.Controls.MenuItem; $umNow.Header = 'Frissítés keresése most'
+$umNow.add_Click({ if ($script:upd.phase -eq 'idle') { $script:upd.force = $true; $script:upd.next = 0; $script:upd.msg = 'Keresem…' } })
+$umInfo = New-Object Windows.Controls.MenuItem; $umInfo.IsEnabled = $false
+foreach ($m in $umNow, (New-Object Windows.Controls.Separator), $umInfo) { [void]$updMenu.Items.Add($m) }
+[void]$script:menu.Items.Add($updMenu)
 [void]$script:menu.Items.Add((New-Object Windows.Controls.Separator))
 [void](AddMenu 'Kilépés' { $win.Close() })
 $idleMenu = New-Object Windows.Controls.MenuItem; $idleMenu.Header = 'Automatikus szünet, ha nem használod a gépet'
@@ -1714,6 +1934,8 @@ $script:menu.add_Opened({ param($s, $e)
   foreach ($m in $idleMenu.Items) { $m.IsChecked = ([int]$m.Tag -eq [int]$script:set.idleMin) }
   $nmOn.IsChecked = [bool]$script:set.naplo
   $singleMenu.IsChecked = [bool]$script:set.single
+  $ust = UpdRead
+  $umInfo.Header = $(if ($ust -and $ust.at) { "Utolsó frissítés: $(([datetime]$ust.at).ToString('yyyy.MM.dd. HH:mm'))" } else { 'Még nem frissült magától.' }) + $(if ($script:upd.msg) { " $($script:upd.msg)" } else { '' })
   $n = $script:nQueue.Count + $(if ($script:set.naplo) { $script:segDirty.Count } else { 0 })
   $nmInfo.Header = $(if (-not $script:set.naplo -and -not $n) { 'Kikapcsolva' } elseif ($n) { "$n bejegyzés vár küldésre. $script:nStatus" } elseif ($script:nStatus) { $script:nStatus } else { 'Minden elküldve.' }) })
 $U.Tab.ContextMenu = $script:menu
@@ -1732,6 +1954,8 @@ $win.Left = $x - 16; $win.Top = $y - 16          # 16 = az árnyék körüli mar
 $script:ax = $win.Left; $script:ay = $win.Top
 # Kilépéskor a futó óra megáll, az idő megmarad
 $win.add_Closing({
+  # frissítés miatti újraindítás: a futó órák nem állnak meg, az új példány folytatja őket
+  if ($script:updRestart) { SaveData; $script:set.lastSeen = NowMs; SaveSet; return }
   foreach ($r in @(RunningAll)) { StopRun $r; $r.state = 'open' }
   SaveData; $script:set.lastSeen = NowMs; SaveSet
 })
@@ -1752,5 +1976,7 @@ $clock = New-Object Windows.Threading.DispatcherTimer
 $clock.Interval = [TimeSpan]::FromSeconds(1)
 $clock.add_Tick({ Tick })
 $clock.Start()
+Later 3000 $null { try { UpdStartup } catch { UpdLog "$_" } }
 try { [void]$win.ShowDialog() } catch { Fail "$_" }
-$mutex.ReleaseMutex()
+try { $mutex.ReleaseMutex() } catch {}
+if ($script:updRestart) { UpdRelaunch }
