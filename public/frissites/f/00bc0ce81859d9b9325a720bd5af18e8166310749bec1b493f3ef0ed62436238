@@ -1,0 +1,95 @@
+﻿TEENDŐIM – lenyitható asztali fül
+=================================
+
+Telepítés
+1. Csomagold ki a mappát egy állandó helyre, pl. Dokumentumok\Teendoim
+   (ne az Asztalra, ne a Letöltésekbe – ha később áthelyezed, az automatikus indítást újra be kell kapcsolni).
+2. Dupla kattintás: Teendoim.bat
+   A képernyő jobb felső sarkában megjelenik a kék „Teendőim” fül.
+
+Használat
+- Kattintás a fülre: lenyílik / becsukódik. Ha máshova kattintasz, magától becsukódik
+  (a gombostű ikonnal nyitva tarthatod).
+- Húzd a fület bárhová – ott marad, és a helyére emlékszik. Lent vagy jobb oldalt a lista
+  felfelé / balra nyílik, hogy ne lógjon ki a képernyőről.
+- ▶ = elkezdem: indul az óra. ⏸ = szünet: az óra megáll, az idő megmarad, és a következő ▶-nél
+  onnan megy tovább. Egyszerre több teendő órája is futhat, mindegyik a sajátját méri. Felül a narancs kártya mutatja,
+  mik futnak most és mennyi ideje; a fülön is látszik az óra. „ma” = a mai összes mért idő (a párhuzamosan futók ideje összeadódik).
+  Kilépéskor / gép leállításakor az óra megáll (az addigi idő megmarad).
+- ★ = fontos (előre kerül),
+  karika = kész, kuka = törlés (6 mp-ig visszavonható).
+- Sorrend: a sor elején lévő ⋮⋮ fogantyút fogd meg és húzd fel vagy le.
+- A listában csak a címek látszanak. Kattints egy címre: lenyílik, és beírhatod / elolvashatod,
+  mit kell pontosan csinálni (több sor is lehet). Újra kattintva becsukódik.
+- Dupla kattintás a címen: a cím átírása. Ha !-lel kezded a beírást, fontosként kerül fel.
+- A program magától elindul a Windows-zal (első indítás után). Kikapcsolni a menüben lehet.
+- Jobb klikk a fülre (vagy ⋯ gomb): Indítás a Windows-zal, Kész tételek törlése,
+  Importálás vágólapról, Kilépés.
+
+A böngészős lista átvétele (egyszer)
+1. Nyisd meg a régi Teendőim oldalt a böngészőben.
+2. F12 → Console fül → írd be (ne bemásold):  copy(localStorage.teendok)  → Enter.
+3. A fülön jobb klikk → Importálás vágólapról.
+
+- Automatikus szünet: ha 2 percig nem nyúlsz a géphez (egér, billentyű), a futó órák megállnak –
+  pontosan ott, ahol utoljára mozdultál. Visszatéréskor a panel magától lenyílik és megkérdezi:
+  Folytatás / Dolgoztam közben, számold bele / Maradjon szünet. Az időt a menüben állíthatod
+  (Kikapcsolva, 2, 5, 10, 15, 30 perc).
+- Amíg fut óra, a fülön egy kis narancs ❚❚ gomb van: egy kattintással megállít mindent, kinyitás nélkül.
+
+Mivel foglalkozom (tevékenység-gombok, váltás)
+- A lista fölött gombok vannak: „Általános” és „Szünet”. Ezek nem teendők, sosem lesznek
+  készek – arra valók, ha épp nem egy konkrét teendőn dolgozol (e-mail, egyeztetés, apróságok).
+- Egy kattintás = váltás: ami eddig ment, megáll, és az új indul. Ugyanez igaz a teendők ▶ gombjára.
+  (Ha mégis több órát akarsz egyszerre futtatni: menü → „Egyszerre csak egy óra fusson” kikapcsolva.)
+- Új gomb: a sor végén a + (vagy menü → Új tevékenység-gomb…). Jobb klikk egy gombon: átnevezés, törlés.
+- A gombon látszik, ma mennyi ment rá.
+- Szünet közben nem kérdez rá a tétlenségre. Ha az automatikus szünetnél azt választod, hogy
+  „Folytatás” vagy „Maradjon szünet”, a távollét szünetként kerül az idősávba.
+
+Munkanapló (BREMAT, https://bremat-stuff.netlify.app/naplo/)
+- Bekapcsolás: jobb klikk a fülre (vagy ⋯) → Munkanapló → Kipipált teendők beírása a naplóba.
+  Első alkalommal megkérdezi a nevedet és a napló belépési kódját (ugyanaz, mint a tableten).
+  A kódot titkosítva menti, csak ezen a gépen, a te Windows-felhasználóddal olvasható.
+- Ha kipipálsz egy teendőt, a mai napra bekerül a naplóba: „Kész: <teendő> (összesen 2 ó 15 p)”,
+  alatta a teendő leírása, ha van. Ha visszaveszed a pipát, a bejegyzés törlődik a naplóból.
+- A küldés a háttérben megy. Ha nincs net, a bejegyzések várnak, és percenként újrapróbálja –
+  a gép újraindítása után is. A menüben (Munkanapló alján) látszik, hány vár még.
+- A bekapcsolás előtt kipipált teendők nem mennek el maguktól. Egyszer, utólag beküldheted őket:
+  menü → Munkanapló → Korábbi kész teendők beküldése… (mindegyik a kipipálás napjára kerül;
+  ami már a naplóban van, azt nem küldi el kétszer).
+- Napló megnyitása: menü → Munkanapló → Napló megnyitása a böngészőben.
+- Napi idősáv: ha a naplózás be van kapcsolva, minden indítás, váltás és megállás felkerül a
+  naplóba. A heti nézetben minden nap alatt látszik: mettől meddig mi ment, mennyi a munka, mennyi
+  a szünet és mennyi a „nem mért idő” (amikor semmi nem futott). Ha nincs net, később küldi.
+- A naplózás a Központnak is elküldi, mi fut most, és hány teendő van hátra.
+
+Az adatok helye: %APPDATA%\Teendoim\teendok.json (a napló várakozó bejegyzései: naplo.json,
+az idősáv szakaszai az utolsó 21 napra: ido.json)
+
+BREMAT Központ és Valk fájlok
+- Ha a BrematKozpont mappa a Teendoim mappa mellett van, a Teendőim indításkor a háttérben
+  elindítja a Központ helyi részét (a Valk fájlok oldalát). Ez csak ezen a gépen érhető el.
+- Menü (jobb klikk a fülre vagy ⋯) → BREMAT Központ:
+    Központ megnyitása = a webes Központ, benne a Valk fájlok menüponttal;
+    Valk fájlok (ezen a gépen) = a rajzok, STEP és PDF fájlok, előnézettel.
+- Részletek: a BrematKozpont mappában az OLVASS.txt.
+
+Idő hozzáadása / levonása (ha elfelejtetted elindítani vagy megállítani az órát)
+- Kattints egy teendő címére: a lenyíló részben "Idő:" gombok: −15 p, −5 p, +5 p, +15 p, +1 ó, Beírás…
+- Vagy jobb klikk a teendőn (a listában vagy a narancs kártyán): +5 / +15 / +30 perc, +1 óra, −5 / −15 / −30 perc,
+  Idő beírása…
+- Beírásnál: +30 = hozzáad 30 percet, -15 = levon 15 percet, +1:30 = hozzáad 1 óra 30 percet,
+  2:00 (előjel nélkül) = legyen összesen ennyi.
+- A teendő összes ideje és a "ma" összesítő változik. A napi idősávba nem kerül új szakasz.
+
+Frissítés (magától)
+- A Teendőim induláskor és 3 óránként megnézi, van-e új változat
+  (https://bremat-stuff.netlify.app/frissites/). Ha van, letölti, és amikor a panel csukva van
+  (vagy 1 perce nem nyúltál a géphez), pár másodpercre eltűnik és újraindul. A futó órák nem állnak meg.
+- A mellette lévő BrematKozpont mappát (Valk fájlok) is frissíti.
+- Csak programkód jön le, ellenőrző összeggel. A teendők, a napló, a Valk fájlok a gépen maradnak,
+  semmi nem megy fel.
+- A lecserélt fájlok: %APPDATA%\Teendoim\frissites\regi\. Ha az új változat nem indul el,
+  magától visszaáll a régire, és azt a változatot kihagyja.
+- Kézzel: menü → Frissítés → Frissítés keresése most. Ott látszik az utolsó frissítés ideje is.

@@ -2,7 +2,7 @@
 
 A teljes háttér a `docs/jegyzet.md`-ben van, szakaszonként. Csak azt a szakaszt olvasd el,
 amelyik részhez nyúlsz (Fájlok, Feladatok, Adatmodell, Munkanapló, Központ, Nyitó animáció,
-Teendőim, Napi idősáv, Kinézet, Munkamódszer, Helyi Központ).
+Teendőim, Napi idősáv, Kinézet, Munkamódszer, Helyi Központ, Önfrissítés).
 
 ## Mi ez
 - A BREMAT belső eszközei egy Netlify oldalon (`https://bremat-stuff.netlify.app`, saját
@@ -14,8 +14,10 @@ Teendőim, Napi idősáv, Kinézet, Munkamódszer, Helyi Központ).
   kódot, táblát, Supabase-t, Netlify oldalt, és nem hivatkozunk rá.
 - **Nincs Supabase, nincs új külső szolgáltatás kérés nélkül.** Az adatok a Netlify Blobs-ban:
   `km-checks` (heti lap), `naplo` (napló).
-- A Teendőim (PowerShell asztali program) forrása nincs a repóban:
-  `/mnt/project-files/teendoim/Teendoim.zip`.
+- A Teendőim (PowerShell asztali program) forrása: `teendoim/` (2026. november 11. óta a repóban).
+- **Önfrissítés**: a Teendőim a `public/frissites/`-ből frissíti magát és a helyi Központot.
+  `teendoim/` vagy `helyi/` módosítása után: `node scripts/frissites.mjs` (az `npm test` jelzi,
+  ha elmaradt). Ami a main-re megy, az magától Alex gépére kerül. Részletek: `docs/jegyzet.md` → Önfrissítés.
 - **Helyi Központ** (`helyi/`): a titkos Valk fájlok (STEP, PDF) csak a gépen, `localhost:47801`.
   Részletek: `docs/jegyzet.md` → Helyi Központ.
 

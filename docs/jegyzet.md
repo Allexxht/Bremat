@@ -322,3 +322,43 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - **Fájlok mappa helyett (2026. november 5., 13:25, Alex):** jig / adapter / termék a kiválasztott fájlokat köti (`files: [{r, p}]`), nem a mappát; a régi `folder` kötés megmarad, leválasztható. Feltöltés az első fájl mappájába, és magától hozzáadódik. Fejlécben „hol vagyok” sáv (szintenként szín, az aktuális kiemelve) és vissza / előre gomb.
 - **Mappa feltöltés, cella kép (13:40):** „Mappa feltöltése” gomb (`webkitdirectory`) és mappák behúzása (bejárja, almappákat `/api/mkdir` `exist: true`-val hoz létre); ütközésnél egyszer kérdez. A cellának `img: {r, p}`.
 - **3. cella adapter nélkül, cella kép gomb (2026. november 6., Alex):** a 3. cellában Siegmund asztal van, oda nem jön adapter: a cella `direct: true` (alapból a `c3`, a cella oldalán átkapcsolható), a jig oldalán egyből „Termékek ezen a jigen” (a termék `jigs[]`-ben). A kezdőlap cella-kártyáin kamera gomb → kép választása / feltöltése.
+
+## Önfrissítés (2026. november 11., Alex kérése)
+- Cél: Alexnek ne kelljen minden változásnál zipet letölteni és kicsomagolni. Egyszer még kézzel
+  telepít (`Teendoim-es-BrematKozpont.zip`), utána a Teendőim magától frissül.
+- A Teendőim forrása `teendoim/` (előtte csak zipben volt). Nincs benne titok: a napló kódját a
+  gépen DPAPI-val titkosítva tárolja (`beallitas.json`).
+- `scripts/frissites.mjs` → `public/frissites/manifest.json` (út, SHA-256, méret) és `f/<sha256>`
+  (a tartalom, név = összeg; így a CDN sosem ad régit, és a Netlify nem nyúl bele, mert nem `.html`).
+  Átalakítás: `.ps1` BOM-mal, `.bat` CRLF, `OLVASS.txt` BOM + CRLF. A `helyi/csomag.sh` ugyanezt
+  használja, így a zipből telepített fájlok összege egyezik a manifesttel. A `tests/frissites.test.mjs`
+  elbukik, ha a `public/frissites/` elavult. A three.js / occt könyvtárak nincsenek benne (csak a zipben).
+- A Teendőim (`UpdPump`, a másodperces `Tick`-ből, `HttpClient` aszinkron): induláskor +20 mp, utána
+  3 óránként letölti a manifestet, összeveti a helyi fájlok SHA-256-jával, a változottakat letölti és
+  ellenőrzi. Csere csak akkor, ha a panel csukva van (vagy 1 perce tétlen), nincs nyitott ablak,
+  húzás, szerkesztés, napló-küldés. Menü → Frissítés: „Frissítés keresése most” + utolsó frissítés.
+- Csere: mentés `%APPDATA%\Teendoim\frissites\regi\`, állapot `frissites\allapot.json`
+  (`phase`: proba / kesz / visszaallitva, `bad` = kihagyandó változat). `Kozpont.ps1` változásánál a
+  helyi szervert `/api/stop`-pal leállítja, majd újraindítja, és 60 mp-ig nézi, válaszol-e a
+  `localhost:47801`; ha nem, visszaállítja a BrematKozpont fájlokat. Ha a `Teendoim.ps1` változott:
+  az ablak bezárul (a futó órák nem állnak meg: `lastSeen` friss, az új példány folytatja), a régi
+  folyamat elindítja az újat `-Frissult`-tal (megvárja a mutexet), és 60 mp-ig várja, hogy az új
+  `teendoim: ok`-ot írjon; ha nem, visszaállít, és a régit indítja.
+- A `web/index.html` változása nem kell újraindítás (a szerver minden kérésnél lemezről olvas).
+- Biztonság: HTTPS, csak a bremat-stuff oldalról, csak a manifestben felsorolt utakra
+  (`Teendoim/…`, `BrematKozpont/…`, `..` tilos). Aki a main-re pushol, az kódot futtat Alex gépén –
+  ezért a main-re továbbra is csak Alex szavára megy bármi.
+
+## Teendőim: idő módosítása, gyorsítás (2026. november 13., Alex kérése)
+- **Idő ± (`AdjustTime`, `AskTime`):** a lenyitott sorban „Idő:” gombok, jobb klikkre közös menü
+  (`$script:timeMenu`, egy példány, a `ContextMenuOpening` adja a teendő id-ját). Az `Elapsed`-et
+  állítja: ha fut az óra és a levonás több, mint az eddigi idő, a `startedAt` tolódik. A `todayMs` is
+  változik (szünetnél nem); a napi idősáv (`ido.json`, napló) nem. Kész teendőn és tevékenység-gombon nincs.
+- **Akadozás okai és javítás:** (1) futó óránál 5 végtelen animáció ment 60 kép/mp-vel egy átlátszó
+  (`AllowsTransparency`) ablakon – a ragyogás `BlurRadius`-a is animált volt, ami minden képkockánál
+  újraszámolt árnyékot jelent. Most: a ragyogás áll, a többi 20–30 kép/mp (`Forever … $fps`),
+  az árnyékok `RenderingBias=Performance`. (2) Minden kattintás 2–3 `ConvertTo-Json` fájlírást
+  csinált a felület szálán. Most: `SaveData` / `SegSave` / `SaveSet` csak megjelöl, a `FlushNow`
+  ~0,3 mp múlva ír (kilépéskor, újraindításkor azonnal). (3) Ecsetek és ikon-alakzatok fagyasztva,
+  gyorsítótárból (`Brush`, `Icon`); animált ecsethez `NewBrush`.
+- PowerShell csapda itt is: függvényen belül se legyen `$c` nevű változó (a `$C` paletta!).

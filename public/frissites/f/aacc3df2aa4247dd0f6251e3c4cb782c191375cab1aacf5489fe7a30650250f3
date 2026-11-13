@@ -1,0 +1,2090 @@
+﻿# Teendőim – lenyitható asztali fül időméréssel (Windows 10/11, PowerShell 5.1 + WPF, telepítés nélkül)
+# Indítás: Teendoim.bat. Adatok: %APPDATA%\Teendoim\teendok.json, beállítások: beallitas.json,
+# a napi idősáv szakaszai: ido.json
+# Önfrissítés: lásd lent, „Önfrissítés”. A -Frissult kapcsolóval a frissítés utáni újraindítás indítja.
+param([switch]$Frissult)
+
+Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
+$script:idleOk = $true
+try {
+  Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public static class TeendoimIdle {
+  [StructLayout(LayoutKind.Sequential)] struct LASTINPUTINFO { public uint cbSize; public uint dwTime; }
+  [DllImport("user32.dll")] static extern bool GetLastInputInfo(ref LASTINPUTINFO p);
+  public static long IdleMs() {
+    LASTINPUTINFO l = new LASTINPUTINFO(); l.cbSize = (uint)Marshal.SizeOf(l);
+    if (!GetLastInputInfo(ref l)) return 0;
+    return (long)unchecked((uint)Environment.TickCount - l.dwTime);
+  }
+}
+"@
+} catch { $script:idleOk = $false }
+
+$dir = Join-Path $env:APPDATA 'Teendoim'
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+$dataFile = Join-Path $dir 'teendok.json'
+$setFile  = Join-Path $dir 'beallitas.json'
+$utf8 = New-Object System.Text.UTF8Encoding $false
+$hu = [Globalization.CultureInfo]::GetCultureInfo('hu-HU')
+
+function Fail($msg) {
+  try { [IO.File]::AppendAllText((Join-Path $dir 'hiba.txt'), "$(Get-Date -Format s) $msg`r`n", $utf8) } catch {}
+  [System.Windows.MessageBox]::Show("Teendőim – hiba:`n$msg", 'Teendőim') | Out-Null
+}
+
+# Egyszerre csak egy példány fusson
+$isNew = $false
+$mutex = New-Object System.Threading.Mutex($true, 'Local\Teendoim-ful', [ref]$isNew)
+if (-not $isNew -and $Frissult) {
+  # frissítés utáni újraindítás: a régi példány pár másodperc múlva elengedi
+  try { $isNew = $mutex.WaitOne(20000) } catch [System.Threading.AbandonedMutexException] { $isNew = $true }
+}
+if (-not $isNew) { exit }
+
+# ---------- Színek: grafit + hegesztőív-narancs, a Windows világos/sötét beállítása szerint ----------
+$dark = $false
+try { $dark = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' -Name AppsUseLightTheme -ErrorAction Stop).AppsUseLightTheme -eq 0 } catch {}
+if ($dark) {
+  $C = @{ bg='#16181C'; surface='#20242A'; fg='#F3F4F6'; muted='#AAB2BD'; line='#2E333A'; hover='#262B33'; hoverT='#00262B33'; sep='#3317191D'; scroll='#4A515A'
+          accent='#FF9A3C'; accentHi='#FFC27A'; accentSoft='#33251A'; accentFg='#17191D'; ok='#4ADE80'; okFg='#0E1A13'; star='#FACC15'; no='#F87171'
+          tab='#24282E'; tabLine='#3A4048'; tabFg='#FFFFFF'; tabChip='#3A4048'; toast='#ECEEF1'; toastFg='#17191D' }
+} else {
+  $C = @{ bg='#FFFFFF'; surface='#F3F4F6'; fg='#0F1215'; muted='#56606C'; line='#E2E5E9'; hover='#F1F3F5'; hoverT='#00F1F3F5'; sep='#40FFFFFF'; scroll='#C5CAD1'
+          accent='#EE7A12'; accentHi='#FFA94D'; accentSoft='#FFF2E5'; accentFg='#FFFFFF'; ok='#16A34A'; okFg='#FFFFFF'; star='#E0A800'; no='#DC2626'
+          tab='#1C1F24'; tabLine='#1C1F24'; tabFg='#FFFFFF'; tabChip='#353A42'; toast='#1C1F24'; toastFg='#FFFFFF' }
+}
+$C.mono = 'Cascadia Mono, Consolas'
+# Ecsetek: színenként egy, fagyasztva (a WPF gyorsabban rajzolja, és nem kell minden sornál újat gyártani).
+# Animálni csak saját, nem fagyasztott ecsetet lehet – arra: NewBrush.
+$script:brushes = @{}
+function NewBrush($hex) { New-Object Windows.Media.SolidColorBrush ([Windows.Media.ColorConverter]::ConvertFromString($hex)) }
+function Brush($hex) {
+  $b = $script:brushes[$hex]
+  if (-not $b) { $b = NewBrush $hex; $b.Freeze(); $script:brushes[$hex] = $b }
+  $b
+}
+
+# ---------- Idő ----------
+function NowMs { [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
+function NewId { "$(NowMs)-" + [Guid]::NewGuid().ToString('N').Substring(0, 4) }
+function TodayKey { Get-Date -Format 'yyyy-MM-dd' }
+function Midnight { ([DateTimeOffset]::new([DateTime]::Today)).ToUnixTimeMilliseconds() }
+function FmtLive($ms) {
+  $s = [int64][Math]::Floor($ms / 1000); $h = [Math]::Floor($s / 3600); $m = [Math]::Floor(($s % 3600) / 60); $sec = $s % 60
+  if ($h -gt 0) { '{0}:{1:00}:{2:00}' -f $h, $m, $sec } else { '{0}:{1:00}' -f $m, $sec }
+}
+function FmtDur($ms) {
+  $min = [int64][Math]::Floor($ms / 60000)
+  if ($min -lt 1) { return '<1 p' }
+  $h = [Math]::Floor($min / 60); $m = $min % 60
+  if ($h -gt 0) { if ($m) { "$h ó $m p" } else { "$h ó" } } else { "$m p" }
+}
+
+# ---------- Adatok ----------
+function Norm($d) {
+  $st = [string]$d.state
+  if ($st -notin 'open', 'doing', 'done') { $st = 'open' }
+  [pscustomobject]@{
+    id        = $(if ($d.id) { [string]$d.id } else { NewId })
+    text      = [string]$d.text
+    state     = $st
+    star      = [bool]$d.star
+    created   = $(if ($d.created) { [int64]$d.created } else { NowMs })
+    doneAt    = $(if ($d.doneAt) { [int64]$d.doneAt } else { $null })
+    order     = $(if ($null -ne $d.order) { [double]$d.order } else { $null })
+    spent     = $(if ($d.spent) { [int64]$d.spent } else { [int64]0 })
+    startedAt = $(if ($d.startedAt) { [int64]$d.startedAt } else { $null })
+    notes     = $(if ($d.notes) { [string]$d.notes } else { '' })
+    # '' = teendő; 'act' = állandó tevékenység (pl. Általános), 'brk' = szünet – ezek sosem lesznek „kész”
+    kind      = $(if ([string]$d.kind -in 'act', 'brk') { [string]$d.kind } else { '' })
+  }
+}
+
+$script:items = New-Object System.Collections.ArrayList
+if (Test-Path $dataFile) {
+  try {
+    $raw = [IO.File]::ReadAllText($dataFile, $utf8)
+    if ($raw.Trim()) { $parsed = ConvertFrom-Json $raw; foreach ($d in $parsed) { [void]$script:items.Add((Norm $d)) } }
+  } catch {
+    Copy-Item $dataFile "$dataFile.hibas" -Force
+    Fail "A teendők fájlja nem olvasható, félretettem: $dataFile.hibas"
+  }
+}
+# A régi (sorrend nélküli) listák a korábbi megjelenés szerinti sorrendet kapják
+if (@($script:items | Where-Object { $null -eq $_.order }).Count) {
+  $i = 0
+  foreach ($it in @($script:items | Sort-Object @{ Expression = { if ($_.state -eq 'doing') { 0 } elseif ($_.star) { 1 } else { 2 } } }, @{ Expression = { $_.created } })) { $it.order = [double]$i; $i++ }
+}
+function OrderEdge($max) {
+  $o = @($script:items | ForEach-Object { $_.order } | Where-Object { $null -ne $_ })
+  if (-not $o.Count) { return 0.0 }
+  $m = $o | Measure-Object -Maximum -Minimum
+  if ($max) { $m.Maximum + 1 } else { $m.Minimum - 1 }
+}
+function SaveDataNow {
+  try {
+    $json = ConvertTo-Json -InputObject @($script:items) -Depth 3
+    [IO.File]::WriteAllText("$dataFile.tmp", $json, $utf8)
+    Move-Item "$dataFile.tmp" $dataFile -Force
+  } catch { Fail "Nem sikerült menteni: $_" }
+}
+
+$script:set = @{ x = $null; y = $null; pinned = $false; showDone = $false; autostart = $true; today = ''; todayMs = 0; lastSeen = $null; idleMin = 2; naplo = $false; naploNev = ''; naploKod = ''; single = $true; actsInit = $false }
+if (Test-Path $setFile) {
+  try {
+    $s = ConvertFrom-Json ([IO.File]::ReadAllText($setFile, $utf8))
+    foreach ($k in @($script:set.Keys)) { if ($null -ne $s.$k) { $script:set[$k] = $s.$k } }
+  } catch {}
+}
+function SaveSetNow { try { [IO.File]::WriteAllText($setFile, (ConvertTo-Json $script:set), $utf8) } catch {} }
+# A JSON-írás (ConvertTo-Json) lassú: kattintáskor csak megjelöljük, és ~0,3 mp múlva, a képernyő
+# frissítése után írjuk ki egyben. Kilépéskor / újraindításkor FlushNow azonnal ír.
+$script:pend = @{ data = $false; seg = $false; set = $false }
+$script:flushTimer = New-Object Windows.Threading.DispatcherTimer
+$script:flushTimer.Interval = [TimeSpan]::FromMilliseconds(300)
+$script:flushTimer.add_Tick({ param($s, $e) $s.Stop(); FlushNow })
+function FlushSoon { if (-not $script:flushTimer.IsEnabled) { $script:flushTimer.Start() } }
+function FlushNow {
+  $script:flushTimer.Stop()
+  if ($script:pend.data) { $script:pend.data = $false; SaveDataNow }
+  if ($script:pend.seg) { $script:pend.seg = $false; SegSaveNow }
+  if ($script:pend.set) { $script:pend.set = $false; SaveSetNow }
+}
+function SaveData { $script:pend.data = $true; FlushSoon }
+function SaveSet { $script:pend.set = $true; FlushSoon }
+function SegSave { $script:pend.seg = $true; FlushSoon }
+
+# Első indításkor két állandó tevékenység: „Általános” (ami nem fér bele egy konkrét teendőbe) és „Szünet”
+if (-not $script:set.actsInit) {
+  [void]$script:items.Add((Norm @{ text = 'Általános'; kind = 'act'; order = -1000 }))
+  [void]$script:items.Add((Norm @{ text = 'Szünet'; kind = 'brk'; order = -999 }))
+  $script:set.actsInit = $true; SaveSet
+}
+function IsAct($it) { $it.kind -eq 'act' -or $it.kind -eq 'brk' }
+function Todos { foreach ($i in $script:items) { if (-not (IsAct $i)) { $i } } }
+
+# ---------- Napi idősáv: mettől meddig mi ment ----------
+# Minden indítás / váltás / megállás egy szakasz: { item, name, kind, start, end } (end = $null, amíg fut).
+# Napokra bontva az ido.json-ban (az utolsó 21 nap), és ha a Munkanapló be van kapcsolva,
+# a megváltozott napot egészben elküldi (time_day_set) – a napló heti nézetében idősáv lesz belőle.
+$segFile = Join-Path $dir 'ido.json'
+$script:seg = @{}        # 'yyyy-MM-dd' -> ArrayList
+$script:segDirty = @{}   # 'yyyy-MM-dd' -> változásszámláló (ami még nincs elküldve)
+if (Test-Path $segFile) {
+  try {
+    $sj = ConvertFrom-Json ([IO.File]::ReadAllText($segFile, $utf8))
+    if ($sj.days) {
+      foreach ($p in $sj.days.PSObject.Properties) {
+        $l = New-Object System.Collections.ArrayList
+        foreach ($x in @($p.Value)) { if ($x -and $x.start) {
+          [void]$l.Add([pscustomobject]@{ item = [string]$x.item; name = [string]$x.name; kind = [string]$x.kind; start = [int64]$x.start; end = $(if ($null -ne $x.end) { [int64]$x.end } else { $null }) }) } }
+        $script:seg[$p.Name] = $l
+      }
+    }
+    foreach ($d in @($sj.dirty)) { if ($d) { $script:segDirty[[string]$d] = 1 } }
+  } catch { Copy-Item $segFile "$segFile.hibas" -Force }
+}
+function DayOf($ms) { [DateTimeOffset]::FromUnixTimeMilliseconds([int64]$ms).LocalDateTime.ToString('yyyy-MM-dd') }
+function SegSaveNow {
+  try {
+    $old = (Get-Date).AddDays(-21).ToString('yyyy-MM-dd')
+    foreach ($k in @($script:seg.Keys)) { if ($k -lt $old) { $script:seg.Remove($k); $script:segDirty.Remove($k) } }
+    $days = @{}; foreach ($k in $script:seg.Keys) { $days[$k] = @($script:seg[$k]) }
+    $json = ConvertTo-Json -InputObject @{ days = $days; dirty = @($script:segDirty.Keys) } -Depth 5
+    [IO.File]::WriteAllText("$segFile.tmp", $json, $utf8)
+    Move-Item "$segFile.tmp" $segFile -Force
+  } catch {}
+}
+function SegTouch($d) { $script:segDirty[$d] = 1 + [int]$script:segDirty[$d] }
+function SegAdd($item, $name, $kind, $start, $end) {
+  $d = DayOf $start
+  if (-not $script:seg.ContainsKey($d)) { $script:seg[$d] = New-Object System.Collections.ArrayList }
+  [void]$script:seg[$d].Add([pscustomobject]@{ item = [string]$item; name = [string]$name; kind = $kind; start = [int64]$start; end = $end })
+  SegTouch $d; SegSave
+}
+function SegKind($it) { if ($it.kind -eq 'brk') { 'break' } elseif ($it.kind -eq 'act') { 'activity' } else { 'todo' } }
+function SegOpen($it, $at) { SegAdd $it.id $it.text (SegKind $it) $at $null }
+function SegClose($it, $at) {
+  $hit = $false
+  foreach ($d in @($script:seg.Keys)) {
+    foreach ($x in $script:seg[$d]) {
+      if ($x.item -eq [string]$it.id -and $null -eq $x.end) { $x.end = [int64][Math]::Max([int64]$at, [int64]$x.start); SegTouch $d; $hit = $true }
+    }
+  }
+  if ($hit) { SegSave }
+}
+# Egy tétel mai ideje a szakaszokból (a tevékenység-gombokon látszik)
+function SegToday($id) {
+  $sum = [int64]0; $now = NowMs
+  $l = $script:seg[(TodayKey)]
+  if ($l) { foreach ($x in $l) { if ($x.item -eq [string]$id) { $sum += $(if ($null -ne $x.end) { [int64]$x.end } else { $now }) - [int64]$x.start } } }
+  $sum
+}
+
+# ---------- Időmérés ----------
+function FindItem($id) { foreach ($i in $script:items) { if ($i.id -eq $id) { return $i } } }
+function RemoveItem($id) { for ($i = 0; $i -lt $script:items.Count; $i++) { if ($script:items[$i].id -eq $id) { $script:items.RemoveAt($i); return } } }
+function RunningAll { foreach ($i in $script:items) { if ($i.state -eq 'doing') { $i } } }
+function Elapsed($it) { [int64]$it.spent + $(if ($it.state -eq 'doing' -and $it.startedAt) { (NowMs) - [int64]$it.startedAt } else { 0 }) }
+function TodayMs {
+  $base = $(if ($script:set.today -eq (TodayKey)) { [int64]$script:set.todayMs } else { 0 })
+  foreach ($r in @(RunningAll)) { if ($r.startedAt -and $r.kind -ne 'brk') { $base += [Math]::Max(0, (NowMs) - [Math]::Max([int64]$r.startedAt, (Midnight))) } }
+  $base
+}
+# A futó óra leállítása: az eltelt idő hozzáadódik a teendőhöz és a mai összeshez
+function StopRun($it, $until = $null) {
+  if ($it.state -eq 'doing' -and $it.startedAt) {
+    $now = $(if ($null -ne $until) { [Math]::Max([int64]$until, [int64]$it.startedAt) } else { NowMs })
+    $it.spent = [int64]$it.spent + ($now - [int64]$it.startedAt)
+    if ($script:set.today -ne (TodayKey)) { $script:set.today = TodayKey; $script:set.todayMs = 0 }
+    # a szünet nem számít bele a mai munkaidőbe
+    if ($it.kind -ne 'brk') { $script:set.todayMs = [int64]$script:set.todayMs + [Math]::Max(0, $now - [Math]::Max([int64]$it.startedAt, (Midnight))) }
+    SaveSet
+    SegClose $it $now
+  }
+  $it.startedAt = $null
+}
+# Váltás: alapból egyszerre egy óra fut – egy másik indítása megállítja az előzőt.
+# (A menüben kikapcsolható; akkor több is futhat, mindegyik a saját idejét gyűjti.)
+function StartRun($it, $at = $null) {
+  if ($script:set.single) {
+    foreach ($r in @(RunningAll)) { if ($r.id -ne $it.id) { StopRun $r; $r.state = 'open'; $script:fresh += $r.id } }
+  }
+  if ($it.state -eq 'doing' -and $it.startedAt) { return }
+  $t = $(if ($null -ne $at) { [int64]$at } else { NowMs })
+  $it.state = 'doing'; $it.startedAt = $t
+  SegOpen $it $t
+}
+
+# Indításkor: ha a program nem futott (pl. leállt a gép), csak az utolsó életjelig számolunk, és a teendő szünetel
+$now0 = NowMs
+foreach ($it in @(RunningAll)) {
+  if (-not $it.startedAt) { $it.startedAt = $now0; SegOpen $it $now0 }
+  elseif ($script:set.lastSeen -and ($now0 - [int64]$script:set.lastSeen) -gt 120000) {
+    $end = [Math]::Max([int64]$it.startedAt, [int64]$script:set.lastSeen)
+    $it.spent = [int64]$it.spent + ($end - [int64]$it.startedAt)
+    SegClose $it $end
+    $it.startedAt = $null; $it.state = 'open'
+  }
+}
+
+# Nyitva maradt szakasz, aminek a tétele már nem fut (pl. összeomlás): az utolsó életjelnél lezárjuk
+$runIds = @(RunningAll | ForEach-Object { [string]$_.id })
+foreach ($d in @($script:seg.Keys)) { foreach ($x in $script:seg[$d]) {
+  if ($null -eq $x.end -and $runIds -notcontains $x.item) {
+    $x.end = [int64][Math]::Max([int64]$x.start, $(if ($script:set.lastSeen) { [int64]$script:set.lastSeen } else { [int64]$x.start })); SegTouch $d } } }
+SegSave
+
+# ---------- Felület ----------
+$xaml = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Teendőim" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize" SizeToContent="WidthAndHeight"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="14" UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display" WindowStartupLocation="Manual">
+  <Window.Resources>
+    <Style x:Key="Btn" TargetType="Border">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Width" Value="28"/>
+      <Setter Property="Height" Value="28"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{{hover}}"/></Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="Row" TargetType="Border">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="0,8,4,8"/>
+    </Style>
+    <Style TargetType="ScrollBar">
+      <Setter Property="Width" Value="10"/>
+      <Setter Property="MinWidth" Value="10"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ScrollBar">
+            <Track x:Name="PART_Track" IsDirectionReversed="True" Width="5" HorizontalAlignment="Center">
+              <Track.Thumb>
+                <Thumb>
+                  <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb"><Border CornerRadius="2.5" Background="{{scroll}}"/></ControlTemplate>
+                  </Thumb.Template>
+                </Thumb>
+              </Track.Thumb>
+            </Track>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="Chip" TargetType="Border">
+      <Setter Property="Background" Value="{{surface}}"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="10,5"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{{line}}"/></Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="Pill" TargetType="Border">
+      <Setter Property="Background" Value="#26FFFFFF"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="11,6"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#40FFFFFF"/></Trigger>
+      </Style.Triggers>
+    </Style>
+  </Window.Resources>
+
+  <Grid x:Name="Root" Margin="16">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+
+    <!-- A fül -->
+    <Border x:Name="Tab" Grid.Row="0" HorizontalAlignment="Left" CornerRadius="12" Background="{{tab}}"
+            BorderBrush="{{tabLine}}" BorderThickness="1" Padding="11,7,10,7" Cursor="Hand" RenderTransformOrigin="0.5,0.5">
+      <Border.Effect><DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.3" RenderingBias="Performance"/></Border.Effect>
+      <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
+      <StackPanel Orientation="Horizontal">
+        <Grid Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center">
+          <Ellipse x:Name="TabRing" Width="8" Height="8" Stroke="{{accent}}" StrokeThickness="1.5" Opacity="0" RenderTransformOrigin="0.5,0.5">
+            <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
+          </Ellipse>
+          <Ellipse x:Name="TabDot" Width="8" Height="8" Fill="#6B7280"/>
+        </Grid>
+        <TextBlock Text="Teendőim" Foreground="{{tabFg}}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <Border x:Name="Badge" Background="{{tabChip}}" CornerRadius="9" MinWidth="20" Height="18" Padding="6,0"
+                Margin="8,0,0,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+          <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
+          <TextBlock x:Name="BadgeText" Text="0" Foreground="{{tabFg}}" FontWeight="Bold" FontSize="11"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <Border x:Name="TabTimer" Background="{{accent}}" CornerRadius="9" Height="18" Padding="7,0" Margin="6,0,0,0"
+                VerticalAlignment="Center" Visibility="Collapsed">
+          <TextBlock x:Name="TabTimerText" Foreground="{{accentFg}}" FontFamily="{{mono}}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+        </Border>
+        <Border x:Name="TabStop" Width="22" Height="22" CornerRadius="11" Background="{{accent}}" Margin="6,0,0,0"
+                VerticalAlignment="Center" Cursor="Hand" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5">
+          <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
+          <Path Data="M6.5,5.5 H9 V14.5 H6.5 Z M11,5.5 H13.5 V14.5 H11 Z" Fill="{{accentFg}}" Width="20" Height="20"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Path.LayoutTransform><ScaleTransform ScaleX="0.7" ScaleY="0.7"/></Path.LayoutTransform>
+          </Path>
+        </Border>
+        <Path x:Name="Chevron" Data="M1,1 L6,6 L11,1" Stroke="{{tabFg}}" StrokeThickness="1.8" Opacity="0.8"
+              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+              Width="12" Height="8" Margin="9,1,0,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+          <Path.RenderTransform><RotateTransform/></Path.RenderTransform>
+        </Path>
+      </StackPanel>
+    </Border>
+
+    <!-- A lenyíló panel -->
+    <Border x:Name="Panel" Grid.Row="1" Width="460" Margin="0,8,0,0" HorizontalAlignment="Left"
+            Background="{{bg}}" BorderBrush="{{line}}" BorderThickness="1" CornerRadius="16" Visibility="Collapsed">
+      <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.28" RenderingBias="Performance"/></Border.Effect>
+      <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
+      <Grid>
+        <StackPanel x:Name="Body" Margin="14,12,14,12">
+          <!-- Fejléc -->
+          <Grid x:Name="Head" Background="Transparent" Cursor="SizeAll">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="Teendőim" Foreground="{{fg}}" FontSize="20" FontWeight="Bold" FontFamily="Segoe UI Variable Display, Segoe UI"/>
+              <TextBlock x:Name="DateText" Foreground="{{muted}}" FontSize="12.5" Margin="0,1,0,0"/>
+            </StackPanel>
+            <Border x:Name="PinBtn" Grid.Column="1" Style="{StaticResource Btn}">
+              <Path x:Name="PinIcon" Data="M7,3 H13 M8,3 V8 L5,11 H15 L12,8 V3 M10,11 V17" Stroke="{{muted}}" StrokeThickness="1.6"
+                    StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="20" Height="20"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <Border x:Name="MenuBtn" Grid.Column="2" Style="{StaticResource Btn}">
+              <TextBlock Text="⋯" FontSize="17" Foreground="{{muted}}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-4,0,0"/>
+            </Border>
+          </Grid>
+
+          <!-- „Most” kártya: a futó teendő és az órája -->
+          <Border x:Name="Away" CornerRadius="14" Margin="0,14,0,0" Padding="14,12,12,12" Background="{{accentSoft}}"
+                  BorderBrush="{{accent}}" BorderThickness="1" Visibility="Collapsed">
+            <Border.LayoutTransform><ScaleTransform/></Border.LayoutTransform>
+            <StackPanel>
+              <TextBlock x:Name="AwayTitle" FontSize="14.5" FontWeight="SemiBold" Foreground="{{fg}}" TextWrapping="Wrap"/>
+              <TextBlock x:Name="AwaySub" FontSize="13" Foreground="{{muted}}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+              <WrapPanel Margin="0,10,0,0">
+                <Border x:Name="AwayGo" CornerRadius="8" Padding="12,6" Margin="0,0,6,6" Background="{{accent}}" Cursor="Hand">
+                  <TextBlock Text="▶  Folytatás" Foreground="{{accentFg}}" FontWeight="SemiBold" FontSize="13"/>
+                </Border>
+                <Border x:Name="AwayCount" Style="{StaticResource Chip}" Margin="0,0,6,6" Padding="12,6">
+                  <TextBlock Text="Dolgoztam közben, számold bele" Foreground="{{fg}}" FontWeight="SemiBold" FontSize="13"/>
+                </Border>
+                <Border x:Name="AwayKeep" Style="{StaticResource Chip}" Margin="0,0,6,6" Padding="12,6">
+                  <TextBlock Text="Maradjon szünet" Foreground="{{fg}}" FontWeight="SemiBold" FontSize="13"/>
+                </Border>
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <Border x:Name="Focus" CornerRadius="16" Margin="0,14,0,0" Padding="16,12,12,14" Background="{{accent}}"
+                  Visibility="Collapsed" RenderTransformOrigin="0.5,0.5">
+            <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
+            <Border.LayoutTransform><ScaleTransform/></Border.LayoutTransform>
+            <StackPanel x:Name="FocusBody">
+              <StackPanel Orientation="Horizontal">
+                <Ellipse x:Name="FocusDot" Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{{accentFg}}"/>
+                <TextBlock x:Name="FocusLabel" FontSize="11.5" FontWeight="Bold" Foreground="{{accentFg}}" Opacity="0.9"/>
+              </StackPanel>
+              <StackPanel x:Name="RunList"/>
+            </StackPanel>
+          </Border>
+
+          <!-- Állás -->
+          <Grid Margin="2,12,2,6">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock x:Name="Count" Foreground="{{muted}}" FontSize="13" FontWeight="SemiBold"/>
+            <TextBlock x:Name="TodayText" Grid.Column="1" Foreground="{{muted}}" FontSize="13" FontFamily="{{mono}}"/>
+          </Grid>
+          <Border x:Name="Track" Height="6" CornerRadius="3" Background="{{line}}">
+            <Border x:Name="Fill" HorizontalAlignment="Left" Width="0" CornerRadius="3" Background="{{ok}}"/>
+          </Border>
+          <TextBlock x:Name="Cheer" Text="Minden kész, szép munka!" Foreground="{{ok}}" FontWeight="SemiBold" Margin="2,8,0,0"
+                     Visibility="Collapsed" RenderTransformOrigin="0,0.5">
+            <TextBlock.RenderTransform><ScaleTransform/></TextBlock.RenderTransform>
+          </TextBlock>
+
+          <!-- Tevékenységek: egy kattintás = váltás (ami eddig ment, megáll) -->
+          <TextBlock x:Name="ActsHead" Text="MIVEL FOGLALKOZOM" Foreground="{{muted}}" FontSize="11" FontWeight="Bold" Margin="2,14,0,6"/>
+          <WrapPanel x:Name="Acts"/>
+
+          <!-- Új teendő -->
+          <Grid Margin="0,12,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <Border x:Name="InputBox" BorderBrush="{{line}}" BorderThickness="1" CornerRadius="10" Background="{{surface}}">
+              <Grid>
+                <TextBox x:Name="Input" BorderThickness="0" Background="Transparent" Foreground="{{fg}}" CaretBrush="{{fg}}"
+                         Padding="10,10" FontSize="14.5" VerticalContentAlignment="Center" MaxLength="300"/>
+                <TextBlock x:Name="Ph" Text="Új teendő…" Foreground="{{muted}}" FontSize="14.5" Margin="13,0,0,0"
+                           VerticalAlignment="Center" IsHitTestVisible="False"/>
+              </Grid>
+            </Border>
+            <Border x:Name="AddBtn" Grid.Column="1" Margin="6,0,0,0" Width="38" CornerRadius="10" Background="{{accent}}"
+                    Cursor="Hand" RenderTransformOrigin="0.5,0.5">
+              <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
+              <Path Data="M10,4 V16 M4,10 H16" Stroke="{{accentFg}}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                    Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+          </Grid>
+
+          <!-- Lista -->
+          <ScrollViewer x:Name="Scroll" MaxHeight="520" Margin="0,10,0,0"
+                        VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+              <StackPanel x:Name="List"/>
+              <TextBlock x:Name="Empty" Foreground="{{muted}}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,16,0,16"/>
+              <Border x:Name="DoneHead" Background="Transparent" Cursor="Hand" Padding="6,10,6,4">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock x:Name="DoneArrow" Text="▸" Foreground="{{muted}}" Width="10" Margin="0,0,6,0" TextAlignment="Center" RenderTransformOrigin="0.5,0.5"><TextBlock.RenderTransform><RotateTransform/></TextBlock.RenderTransform></TextBlock>
+                  <TextBlock x:Name="DoneHeadText" Foreground="{{muted}}" FontWeight="SemiBold" FontSize="13"/>
+                </StackPanel>
+              </Border>
+              <StackPanel x:Name="DoneList"/>
+            </StackPanel>
+          </ScrollViewer>
+
+          <Border x:Name="Undo" Background="{{toast}}" CornerRadius="10" Padding="12,6,6,6" Margin="0,8,0,0" Visibility="Collapsed">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock x:Name="UndoText" Foreground="{{toastFg}}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+              <Border x:Name="UndoBtn" Grid.Column="1" BorderBrush="{{toastFg}}" BorderThickness="1" CornerRadius="7"
+                      Padding="10,3" Margin="8,0,0,0" Cursor="Hand">
+                <TextBlock Text="Visszavonás" Foreground="{{toastFg}}" FontWeight="SemiBold"/>
+              </Border>
+            </Grid>
+          </Border>
+        </StackPanel>
+        <Canvas x:Name="Fx" IsHitTestVisible="False"/>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
+'@
+foreach ($k in $C.Keys) { $xaml = $xaml.Replace("{{$k}}", $C[$k]) }
+
+try { $win = [Windows.Markup.XamlReader]::Parse($xaml) } catch { Fail "A felület nem töltődött be: $_"; exit }
+$U = @{}
+foreach ($n in 'Tab', 'TabStop', 'TabRing', 'TabDot', 'Badge', 'BadgeText', 'TabTimer', 'TabTimerText', 'Chevron', 'Panel', 'Head', 'DateText',
+               'PinBtn', 'PinIcon', 'MenuBtn', 'Focus', 'FocusDot', 'FocusLabel', 'RunList', 'Away', 'AwayTitle', 'AwaySub', 'AwayGo', 'AwayCount', 'AwayKeep', 'Count', 'TodayText', 'Body', 'FocusBody', 'Track', 'Fill', 'Cheer', 'InputBox', 'Input', 'Ph', 'AddBtn', 'Scroll', 'List',
+               'Empty', 'DoneHead', 'DoneArrow', 'DoneHeadText', 'DoneList', 'Undo', 'UndoText', 'UndoBtn', 'Fx', 'ActsHead', 'Acts') { $U[$n] = $win.FindName($n) }
+
+# ---------- Animáció ----------
+$OP = [Windows.UIElement]::OpacityProperty
+$SX = [Windows.Media.ScaleTransform]::ScaleXProperty
+$SY = [Windows.Media.ScaleTransform]::ScaleYProperty
+$TX = [Windows.Media.TranslateTransform]::XProperty
+$TY = [Windows.Media.TranslateTransform]::YProperty
+$ANG = [Windows.Media.RotateTransform]::AngleProperty
+$WP = [Windows.FrameworkElement]::WidthProperty
+$CL = [Windows.Controls.Canvas]::LeftProperty
+$CT = [Windows.Controls.Canvas]::TopProperty
+$easeOut = New-Object Windows.Media.Animation.QuinticEase; $easeOut.EasingMode = 'EaseOut'
+$easeIO  = New-Object Windows.Media.Animation.SineEase; $easeIO.EasingMode = 'EaseInOut'
+$easeIn  = New-Object Windows.Media.Animation.CubicEase; $easeIn.EasingMode = 'EaseIn'
+$backOut = New-Object Windows.Media.Animation.BackEase; $backOut.EasingMode = 'EaseOut'; $backOut.Amplitude = 0.35
+
+function Anim($target, $prop, $from, $to, $ms, $ease = $easeOut, $delay = 0) {
+  $a = New-Object Windows.Media.Animation.DoubleAnimation
+  if ($null -ne $from) { $a.From = $from }
+  $a.To = $to
+  $a.Duration = New-Object Windows.Duration ([TimeSpan]::FromMilliseconds($ms))
+  if ($ease) { $a.EasingFunction = $ease }
+  if ($delay) { $a.BeginTime = [TimeSpan]::FromMilliseconds($delay) }
+  $target.BeginAnimation($prop, $a)
+}
+# A végtelen (háttér) animációk 24 kép/mp-vel mennek: így alig terhelik a gépet, és a kattintásokra
+# jobban reagál a fül (az átlátszó ablakot a Windows minden képkockánál újra összerakja).
+function Forever($target, $prop, $from, $to, $ms, $reverse = $true, $ease = $null, $fps = 24) {
+  $a = New-Object Windows.Media.Animation.DoubleAnimation
+  [Windows.Media.Animation.Timeline]::SetDesiredFrameRate($a, $fps)
+  if ($ease) { $a.EasingFunction = $ease }
+  $a.From = $from; $a.To = $to; $a.AutoReverse = $reverse
+  $a.Duration = New-Object Windows.Duration ([TimeSpan]::FromMilliseconds($ms))
+  $a.RepeatBehavior = [Windows.Media.Animation.RepeatBehavior]::Forever
+  $target.BeginAnimation($prop, $a)
+}
+function Pop($scale, $from = 0.6, $ms = 380) { Anim $scale $SX $from 1 $ms $backOut; Anim $scale $SY $from 1 $ms $backOut }
+function Pulse($el) { Forever $el $OP 1 0.25 900 $true $easeIO 20 }
+# Rámutatásra finoman megnő, elhagyva visszaáll
+function Hoverable($el, $to = 1.14) {
+  $el.RenderTransformOrigin = [Windows.Point]::new(0.5, 0.5)
+  if ($el.RenderTransform -isnot [Windows.Media.ScaleTransform]) { $el.RenderTransform = New-Object Windows.Media.ScaleTransform }
+  $el.add_MouseEnter({ param($s, $e) Anim $s.RenderTransform $SX $null 1.14 240; Anim $s.RenderTransform $SY $null 1.14 240 })
+  $el.add_MouseLeave({ param($s, $e) Anim $s.RenderTransform $SX $null 1 300; Anim $s.RenderTransform $SY $null 1 300 })
+}
+# Sor eltüntetése: kicsúszik jobbra, a lista simán összezárul
+function RowOut($row, $id, [scriptblock]$then) {
+  Anim $row $OP $null 0 260 $easeIn
+  Anim $row.RenderTransform $TX $null 48 300 $easeIn
+  if ($row.LayoutTransform -is [Windows.Media.ScaleTransform]) { Anim $row.LayoutTransform $SY 1 0 320 $easeIO 130 }
+  Later 470 $id $then
+}
+function Later($ms, $arg, [scriptblock]$do) {
+  $t = New-Object Windows.Threading.DispatcherTimer
+  $t.Interval = [TimeSpan]::FromMilliseconds($ms)
+  $t.Tag = @($do, $arg)
+  $t.add_Tick({ param($s, $e) $s.Stop(); & $s.Tag[0] $s.Tag[1] })
+  $t.Start()
+}
+function Burst($from) {
+  $p = $from.TranslatePoint([Windows.Point]::new($from.ActualWidth / 2, $from.ActualHeight / 2), $U.Fx)
+  $cols = $C.accent, $C.ok, $C.star
+  for ($i = 0; $i -lt 16; $i++) {
+    $r = New-Object Windows.Shapes.Rectangle
+    $r.Width = 6; $r.Height = 6; $r.RadiusX = 1.5; $r.RadiusY = 1.5; $r.Fill = Brush $cols[$i % 3]
+    [void]$U.Fx.Children.Add($r)
+    $ang = $i / 16 * 2 * [Math]::PI + (Get-Random -Maximum 40) / 100
+    $dist = 24 + (Get-Random -Maximum 26)
+    $ms = 550 + (Get-Random -Maximum 220)
+    Anim $r $CL ($p.X - 3) ($p.X - 3 + [Math]::Cos($ang) * $dist) $ms
+    Anim $r $CT ($p.Y - 3) ($p.Y - 3 + [Math]::Sin($ang) * $dist) $ms
+    Anim $r $OP 1 0 $ms $easeIn
+  }
+  Later 900 $null { $U.Fx.Children.Clear() }
+}
+
+# ---------- Sorok ----------
+$ICON = @{
+  check = 'M5.5,10.5 L8.5,13.5 L14.5,7'
+  play  = 'M7.5,5 L7.5,15 L15,10 Z'
+  pause = 'M6.5,5.5 H9 V14.5 H6.5 Z M11,5.5 H13.5 V14.5 H11 Z'
+  star  = 'M10,2.8 L12.2,7.4 L17.2,8.1 L13.6,11.6 L14.5,16.6 L10,14.2 L5.5,16.6 L6.4,11.6 L2.8,8.1 L7.8,7.4 Z'
+  del   = 'M4,6 H16 M8,6 V4.5 H12 V6 M6,6 L6.7,16 H13.3 L14,6'
+  grip  = 'M5,6 L5,6.01 M10,6 L10,6.01 M5,10 L5,10.01 M10,10 L10,10.01 M5,14 L5,14.01 M10,14 L10,14.01'
+  clock = 'M10,3.5 A6.5,6.5 0 1,1 9.99,3.5 M10,6.5 V10 L12.5,11.5'
+}
+$script:geoms = @{}
+function Icon($data, $fill, $stroke, $thick = 1.6, $size = 20) {
+  $p = New-Object Windows.Shapes.Path
+  $geo = $script:geoms[$data]
+  if (-not $geo) { $geo = [Windows.Media.Geometry]::Parse($data); $geo.Freeze(); $script:geoms[$data] = $geo }
+  $p.Data = $geo
+  if ($fill) { $p.Fill = $fill }
+  if ($stroke) { $p.Stroke = $stroke; $p.StrokeThickness = $thick; $p.StrokeLineJoin = 'Round'; $p.StrokeStartLineCap = 'Round'; $p.StrokeEndLineCap = 'Round' }
+  $p.Width = 20; $p.Height = 20; $p.HorizontalAlignment = 'Center'; $p.VerticalAlignment = 'Center'
+  if ($size -ne 20) { $p.LayoutTransform = New-Object Windows.Media.ScaleTransform ($size / 20), ($size / 20) }
+  $p
+}
+function Btn($tip, $child, $col) {
+  $b = New-Object Windows.Controls.Border
+  $b.Style = $win.Resources['Btn']; $b.Child = $child
+  $b.VerticalAlignment = 'Center'
+  [Windows.Controls.Grid]::SetColumn($b, $col)
+  Hoverable $b
+  $b
+}
+function Col($w) { $c = New-Object Windows.Controls.ColumnDefinition; $c.Width = $w; $c }
+function Txt($text, $size, $color, $weight = 'Normal') {
+  $t = New-Object Windows.Controls.TextBlock
+  $t.Text = $text; $t.FontSize = $size; $t.Foreground = Brush $color; $t.FontWeight = [Windows.FontWeights]::$weight; $t.VerticalAlignment = 'Center'
+  $t
+}
+# Kis „címke” a sor alatt: óra ikon + idő
+function TimeChip($text, $running) {
+  $b = New-Object Windows.Controls.Border
+  $b.CornerRadius = 6; $b.Padding = '5,1,7,1'; $b.Margin = '0,0,6,0'
+  $b.Background = Brush $(if ($running) { $C.accent } else { $C.surface })
+  $fg = $(if ($running) { $C.accentFg } else { $C.muted })
+  $sp = New-Object Windows.Controls.StackPanel; $sp.Orientation = 'Horizontal'
+  [void]$sp.Children.Add((Icon $ICON.clock $null (Brush $fg) 1.8 12))
+  $t = Txt $text 11 $fg $(if ($running) { 'Bold' } else { 'SemiBold' })
+  $t.Margin = '3,0,0,0'
+  if ($running) { $t.FontFamily = New-Object Windows.Media.FontFamily $C.mono }
+  [void]$sp.Children.Add($t)
+  $b.Child = $sp
+  @($b, $t)
+}
+
+$script:fresh = @(); $script:spin = $null; $script:live = @(); $script:stagger = -1
+
+function Fade($brush, $hex, $ms) {
+  $a = New-Object Windows.Media.Animation.ColorAnimation
+  $a.To = [Windows.Media.ColorConverter]::ConvertFromString($hex)
+  $a.Duration = New-Object Windows.Duration ([TimeSpan]::FromMilliseconds($ms)); $a.EasingFunction = $easeOut
+  $brush.BeginAnimation([Windows.Media.SolidColorBrush]::ColorProperty, $a)
+}
+function Row($it) {
+  $done = $it.state -eq 'done'
+  $row = New-Object Windows.Controls.Border
+  $row.Style = $win.Resources['Row']; $row.Tag = $it.id; $row.Margin = '0,1,0,1'
+  $bgb = NewBrush $C.hoverT; $row.Background = $bgb   # ezt animálja a rámutatás, ezért saját
+  $tt = New-Object Windows.Media.TranslateTransform; $row.RenderTransform = $tt
+  $g = New-Object Windows.Controls.Grid
+  foreach ($w in [Windows.GridLength]::Auto, [Windows.GridLength]::Auto, [Windows.GridLength]::new(1, 'Star'), [Windows.GridLength]::Auto, [Windows.GridLength]::Auto, [Windows.GridLength]::Auto, [Windows.GridLength]::Auto) { [void]$g.ColumnDefinitions.Add((Col $w)) }
+  foreach ($h in 1, 2) { $rd = New-Object Windows.Controls.RowDefinition; $rd.Height = [Windows.GridLength]::Auto; [void]$g.RowDefinitions.Add($rd) }
+  $row.Child = $g
+
+  # Fogantyú az átrendezéshez
+  $grip = New-Object Windows.Controls.Border
+  $grip.Width = 18; $grip.Background = [Windows.Media.Brushes]::Transparent; $grip.VerticalAlignment = 'Stretch'
+  if (-not $done) {
+    $grip.Cursor = [Windows.Input.Cursors]::SizeNS; $grip.Tag = $row
+    $grip.Child = Icon $ICON.grip $null (Brush $C.muted) 2.2; $grip.Opacity = 0
+    $grip.add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; DragStart $s $e })
+    $grip.add_MouseMove({ param($s, $e) ReDrag $e })
+    $grip.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; DragEnd })
+    $grip.add_LostMouseCapture({ DragEnd })
+  }
+  [void]$g.Children.Add($grip)
+
+  # Kész-karika
+  $cg = New-Object Windows.Controls.Grid; $cg.Width = 22; $cg.Height = 22
+  $cg.RenderTransformOrigin = [Windows.Point]::new(0.5, 0.5); $cg.RenderTransform = New-Object Windows.Media.ScaleTransform
+  $el = New-Object Windows.Shapes.Ellipse; $el.StrokeThickness = 1.8
+  $el.Stroke = Brush $(if ($done) { $C.ok } else { $C.muted })
+  $el.Fill = $(if ($done) { Brush $C.ok } else { [Windows.Media.Brushes]::Transparent })
+  $mark = Icon $ICON.check $null (Brush $C.okFg) 2.3; $mark.Opacity = $(if ($done) { 1 } else { 0 })
+  [void]$cg.Children.Add($el); [void]$cg.Children.Add($mark)
+  $chk = Btn '' $cg 1
+  $chk.Tag = @{ id = $it.id; el = $el; mark = $mark; cg = $cg; row = $row }
+  $chk.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; OnCheck $s })
+  [void]$g.Children.Add($chk)
+
+  # Címsor: a cím legfeljebb 2 sorban, alatta az eddigi idő; kattintásra lenyílik a részletes leírás
+  $hd = New-Object Windows.Controls.Grid; $hd.VerticalAlignment = 'Center'; $hd.Margin = '8,0,4,0'
+  $hd.Background = [Windows.Media.Brushes]::Transparent; $hd.Cursor = [Windows.Input.Cursors]::Hand; $hd.Tag = $row
+  foreach ($w in [Windows.GridLength]::Auto, [Windows.GridLength]::new(1, 'Star'), [Windows.GridLength]::Auto, [Windows.GridLength]::Auto) { [void]$hd.ColumnDefinitions.Add((Col $w)) }
+  [Windows.Controls.Grid]::SetColumn($hd, 2)
+  if ($it.star -and -not $done) {
+    $sm = Icon $ICON.star (Brush $C.star) (Brush $C.star) 1.4 15
+    $sm.Margin = '0,0,6,0'; $sm.VerticalAlignment = 'Top'; $sm.RenderTransformOrigin = [Windows.Point]::new(0.5, 0.5)
+    $sst = New-Object Windows.Media.ScaleTransform; $sm.RenderTransform = $sst
+    if ($script:spin -eq $it.id) { Pop $sst 0.3 450 }
+    $hd.Children.Add($sm) | Out-Null
+  }
+  $ts = New-Object Windows.Controls.StackPanel; $ts.VerticalAlignment = 'Center'
+  [Windows.Controls.Grid]::SetColumn($ts, 1)
+  $tb = New-Object Windows.Controls.TextBlock
+  $tb.Text = $it.text; $tb.TextWrapping = 'Wrap'; $tb.TextTrimming = 'CharacterEllipsis'; $tb.Tag = $it.id
+  $tb.FontSize = 14.5; $tb.LineHeight = 20; $tb.MaxHeight = 40
+  $tb.Foreground = Brush $(if ($done) { $C.muted } else { $C.fg })
+  if ($it.star -and -not $done) { $tb.FontWeight = [Windows.FontWeights]::SemiBold }
+  if ($done) { $tb.TextDecorations = [Windows.TextDecorations]::Strikethrough }
+  [void]$ts.Children.Add($tb)
+  if ([int64]$it.spent -gt 0) {
+    $tl = New-Object Windows.Controls.StackPanel; $tl.Orientation = 'Horizontal'; $tl.Margin = '0,2,0,0'
+    [void]$tl.Children.Add((Icon $ICON.clock $null (Brush $C.muted) 1.8 12))
+    $tm = Txt (FmtDur ([int64]$it.spent)) 12 $C.muted 'SemiBold'; $tm.Margin = '4,0,0,0'
+    [void]$tl.Children.Add($tm)
+    [void]$ts.Children.Add($tl)
+  }
+  [void]$hd.Children.Add($ts)
+  if ($it.notes) {
+    $ni = Icon 'M5,6 H15 M5,10 H15 M5,14 H11' $null (Brush $C.muted) 1.7 14
+    $ni.Margin = '6,0,0,0'; $ni.Opacity = 0.8
+    [Windows.Controls.Grid]::SetColumn($ni, 2); [void]$hd.Children.Add($ni)
+  }
+  $chev = Icon 'M8,5.5 L12.5,10 L8,14.5' $null (Brush $C.muted) 1.9 14
+  $chev.Margin = '4,0,2,0'; $chev.RenderTransformOrigin = [Windows.Point]::new(0.5, 0.5); $chev.RenderTransform = New-Object Windows.Media.RotateTransform
+  [Windows.Controls.Grid]::SetColumn($chev, 3); [void]$hd.Children.Add($chev)
+  $hd.add_MouseLeftButtonDown({ param($s, $e)
+    $e.Handled = $true
+    if ($e.ClickCount -eq 2) { StartEdit $s.DataContext.title } else { ToggleRow $s.Tag } })
+  [void]$g.Children.Add($hd)
+
+  # Lenyíló rész: mit kell pontosan csinálni
+  $det = New-Object Windows.Controls.StackPanel; $det.Margin = '8,8,6,2'; $det.Visibility = 'Collapsed'
+  $det.LayoutTransform = New-Object Windows.Media.ScaleTransform
+  [Windows.Controls.Grid]::SetRow($det, 1); [Windows.Controls.Grid]::SetColumn($det, 2); [Windows.Controls.Grid]::SetColumnSpan($det, 2)
+  $nb = New-Object Windows.Controls.Border
+  $nb.CornerRadius = 10; $nb.Background = Brush $C.surface; $nb.BorderBrush = Brush $C.line; $nb.BorderThickness = 1
+  $ng = New-Object Windows.Controls.Grid
+  $box = New-Object Windows.Controls.TextBox
+  $box.Text = $it.notes; $box.Tag = $it.id; $box.AcceptsReturn = $true; $box.TextWrapping = 'Wrap'; $box.MinHeight = 64; $box.MaxLength = 4000
+  $box.FontSize = 14; $box.Padding = '10,8'; $box.BorderThickness = 0; $box.Background = [Windows.Media.Brushes]::Transparent
+  $box.Foreground = Brush $C.fg; $box.CaretBrush = Brush $C.fg; $box.VerticalScrollBarVisibility = 'Auto'; $box.MaxHeight = 220
+  $ph = Txt 'Mit kell pontosan csinálni? Írd ide a részleteket…' 13.5 $C.muted
+  $ph.Margin = '13,9,8,0'; $ph.VerticalAlignment = 'Top'; $ph.IsHitTestVisible = $false; $ph.TextWrapping = 'Wrap'
+  if ($it.notes) { $ph.Visibility = 'Collapsed' }
+  $box.DataContext = @{ ph = $ph; frame = $nb }
+  $box.add_TextChanged({ param($s, $e)
+    $x = FindItem $s.Tag; if ($x) { $x.notes = $s.Text; $script:dirty = $true }
+    $s.DataContext.ph.Visibility = $(if ($s.Text) { 'Collapsed' } else { 'Visible' }) })
+  $box.add_GotKeyboardFocus({ param($s, $e) $s.DataContext.frame.BorderBrush = Brush $C.accent })
+  $box.add_LostKeyboardFocus({ param($s, $e) $s.DataContext.frame.BorderBrush = Brush $C.line; if ($script:dirty) { SaveData; $script:dirty = $false } })
+  $box.add_KeyDown({ param($s, $e) if ($e.Key -eq 'Escape') { $e.Handled = $true; [void]$U.Input.Focus() } })
+  [void]$ng.Children.Add($box); [void]$ng.Children.Add($ph)
+  $nb.Child = $ng
+  [void]$det.Children.Add($nb)
+  $info = @()
+  $days = [int][Math]::Floor(((NowMs) - $it.created) / 86400000)
+  $info += 'felvéve ' + ([DateTimeOffset]::FromUnixTimeMilliseconds([int64]$it.created).LocalDateTime.ToString('MMM d., HH:mm', $hu)) + $(if ($days -ge 1) { "  ($days napja)" } else { '' })
+  if ([int64]$it.spent -gt 0) { $info += 'eddig ' + (FmtDur ([int64]$it.spent)) }
+  if ($done -and $it.doneAt) { $info += 'kész ' + ([DateTimeOffset]::FromUnixTimeMilliseconds([int64]$it.doneAt).LocalDateTime.ToString('MMM d., HH:mm', $hu)) }
+  $acts = New-Object Windows.Controls.Grid; $acts.Margin = '0,8,0,0'
+  foreach ($w in [Windows.GridLength]::new(1, 'Star'), [Windows.GridLength]::Auto, [Windows.GridLength]::Auto) { [void]$acts.ColumnDefinitions.Add((Col $w)) }
+  $mi = Txt ($info -join '  ·  ') 12 $C.muted; $mi.Margin = '4,0,8,0'; $mi.HorizontalAlignment = 'Left'; $mi.TextWrapping = 'Wrap'
+  [void]$acts.Children.Add($mi)
+  if (-not $done) {
+    $fc = New-Object Windows.Controls.Border; $fc.Style = $win.Resources['Chip']; $fc.Tag = $it.id; $fc.Margin = '0,0,6,0'
+    $fs = New-Object Windows.Controls.StackPanel; $fs.Orientation = 'Horizontal'
+    [void]$fs.Children.Add((Icon $ICON.star $(if ($it.star) { Brush $C.star } else { $null }) (Brush $(if ($it.star) { $C.star } else { $C.muted })) 1.6 14))
+    $ft = Txt $(if ($it.star) { 'Nem fontos' } else { 'Fontos' }) 12.5 $C.fg 'SemiBold'; $ft.Margin = '5,0,0,0'; [void]$fs.Children.Add($ft)
+    $fc.Child = $fs
+    $fc.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; OnStar $s.Tag })
+    [Windows.Controls.Grid]::SetColumn($fc, 1); [void]$acts.Children.Add($fc)
+  }
+  $dc = New-Object Windows.Controls.Border; $dc.Style = $win.Resources['Chip']; $dc.Tag = $row
+  $ds = New-Object Windows.Controls.StackPanel; $ds.Orientation = 'Horizontal'
+  [void]$ds.Children.Add((Icon $ICON.del $null (Brush $C.no) 1.6 14))
+  $dt = Txt 'Törlés' 12.5 $C.no 'SemiBold'; $dt.Margin = '5,0,0,0'; [void]$ds.Children.Add($dt)
+  $dc.Child = $ds
+  $dc.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; OnDelete $s.Tag })
+  [Windows.Controls.Grid]::SetColumn($dc, 2); [void]$acts.Children.Add($dc)
+  if (-not $done) {
+    # Idő módosítása: ha elfelejtetted elindítani / megállítani az órát
+    $trw = New-Object Windows.Controls.WrapPanel; $trw.Margin = '0,8,0,0'
+    $tlb = Txt 'Idő:' 12 $C.muted 'SemiBold'; $tlb.Margin = '4,0,6,4'; [void]$trw.Children.Add($tlb)
+    foreach ($q in @(@('−15 p', -15), @('−5 p', -5), @('+5 p', 5), @('+15 p', 15), @('+1 ó', 60), @('Beírás…', 0))) {
+      $tcb = New-Object Windows.Controls.Border; $tcb.Style = $win.Resources['Chip']; $tcb.Padding = '8,3'; $tcb.Margin = '0,0,5,4'
+      $tcb.Tag = @($it.id, ([int64]$q[1] * 60000))
+      $tcb.Child = Txt $q[0] 12 $C.fg 'SemiBold'
+      $tcb.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; if ($s.Tag[1]) { AdjustTime $s.Tag[0] $s.Tag[1] } else { AskTime $s.Tag[0] } })
+      [void]$trw.Children.Add($tcb)
+    }
+    [void]$det.Children.Add($trw)
+  }
+  [void]$det.Children.Add($acts)
+  [void]$g.Children.Add($det)
+  if (-not $done) { UseTimeMenu $row }
+
+  if (-not $done) {
+    $pb = New-Object Windows.Controls.Border
+    $pb.Width = 30; $pb.Height = 30; $pb.CornerRadius = 15; $pb.Cursor = [Windows.Input.Cursors]::Hand; $pb.VerticalAlignment = 'Center'; $pb.Margin = '2,0,0,0'
+    $pb.Background = Brush $C.surface; $pb.Child = Icon $ICON.play (Brush $C.muted) $null
+    $pb.add_MouseEnter({ param($s, $e) $s.Child.Fill = Brush $C.accent })
+    $pb.add_MouseLeave({ param($s, $e) $s.Child.Fill = Brush $C.muted })
+    [Windows.Controls.Grid]::SetColumn($pb, 3)
+    $pb.Tag = $it.id
+    Hoverable $pb
+    $pb.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; Pop $s.RenderTransform 0.7 360; PlayFromRow $s })
+    [void]$g.Children.Add($pb)
+  }
+
+  # Rámutatásra: lágy háttér, előjön a fogantyú, a csillag és a kuka
+  $row.DataContext = @{ bg = $bgb; grip = $grip; det = $det; title = $tb; chev = $chev; box = $box }
+  $row.add_MouseEnter({ param($s, $e)
+    $d = $s.DataContext; if ($script:drag) { return }
+    Fade $d.bg $C.hover 180
+    if ($d.grip.Child) { Anim $d.grip $OP $null 0.55 220 } })
+  $row.add_MouseLeave({ param($s, $e)
+    $d = $s.DataContext; if ($script:drag) { return }
+    Fade $d.bg $C.hoverT 320
+    if ($d.grip.Child) { Anim $d.grip $OP $null 0 300 } })
+
+  $ls = New-Object Windows.Media.ScaleTransform; $row.LayoutTransform = $ls
+  if ($script:fresh -contains $it.id) {
+    $row.Opacity = 0
+    Anim $ls $SY 0 1 420; Anim $row $OP 0 1 420 $easeOut 80; Anim $tt $TX -22 0 520 $easeOut 80
+  } elseif ($script:stagger -ge 0) {
+    $d = 70 + 38 * [Math]::Min($script:stagger, 12); $script:stagger++
+    $row.Opacity = 0; $tt.Y = 12
+    Anim $row $OP 0 1 420 $easeOut $d; Anim $tt $TY 12 0 520 $easeOut $d
+  }
+  if ($script:expanded[$it.id]) { SetExpanded $row $true $false }
+  $row
+}
+
+# Lenyitás / becsukás egy soron belül, újrarajzolás nélkül
+$script:expanded = @{}
+function SetExpanded($row, $open, $animate) {
+  $d = $row.DataContext; $det = $d.det
+  if ($open) {
+    $det.Visibility = 'Visible'
+    $d.title.MaxHeight = [double]::PositiveInfinity
+    if ($animate) {
+      Anim $det.LayoutTransform $SY 0 1 380; Anim $det $OP 0 1 340 $easeOut 60
+      Anim $d.chev.RenderTransform $ANG $null 90 360 $backOut
+    } else { $d.chev.RenderTransform.Angle = 90 }
+  } else {
+    $d.title.MaxHeight = 40
+    Anim $d.chev.RenderTransform $ANG $null 0 300
+    Anim $det.LayoutTransform $SY $null 0 280 $easeIO; Anim $det $OP $null 0 200 $easeIn
+    Later 290 $row { param($r) if (-not $script:expanded[$r.Tag]) { $r.DataContext.det.Visibility = 'Collapsed' } }
+  }
+}
+function ToggleRow($row) {
+  $id = $row.Tag
+  $open = -not $script:expanded[$id]
+  if ($open) { $script:expanded[$id] = $true } else { $script:expanded.Remove($id) }
+  SetExpanded $row $open $true
+  if ($open) { Later 120 $row.DataContext.box { param($b) if (-not $script:editing) { [void]$b.Focus(); $b.CaretIndex = $b.Text.Length } } }
+}
+
+# Futó teendő a narancs kártyán: cím, nagy óra, Szünet / Kész
+function Pill($text) {
+  $p = New-Object Windows.Controls.Border; $p.Style = $win.Resources['Pill']
+  $p.Child = Txt $text 13 $C.accentFg 'SemiBold'
+  Hoverable $p
+  $p
+}
+function RunItem($it, $first) {
+  $b = New-Object Windows.Controls.Border; $b.Tag = $it.id
+  $b.Padding = '0,10,0,0'
+  if (-not $first) { $b.BorderBrush = Brush $C.sep; $b.BorderThickness = '0,1,0,0'; $b.Margin = '0,10,0,0' }
+  $tt = New-Object Windows.Media.TranslateTransform; $b.RenderTransform = $tt
+  $ls = New-Object Windows.Media.ScaleTransform; $b.LayoutTransform = $ls
+  $g = New-Object Windows.Controls.Grid
+  foreach ($w in [Windows.GridLength]::new(1, 'Star'), [Windows.GridLength]::Auto) { [void]$g.ColumnDefinitions.Add((Col $w)) }
+  $b.Child = $g
+  $sp = New-Object Windows.Controls.StackPanel; $sp.VerticalAlignment = 'Center'
+  $title = New-Object Windows.Controls.TextBlock
+  $title.Text = $it.text; $title.TextWrapping = 'Wrap'; $title.FontSize = 15; $title.LineHeight = 20; $title.Tag = $it.id
+  $title.FontWeight = [Windows.FontWeights]::SemiBold; $title.Foreground = Brush $C.accentFg
+  $title.add_MouseLeftButtonDown({ param($s, $e) if ($e.ClickCount -eq 2) { $e.Handled = $true; StartEdit $s } })
+  $time = Txt (FmtLive (Elapsed $it)) 26 $C.accentFg 'Bold'
+  $time.FontFamily = New-Object Windows.Media.FontFamily $C.mono; $time.HorizontalAlignment = 'Left'; $time.Margin = '0,2,0,0'
+  $script:live += , @($it.id, $time)
+  [void]$sp.Children.Add($title)
+  if ($it.notes) {
+    $nt = Txt $it.notes 13 $C.accentFg; $nt.TextWrapping = 'Wrap'; $nt.Opacity = 0.9; $nt.Margin = '0,3,0,0'
+    $nt.MaxHeight = 80; $nt.TextTrimming = 'CharacterEllipsis'; $nt.HorizontalAlignment = 'Left'
+    [void]$sp.Children.Add($nt)
+  }
+  [void]$sp.Children.Add($time)
+  [void]$g.Children.Add($sp)
+  $bt = New-Object Windows.Controls.StackPanel; $bt.Orientation = 'Horizontal'; $bt.VerticalAlignment = 'Center'; $bt.Margin = '10,0,0,0'
+  [Windows.Controls.Grid]::SetColumn($bt, 1)
+  $pz = Pill $(if ($it.kind -eq 'brk') { '■  Vége' } else { '❚❚  Szünet' }); $pz.Tag = $b
+  $pz.add_MouseLeftButtonUp({ param($s, $e) RowOut $s.Tag $s.Tag.Tag { param($id) OnPlay $id } })
+  [void]$bt.Children.Add($pz)
+  if (-not (IsAct $it)) {
+    $ok = Pill '✓  Kész'; $ok.Tag = $b; $ok.Margin = '6,0,0,0'
+    $ok.add_MouseLeftButtonUp({ param($s, $e) Burst $s; RowOut $s.Tag $s.Tag.Tag { param($id) Finish $id } })
+    [void]$bt.Children.Add($ok)
+  }
+  [void]$g.Children.Add($bt)
+  if (-not (IsAct $it)) { UseTimeMenu $b }
+  if ($script:fresh -contains $it.id) {
+    $b.Opacity = 0
+    Anim $ls $SY 0 1 440; Anim $b $OP 0 1 420 $easeOut 90; Anim $tt $TY 14 0 520 $easeOut 90
+  }
+  $b
+}
+
+# ---------- Megjelenítés ----------
+$script:lastBadge = ''; $script:lastFocus = '-'
+$script:shine = New-Object Windows.Media.LinearGradientBrush
+$script:shine.StartPoint = [Windows.Point]::new(0, 0.5); $script:shine.EndPoint = [Windows.Point]::new(1, 0.5)
+foreach ($st in @(@($C.accent, 0.0), @($C.accent, 0.36), @($C.accentHi, 0.5), @($C.accent, 0.64), @($C.accent, 1.0))) {
+  [void]$script:shine.GradientStops.Add([Windows.Media.GradientStop]::new([Windows.Media.ColorConverter]::ConvertFromString($st[0]), [double]$st[1]))
+}
+$script:shineT = New-Object Windows.Media.TranslateTransform; $script:shine.RelativeTransform = $script:shineT
+$script:glow = New-Object Windows.Media.Effects.DropShadowEffect
+$script:glow.Color = [Windows.Media.ColorConverter]::ConvertFromString($C.accent); $script:glow.ShadowDepth = 0; $script:glow.Opacity = 0.5; $script:glow.BlurRadius = 18
+$script:glow.RenderingBias = 'Performance'
+$script:focusOn = $false
+function RenderRun {
+  $U.RunList.Children.Clear()
+  $runs = @(RunningAll | Sort-Object @{ Expression = { $_.startedAt } })
+  $n = $runs.Count
+  if ($n) {
+    $U.FocusLabel.Text = $(if ($n -gt 1) { "FUT MOST  ·  $n" } else { 'FUT MOST' })
+    $i = 0; foreach ($r in $runs) { [void]$U.RunList.Children.Add((RunItem $r ($i -eq 0))); $i++ }
+    $U.TabTimer.Visibility = 'Visible'; $U.TabTimerText.Text = TabText $runs
+    $U.TabTimer.Background = Brush $C.accent; $U.TabTimerText.Foreground = Brush $C.accentFg
+    if ($U.TabStop.Visibility -ne 'Visible') { $U.TabStop.Visibility = 'Visible'; Pop $U.TabStop.RenderTransform 0.3 450 }
+    $U.TabDot.Fill = Brush $C.accent
+    if (-not $script:focusOn) {
+      $script:focusOn = $true
+      $U.Focus.Visibility = 'Visible'; $U.Focus.Background = $script:shine; $U.Focus.Effect = $script:glow
+      Anim $U.Focus.LayoutTransform $SY 0 1 460; Anim $U.Focus $OP 0 1 420
+      Forever $script:shineT $TX -1 1 4200 $false $easeIO 30
+      Pulse $U.FocusDot
+      Forever $U.TabRing.RenderTransform $SX 1 2.6 2200 $false $easeOut 20; Forever $U.TabRing.RenderTransform $SY 1 2.6 2200 $false $easeOut 20
+      Forever $U.TabRing $OP 0.9 0 2200 $false $easeOut 20
+    }
+  } else {
+    if ($script:away.Count) {
+      $U.TabTimer.Visibility = 'Visible'; $U.TabTimerText.Text = '❚❚  szünet'
+      $U.TabTimer.Background = Brush $C.star; $U.TabTimerText.Foreground = Brush '#1C1F24'
+    } else { $U.TabTimer.Visibility = 'Collapsed' }
+    $U.TabStop.Visibility = 'Collapsed'
+    $U.TabDot.Fill = Brush '#6B7280'
+    if ($script:focusOn) {
+      $script:focusOn = $false
+      Anim $U.Focus.LayoutTransform $SY $null 0 360 $easeIO; Anim $U.Focus $OP $null 0 300 $easeIn
+      Later 380 $null { if (-not $script:focusOn) {
+        $U.Focus.Visibility = 'Collapsed'
+        $script:shineT.BeginAnimation($TX, $null) } }
+      $U.TabRing.RenderTransform.BeginAnimation($SX, $null); $U.TabRing.RenderTransform.BeginAnimation($SY, $null)
+      $U.TabRing.BeginAnimation($OP, $null); $U.TabRing.Opacity = 0
+    }
+  }
+}
+function TabText($runs) {
+  $last = @($runs | Sort-Object @{ Expression = { $_.startedAt } } -Descending)[0]
+  $t = FmtLive (Elapsed $last)
+  if ($runs.Count -gt 1) { "$($runs.Count)×  $t" } else { $t }
+}
+
+# A tevékenység-gombok sora: név + mai idő; a futó narancs. Kattintás = váltás, jobb klikk = átnevezés / törlés.
+$script:actLive = @()
+function ActChip($it) {
+  $run = $it.state -eq 'doing'
+  $b = New-Object Windows.Controls.Border; $b.Style = $win.Resources['Chip']; $b.Margin = '0,0,6,6'; $b.Padding = '11,6'; $b.Tag = $it.id
+  if ($run) { $b.Background = Brush $C.accent }
+  $fg = $(if ($run) { $C.accentFg } else { $C.fg })
+  $sp = New-Object Windows.Controls.StackPanel; $sp.Orientation = 'Horizontal'
+  $ic = $(if ($run) { Icon $ICON.pause (Brush $fg) $null 1.6 12 } elseif ($it.kind -eq 'brk') { Icon 'M5,8 H13 V12 A3.5,3.5 0 0,1 9.5,15.5 H8.5 A3.5,3.5 0 0,1 5,12 Z M13,9 H14.5 A1.8,1.8 0 0,1 14.5,12.6 H13 M7,3.5 V6 M10,3.5 V6' $null (Brush $C.muted) 1.6 13 } else { Icon $ICON.play (Brush $C.muted) $null 1.6 12 })
+  $ic.Margin = '0,0,6,0'; [void]$sp.Children.Add($ic)
+  [void]$sp.Children.Add((Txt $it.text 13 $fg 'SemiBold'))
+  $tm = Txt '' 12 $(if ($run) { $C.accentFg } else { $C.muted }) 'SemiBold'; $tm.Margin = '8,0,0,0'
+  $ms = SegToday $it.id
+  if ($ms -ge 60000) { $tm.Text = FmtDur $ms }
+  if ($run) { $tm.FontFamily = New-Object Windows.Media.FontFamily $C.mono }
+  [void]$sp.Children.Add($tm)
+  $script:actLive += , @($it.id, $tm)
+  $b.Child = $sp
+  Hoverable $b
+  $b.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; Pop $s.RenderTransform 0.8 320; OnPlay $s.Tag })
+  $cm = New-Object Windows.Controls.ContextMenu
+  $m1 = New-Object Windows.Controls.MenuItem; $m1.Header = 'Átnevezés…'; $m1.Tag = $it.id; $m1.add_Click({ param($s, $e) ActRename $s.Tag })
+  $m2 = New-Object Windows.Controls.MenuItem; $m2.Header = 'Törlés a gombok közül'; $m2.Tag = $it.id; $m2.add_Click({ param($s, $e) ActDelete $s.Tag })
+  [void]$cm.Items.Add($m1); [void]$cm.Items.Add($m2)
+  $cm.add_Opened({ $script:modal = $true }); $cm.add_Closed({ $script:modal = $false })
+  $b.ContextMenu = $cm
+  $b
+}
+function RenderActs {
+  $U.Acts.Children.Clear(); $script:actLive = @()
+  foreach ($it in @($script:items | Where-Object { IsAct $_ } | Sort-Object @{ Expression = { if ($_.kind -eq 'brk') { 1 } else { 0 } } }, @{ Expression = { $_.order } }, @{ Expression = { $_.created } })) {
+    [void]$U.Acts.Children.Add((ActChip $it))
+  }
+  $add = New-Object Windows.Controls.Border; $add.Style = $win.Resources['Chip']; $add.Margin = '0,0,6,6'; $add.Padding = '9,6'
+  $add.Child = Icon 'M10,4 V16 M4,10 H16' $null (Brush $C.muted) 2 12
+  $add.ToolTip = 'Új tevékenység-gomb (pl. E-mail, DPTS programozás)'
+  Hoverable $add
+  $add.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; ActAdd })
+  [void]$U.Acts.Children.Add($add)
+}
+function AskText($q, $def = '') {
+  Add-Type -AssemblyName Microsoft.VisualBasic
+  $script:modal = $true
+  try { ([Microsoft.VisualBasic.Interaction]::InputBox($q, 'Teendőim', $def) -replace '\s+', ' ').Trim() } finally { $script:modal = $false }
+}
+function ActAdd {
+  $t = AskText 'Az új tevékenység-gomb neve (pl. E-mail, DPTS programozás, Megbeszélés):'
+  if (-not $t) { return }
+  if ($t.Length -gt 60) { $t = $t.Substring(0, 60) }
+  $it = Norm @{ text = $t; kind = 'act'; order = (OrderEdge $true) }
+  [void]$script:items.Add($it); Commit
+}
+function ActRename($id) {
+  $it = FindItem $id; if (-not $it) { return }
+  $t = AskText 'A tevékenység új neve:' $it.text
+  if ($t -and $t -ne $it.text) { $it.text = $t.Substring(0, [Math]::Min(60, $t.Length)); Commit }
+}
+function ActDelete($id) {
+  $it = FindItem $id; if (-not $it) { return }
+  $script:modal = $true
+  try { $ans = [System.Windows.MessageBox]::Show($win, ('Törlöd a(z) „' + $it.text + '” gombot?' + "`n`n" + 'A naplóban az eddig mért ideje megmarad.'), 'Teendőim', 'YesNo') } finally { $script:modal = $false }
+  if ($ans -ne 'Yes') { return }
+  if ($it.state -eq 'doing') { StopRun $it; $it.state = 'open' }
+  RemoveItem $id; Commit
+}
+
+function Render {
+  $U.List.Children.Clear(); $U.DoneList.Children.Clear(); $script:live = @()
+  $active = @($script:items | Where-Object { $_.state -eq 'open' -and -not (IsAct $_) } | Sort-Object @{ Expression = { $_.order } }, @{ Expression = { $_.created } })
+  $doneI  = @($script:items | Where-Object { $_.state -eq 'done' } | Sort-Object @{ Expression = { $_.doneAt } } -Descending)
+  foreach ($it in $active) { [void]$U.List.Children.Add((Row $it)) }
+  if ($script:set.showDone) { foreach ($it in $doneI) { [void]$U.DoneList.Children.Add((Row $it)) } }
+  $script:fresh = @(); $script:spin = $null
+
+  $total = @(Todos).Count; $nd = $doneI.Count; $no = $total - $nd
+  RenderActs
+  $U.Empty.Visibility = $(if ($active.Count -eq 0 -and $no -eq 0) { 'Visible' } else { 'Collapsed' })
+  $U.Empty.Text = $(if ($total -eq 0) { 'Üres a lista. Írd be fent az első teendőt.' } else { 'Nincs hátralévő teendő.' })
+  $U.DoneHead.Visibility = $(if ($nd) { 'Visible' } else { 'Collapsed' })
+  $sumDone = 0; foreach ($d in $doneI) { $sumDone += [int64]$d.spent }
+  $U.DoneHeadText.Text = "Kész ($nd)" + $(if ($sumDone -gt 0) { "  ·  összesen $(FmtDur $sumDone)" } else { '' })
+  Anim $U.DoneArrow.RenderTransform $ANG $null $(if ($script:set.showDone) { 90 } else { 0 }) 320
+  $U.Count.Text = $(if ($total) { "$no hátra  ·  $nd kész" } else { 'Még nincs teendő' })
+  $U.TodayText.Text = 'ma ' + (FmtDur (TodayMs))
+  $tw = $(if ($U.Track.ActualWidth -gt 0) { $U.Track.ActualWidth } else { 330 })
+  Anim $U.Fill $WP $null $(if ($total) { $tw * $nd / $total } else { 0 }) 900
+
+  $badge = $(if ($total -and -not $no) { '✓' } else { "$no" })
+  if ($badge -ne $script:lastBadge) {
+    $U.BadgeText.Text = $badge
+    if ($script:lastBadge) { Pop $U.Badge.RenderTransform 1.4 400 }
+    $script:lastBadge = $badge
+  }
+  $all = $total -gt 0 -and $no -eq 0
+  if ($all -and $U.Cheer.Visibility -ne 'Visible') { $U.Cheer.Visibility = 'Visible'; Pop $U.Cheer.RenderTransform 0.5 500 }
+  if (-not $all) { $U.Cheer.Visibility = 'Collapsed' }
+  RenderRun
+}
+function Commit {
+  SaveData; Render
+  if ($script:focusNotes) {
+    foreach ($k in $U.List.Children) { if ($k.Tag -eq $script:focusNotes) { Later 200 $k.DataContext.box { param($b) [void]$b.Focus() } } }
+    $script:focusNotes = $null
+  }
+}
+
+# Másodpercenként: futó óra frissítése; alvás után nem számolja az alvás idejét
+$script:lastTick = NowMs; $script:lastSeenSave = 0
+function Tick {
+  $now = NowMs
+  $prev = $script:lastTick
+  $gap = $now - $prev
+  $script:lastTick = $now
+  $runs = @(RunningAll)
+  if ($gap -gt 120000 -and $runs.Count) {
+    # alvás / hibernálás: az alvás ideje nem számít, a szakasz ott megszakad
+    foreach ($r in $runs) { if ($r.startedAt) { $r.startedAt = [int64]$r.startedAt + ($gap - 1000); SegClose $r $prev; SegOpen $r $now } }
+    SaveData
+  }
+  foreach ($p in $script:actLive) { $r = FindItem $p[0]; if ($r -and $r.state -eq 'doing') { $ms = SegToday $r.id; if ($ms -ge 60000) { $p[1].Text = FmtDur $ms } } }
+  foreach ($p in $script:live) { $r = FindItem $p[0]; if ($r -and $r.state -eq 'doing') { $p[1].Text = FmtLive (Elapsed $r) } }
+  if ($runs.Count) { $U.TabTimerText.Text = TabText $runs }
+  if ($runs.Count -or $gap -gt 60000) { $U.TodayText.Text = 'ma ' + (FmtDur (TodayMs)) }
+  if ($script:dirty -and -not $script:drag) { SaveData; $script:dirty = $false }
+  if ($script:idleOk -and [int]$script:set.idleMin -gt 0) {
+    $idle = [TeendoimIdle]::IdleMs()
+    # szünet közben nem kérdez – akkor épp az a cél, hogy ne nyúlj a géphez
+    $work = @($runs | Where-Object { $_.kind -ne 'brk' })
+    if ($work.Count -and $idle -ge [int]$script:set.idleMin * 60000) { AutoPause ($now - $idle) }
+    elseif ($script:away.Count -and -not $script:awayShown -and $idle -lt 3000) { ShowAway }
+  }
+  if ($now - $script:lastSeenSave -gt 30000) { $script:set.lastSeen = $now; SaveSet; $script:lastSeenSave = $now }
+  try { NaploPump } catch { NaploLog "$_" }
+  try { UpdPump } catch { UpdLog "$_" }
+}
+
+# ---------- Automatikus szünet tétlenségnél ----------
+$script:away = @(); $script:awayFrom = $null; $script:awayShown = $false
+function AutoPause($cut) {
+  foreach ($r in @(RunningAll)) {
+    if ($r.kind -eq 'brk') { continue }
+    StopRun $r $cut; $r.state = 'open'
+    $script:away += $r.id
+  }
+  if (-not $script:awayFrom) { $script:awayFrom = $cut }
+  $script:awayShown = $false
+  Commit
+}
+function ShowAway {
+  $script:awayShown = $true
+  $mins = [int][Math]::Round(((NowMs) - [int64]$script:awayFrom) / 60000)
+  $names = @($script:away | ForEach-Object { $x = FindItem $_; if ($x) { $x.text } })
+  if (-not $names.Count) { $script:away = @(); Render; return }
+  $at = [DateTimeOffset]::FromUnixTimeMilliseconds([int64]$script:awayFrom).LocalDateTime.ToString('HH:mm')
+  $U.AwayTitle.Text = "Szünetet tartottál – $mins percig nem nyúltál a géphez."
+  $U.AwaySub.Text = "Az órát $at-kor megállítottam, a közben eltelt időt nem számoltam bele: " + ($names -join ', ')
+  $U.Away.Visibility = 'Visible'
+  Anim $U.Away.LayoutTransform $SY 0 1 420; Anim $U.Away $OP 0 1 380
+  if (-not $script:open) { Expand $true }
+}
+function CloseAway {
+  $script:away = @(); $script:awayFrom = $null; $script:awayShown = $false
+  Anim $U.Away.LayoutTransform $SY $null 0 320 $easeIO; Anim $U.Away $OP $null 0 260 $easeIn
+  Later 330 $null { if (-not $script:away.Count) { $U.Away.Visibility = 'Collapsed' } }
+}
+function ResumeAway($count) {
+  # Ha nem számolom bele, a távollét szünetként kerül az idősávba
+  if (-not $count -and $script:awayFrom) { SegAdd '' 'Szünet' 'break' ([int64]$script:awayFrom) (NowMs) }
+  foreach ($id in $script:away) {
+    $x = FindItem $id
+    if ($x -and $x.state -eq 'open') {
+      # a távollét is beleszámít: az óra onnan indul, ahol megállt
+      if ($count) { StartRun $x ([int64]$script:awayFrom) } else { StartRun $x }
+      $script:fresh += $x.id
+    }
+  }
+  CloseAway; Commit
+}
+$U.AwayGo.add_MouseLeftButtonUp({ ResumeAway $false })
+$U.AwayCount.add_MouseLeftButtonUp({ ResumeAway $true })
+$U.AwayKeep.add_MouseLeftButtonUp({
+  if ($script:awayFrom) { SegAdd '' 'Szünet' 'break' ([int64]$script:awayFrom) (NowMs) }
+  CloseAway; Render })
+
+# ---------- Műveletek ----------
+function AddItem {
+  $t = ($U.Input.Text -replace '\s+', ' ').Trim()
+  $star = $t.StartsWith('!')
+  if ($star) { $t = ($t -replace '^!+\s*', '') }
+  if (-not $t) { return }
+  $it = Norm @{ text = $t; state = 'open'; star = $star; order = (OrderEdge (-not $star)) }
+  [void]$script:items.Add($it); $script:fresh += $it.id; $script:expanded[$it.id] = $true; $script:focusNotes = $it.id
+  $U.Input.Text = ''
+  Pop $U.AddBtn.RenderTransform 0.8 300
+  Commit
+}
+function Finish($id) {
+  $x = FindItem $id
+  if ($x -and $x.state -ne 'done') { StopRun $x; $x.state = 'done'; $x.doneAt = NowMs; NaploAdd $x; $script:fresh += $x.id; Commit }
+}
+function OnCheck($btn) {
+  $t = $btn.Tag; $it = FindItem $t.id
+  if (-not $it) { return }
+  if ($it.state -eq 'done') { $it.state = 'open'; $it.doneAt = $null; NaploUndo $it; $script:fresh += $it.id; Commit; return }
+  $t.el.Fill = Brush $C.ok; $t.el.Stroke = Brush $C.ok
+  Anim $t.mark $OP 0 1 200
+  Pop $t.cg.RenderTransform 0.6 380
+  Burst $btn
+  Later 380 $t { param($t) RowOut $t.row $t.id { param($id) Finish $id } }
+}
+function OnPlay($id) {
+  $it = FindItem $id
+  if (-not $it) { return }
+  if ($it.state -eq 'doing') { StopRun $it; $it.state = 'open' } else { StartRun $it }
+  $script:fresh += $id
+  Commit
+}
+# ---------- Idő hozzáadása / levonása ----------
+# Ha elfelejtetted elindítani vagy megállítani az órát. A teendő összes idejét és a mai összesítőt
+# módosítja; a napi idősávba nem kerül új szakasz (ott csak a valóban mért idő van).
+function AdjustTime($id, $delta) {
+  $it = FindItem $id; if (-not $it -or (IsAct $it) -or $it.state -eq 'done') { return }
+  $cur = [int64](Elapsed $it)
+  $target = [int64][Math]::Max([int64]0, $cur + [int64]$delta)
+  $real = $target - $cur
+  if ($real -eq 0) { return }
+  $shift = [int64]0
+  if ($it.state -eq 'doing' -and $it.startedAt) {
+    # fut az óra: előbb az eddigi időből vonunk le, ha az kevés, a mostani futásból
+    $run = (NowMs) - [int64]$it.startedAt
+    $sp = $target - $run
+    if ($sp -lt 0) { $shift = -$sp; $it.startedAt = [int64]$it.startedAt + $shift; $sp = 0 }
+    $it.spent = [int64]$sp
+  } else { $it.spent = [int64]$target }
+  if ($it.kind -ne 'brk') {
+    if ($script:set.today -ne (TodayKey)) { $script:set.today = TodayKey; $script:set.todayMs = 0 }
+    $script:set.todayMs = [int64][Math]::Max([int64]0, [int64]$script:set.todayMs + $real + $shift)
+    SaveSet
+  }
+  Commit
+  $sign = $(if ($real -gt 0) { '+' } else { '−' })
+  ShowNote ($sign + (FmtDur ([Math]::Abs($real))) + '  ·  ' + $it.text + ': ' + (FmtDur (Elapsed $it)))
+}
+function AskTime($id) {
+  $it = FindItem $id; if (-not $it) { return }
+  $nl = [Environment]::NewLine
+  $q = 'Idő módosítása: ' + $it.text + $nl + 'Eddig: ' + (FmtDur (Elapsed $it)) + $nl + $nl +
+       '+30  = hozzáad 30 percet' + $nl + '-15  = levon 15 percet' + $nl + '+1:30  = hozzáad 1 óra 30 percet' + $nl +
+       '2:00  (előjel nélkül) = legyen összesen ennyi'
+  $a = AskText $q
+  if (-not $a) { return }
+  $a = $a.ToLower().Replace(' ', '').Replace('−', '-').Replace('–', '-')
+  $m = [regex]::Match($a, '^([+-])?(\d{1,4})(?::(\d{1,2}))?(p|perc|ó|o|óra|ora)?$')
+  if (-not $m.Success) { Ask 'Ezt nem értem. Példák: +30, -15, +1:30, 2:00'; return }
+  $min = [int64]$m.Groups[2].Value
+  if ($m.Groups[3].Success) { $min = $min * 60 + [int64]$m.Groups[3].Value }
+  elseif ($m.Groups[4].Value -match '^(ó|o)') { $min = $min * 60 }
+  $ms = $min * 60000
+  $delta = $(if ($m.Groups[1].Value -eq '+') { $ms } elseif ($m.Groups[1].Value -eq '-') { -$ms } else { $ms - [int64](Elapsed $it) })
+  AdjustTime $id $delta
+}
+# Jobb klikk egy teendőn (a listában vagy a narancs kártyán): egy közös menü, nem soronként új
+$script:timeMenuId = $null
+$script:timeMenu = New-Object Windows.Controls.ContextMenu
+foreach ($q in @(@('+5 perc', 5), @('+15 perc', 15), @('+30 perc', 30), @('+1 óra', 60), @('−5 perc', -5), @('−15 perc', -15), @('−30 perc', -30))) {
+  $tmi = New-Object Windows.Controls.MenuItem; $tmi.Header = $q[0]; $tmi.Tag = [int64]$q[1] * 60000
+  $tmi.add_Click({ param($s, $e) if ($script:timeMenuId) { AdjustTime $script:timeMenuId $s.Tag } })
+  [void]$script:timeMenu.Items.Add($tmi)
+}
+[void]$script:timeMenu.Items.Insert(4, (New-Object Windows.Controls.Separator))
+[void]$script:timeMenu.Items.Add((New-Object Windows.Controls.Separator))
+$tmi = New-Object Windows.Controls.MenuItem; $tmi.Header = 'Idő beírása…'
+$tmi.add_Click({ if ($script:timeMenuId) { AskTime $script:timeMenuId } })
+[void]$script:timeMenu.Items.Add($tmi)
+$script:timeMenu.add_Opened({ $script:modal = $true }); $script:timeMenu.add_Closed({ $script:modal = $false })
+function UseTimeMenu($el) {
+  $el.ContextMenu = $script:timeMenu
+  $el.add_ContextMenuOpening({ param($s, $e) $script:timeMenuId = $s.Tag })
+}
+# A sor elúszik, aztán a futók közé kerül
+function PlayFromRow($pb) { $row = $pb.Parent.Parent; RowOut $row $pb.Tag { param($id) OnPlay $id } }
+function OnStar($id) {
+  $it = FindItem $id
+  if ($it) { $it.star = -not $it.star; if ($it.star) { $script:spin = $id; $it.order = OrderEdge $false }; Commit }
+}
+$script:undo = @(); $script:undoGen = 0
+function ShowUndo($text) {
+  $U.UndoText.Text = $text; $U.Undo.Visibility = 'Visible'; $U.UndoBtn.Visibility = 'Visible'
+  Anim $U.Undo $OP 0 1 220
+  $script:undoGen++
+  Later 6000 $script:undoGen { param($g) if ($g -eq $script:undoGen) { $U.Undo.Visibility = 'Collapsed' } }
+}
+function OnDelete($row) {
+  RowOut $row $row.Tag {
+    param($id)
+    $it = FindItem $id
+    if ($it) {
+      if ($it.state -eq 'doing') { StopRun $it; $it.state = 'open' }
+      $script:undo = @($it); RemoveItem $id; Commit; ShowUndo ('Törölve: „' + $it.text + '”')
+    }
+  }
+}
+function ClearDone {
+  $d = @($script:items | Where-Object { $_.state -eq 'done' })
+  if (-not $d.Count) { return }
+  $script:undo = $d
+  foreach ($x in $d) { RemoveItem $x.id }
+  Commit; ShowUndo "$($d.Count) kész tétel törölve"
+}
+# Rövid értesítés ugyanazon a helyen, visszavonás gomb nélkül
+function ShowNote($text) {
+  $U.UndoText.Text = $text; $U.UndoText.ToolTip = $text; $U.Undo.Visibility = 'Visible'; $U.UndoBtn.Visibility = 'Collapsed'
+  Anim $U.Undo $OP 0 1 220
+  $script:undoGen++
+  Later 9000 $script:undoGen { param($g) if ($g -eq $script:undoGen) { $U.Undo.Visibility = 'Collapsed' } }
+}
+$U.UndoBtn.add_MouseLeftButtonUp({
+  foreach ($x in $script:undo) { if (-not (FindItem $x.id)) { [void]$script:items.Add($x); $script:fresh += $x.id } }
+  $script:undo = @(); $script:undoGen++; $U.Undo.Visibility = 'Collapsed'
+  Commit
+})
+$script:editing = $null
+function StartEdit($tb) {
+  $it = FindItem $tb.Tag; if (-not $it) { return }
+  $parent = $tb.Parent
+  $box = New-Object Windows.Controls.TextBox
+  $box.Text = $it.text; $box.TextWrapping = 'Wrap'; $box.Tag = $it.id; $box.MaxLength = 300; $box.FontSize = 13.5
+  $box.Background = Brush $C.bg; $box.Foreground = Brush $C.fg; $box.CaretBrush = Brush $C.fg
+  $box.BorderBrush = Brush $C.accent; $box.Padding = '2,1'
+  $idx = $parent.Children.IndexOf($tb); $parent.Children.RemoveAt($idx); $parent.Children.Insert($idx, $box)
+  $script:editing = $box
+  $box.add_KeyDown({ param($s, $e)
+    if ($e.Key -eq 'Return') { $e.Handled = $true; EndEdit $s $true }
+    elseif ($e.Key -eq 'Escape') { $e.Handled = $true; EndEdit $s $false } })
+  $box.add_LostKeyboardFocus({ param($s, $e) EndEdit $s $true })
+  Later 30 $box { param($b) [void]$b.Focus(); $b.SelectAll() }
+}
+function EndEdit($box, $keep) {
+  if ($script:editing -ne $box) { return }
+  $script:editing = $null
+  $it = FindItem $box.Tag
+  $v = ($box.Text -replace '\s+', ' ').Trim()
+  if ($keep -and $it -and $v -and $v -ne $it.text) { $it.text = $v; Commit } else { Render }
+}
+
+# ---------- Átrendezés húzással ----------
+$script:drag = $null
+function DragStart($grip, $e) {
+  $row = $grip.Tag
+  $kids = @($U.List.Children)
+  $idx = [array]::IndexOf($kids, $row)
+  if ($idx -lt 0) { return }
+  $mids = @()
+  foreach ($k in $kids) {
+    $k.RenderTransform.BeginAnimation($TY, $null); $k.RenderTransform.Y = 0
+    $mids += $k.TranslatePoint([Windows.Point]::new(0, 0), $U.List).Y + $k.ActualHeight / 2
+  }
+  $script:drag = @{ row = $row; grip = $grip; idx = $idx; target = $idx; kids = $kids; mids = $mids
+                    y0 = $e.GetPosition($U.List).Y; h = $row.ActualHeight + 2; active = $false; shifts = @{} }
+  [void]$grip.CaptureMouse()
+}
+function ReDrag($e) {
+  $d = $script:drag
+  if (-not $d) { return }
+  $dy = $e.GetPosition($U.List).Y - $d.y0
+  if (-not $d.active) {
+    if ([Math]::Abs($dy) -lt 4) { return }
+    $d.active = $true
+    [Windows.Controls.Panel]::SetZIndex($d.row, 10)
+    $d.row.Background = Brush $C.bg; $d.row.Opacity = 0.97
+    $fx = New-Object Windows.Media.Effects.DropShadowEffect; $fx.BlurRadius = 16; $fx.ShadowDepth = 3; $fx.Opacity = 0.3
+    $d.row.Effect = $fx
+  }
+  $d.row.RenderTransform.Y = $dy
+  $c = $d.mids[$d.idx] + $dy
+  $t = 0
+  for ($i = 0; $i -lt $d.kids.Count; $i++) { if ($i -ne $d.idx -and $d.mids[$i] -lt $c) { $t++ } }
+  $d.target = $t
+  for ($i = 0; $i -lt $d.kids.Count; $i++) {
+    if ($i -eq $d.idx) { continue }
+    $sh = 0
+    if ($d.idx -lt $t -and $i -gt $d.idx -and $i -le $t) { $sh = -$d.h }
+    elseif ($d.idx -gt $t -and $i -ge $t -and $i -lt $d.idx) { $sh = $d.h }
+    if ($d.shifts[$i] -ne $sh) { $d.shifts[$i] = $sh; Anim $d.kids[$i].RenderTransform $TY $null $sh 160 }
+  }
+  $sy = $e.GetPosition($U.Scroll).Y
+  if ($sy -lt 24) { $U.Scroll.ScrollToVerticalOffset($U.Scroll.VerticalOffset - 8) }
+  elseif ($sy -gt $U.Scroll.ActualHeight - 24) { $U.Scroll.ScrollToVerticalOffset($U.Scroll.VerticalOffset + 8) }
+}
+function DragEnd {
+  $d = $script:drag
+  if (-not $d) { return }
+  $script:drag = $null
+  try { $d.grip.ReleaseMouseCapture() } catch {}
+  if (-not $d.active) { return }
+  if ($d.target -eq $d.idx) { Render; return }
+  $ids = @($d.kids | ForEach-Object { $_.Tag })
+  $moved = $ids[$d.idx]
+  $rest = @($ids | Where-Object { $_ -ne $moved })
+  $new = @()
+  for ($i = 0; $i -lt $rest.Count; $i++) { if ($i -eq $d.target) { $new += $moved }; $new += $rest[$i] }
+  if ($d.target -ge $rest.Count) { $new += $moved }
+  $o = 0
+  foreach ($id in $new) { $x = FindItem $id; if ($x) { $x.order = [double]$o }; $o++ }
+  Commit
+}
+
+# ---------- Lenyitás, áthelyezés ----------
+$script:open = $false; $script:alignRight = $false; $script:openUp = $false
+function TabRect {
+  $p = $U.Tab.TranslatePoint([Windows.Point]::new(0, 0), $win)
+  @{ x = $win.Left + $p.X; y = $win.Top + $p.Y; w = $U.Tab.ActualWidth; h = $U.Tab.ActualHeight }
+}
+function SetAnchors {
+  $script:ax = $(if ($script:alignRight) { $win.Left + $win.ActualWidth } else { $win.Left })
+  $script:ay = $(if ($script:openUp) { $win.Top + $win.ActualHeight } else { $win.Top })
+}
+function Place {
+  $win.Left = $(if ($script:alignRight) { $script:ax - $win.ActualWidth } else { $script:ax })
+  $win.Top  = $(if ($script:openUp) { $script:ay - $win.ActualHeight } else { $script:ay })
+}
+function SavePos {
+  $r = TabRect
+  $script:set.x = [int]$r.x; $script:set.y = [int]$r.y
+  SaveSet
+}
+function Expand($quiet = $false) {
+  if ($script:open) { return }
+  $script:open = $true
+  $r = TabRect; $wa = [Windows.SystemParameters]::WorkArea
+  $script:openUp = ($r.y + $r.h / 2) -gt ($wa.Top + $wa.Height * 0.55)
+  $script:alignRight = ($r.x + $r.w / 2) -gt ($wa.Left + $wa.Width / 2)
+  $ha = $(if ($script:alignRight) { 'Right' } else { 'Left' })
+  $U.Tab.HorizontalAlignment = $ha; $U.Panel.HorizontalAlignment = $ha
+  [Windows.Controls.Grid]::SetRow($U.Tab, [int]$script:openUp)
+  [Windows.Controls.Grid]::SetRow($U.Panel, 1 - [int]$script:openUp)
+  $U.Panel.Margin = $(if ($script:openUp) { '0,0,0,8' } else { '0,8,0,0' })
+  $U.Panel.RenderTransformOrigin = [Windows.Point]::new([double][int]$script:alignRight, [double][int]$script:openUp)
+  $U.DateText.Text = (Get-Date).ToString('MMMM d., dddd', $hu)
+  SetAnchors
+  $script:stagger = 0; Render; $script:stagger = -1
+  $U.Panel.Visibility = 'Visible'
+  $sc = $U.Panel.RenderTransform
+  Anim $sc $SX 0.94 1 460; Anim $sc $SY 0.82 1 480; Anim $U.Panel $OP 0 1 280
+  $bl = New-Object Windows.Media.Effects.BlurEffect; $bl.Radius = 14; $U.Body.Effect = $bl
+  Anim $bl ([Windows.Media.Effects.BlurEffect]::RadiusProperty) 14 0 420
+  Later 460 $null { $U.Body.Effect = $null }
+  Pop $U.Focus.RenderTransform 0.94 600
+  Anim $U.Chevron.RenderTransform $ANG $null 180 520 $backOut
+  if (-not $quiet) {
+    [void]$win.Activate()
+    Later 60 $null { [void]$U.Input.Focus() }
+  }
+}
+function Collapse {
+  if (-not $script:open) { return }
+  $script:open = $false
+  if ($script:editing) { EndEdit $script:editing $true }
+  $sc = $U.Panel.RenderTransform
+  Anim $sc $SX $null 0.96 220 $easeIn; Anim $sc $SY $null 0.86 220 $easeIn; Anim $U.Panel $OP $null 0 200 $easeIn
+  Anim $U.Chevron.RenderTransform $ANG $null 0 420 $backOut
+  Later 225 $null { if (-not $script:open) { $U.Panel.Visibility = 'Collapsed'; Later 120 $null { SavePos } } }
+}
+function DragWin {
+  $l = $win.Left; $t = $win.Top
+  try { $win.DragMove() } catch {}
+  $moved = ([Math]::Abs($win.Left - $l) + [Math]::Abs($win.Top - $t)) -gt 3
+  if ($moved) { SetAnchors; SavePos }
+  $moved
+}
+
+$win.add_SizeChanged({ Place })
+$U.TabStop.add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true })
+$U.TabStop.add_MouseLeftButtonUp({ param($s, $e)
+  $e.Handled = $true
+  foreach ($r in @(RunningAll)) { StopRun $r; $r.state = 'open'; $script:fresh += $r.id }
+  Commit })
+$U.TabStop.add_MouseEnter({ Anim $U.TabStop.RenderTransform $SX $null 1.18 220; Anim $U.TabStop.RenderTransform $SY $null 1.18 220 })
+$U.TabStop.add_MouseLeave({ Anim $U.TabStop.RenderTransform $SX $null 1 280; Anim $U.TabStop.RenderTransform $SY $null 1 280 })
+$U.Tab.add_MouseEnter({ Anim $U.Tab.RenderTransform $SX $null 1.05 300; Anim $U.Tab.RenderTransform $SY $null 1.05 300 })
+$U.Tab.add_MouseLeave({ Anim $U.Tab.RenderTransform $SX $null 1 360; Anim $U.Tab.RenderTransform $SY $null 1 360 })
+foreach ($b in $U.PinBtn, $U.MenuBtn, $U.AddBtn, $U.UndoBtn, $U.AwayGo, $U.AwayCount, $U.AwayKeep) { Hoverable $b }
+$U.Tab.add_MouseLeftButtonDown({ param($s, $e)
+  $e.Handled = $true
+  if (-not (DragWin)) { if ($script:open) { Collapse } else { Expand } } })
+$U.Head.add_MouseLeftButtonDown({ param($s, $e) [void](DragWin) })
+$U.DoneHead.add_MouseLeftButtonUp({
+  $script:set.showDone = -not $script:set.showDone; SaveSet; Render
+  if ($script:set.showDone) { Anim $U.DoneList $OP 0 1 250 } })
+$U.AddBtn.add_MouseLeftButtonUp({ AddItem; [void]$U.Input.Focus() })
+$U.Input.add_KeyDown({ param($s, $e) if ($e.Key -eq 'Return') { $e.Handled = $true; AddItem } })
+$U.Input.add_TextChanged({ $U.Ph.Visibility = $(if ($U.Input.Text) { 'Collapsed' } else { 'Visible' }) })
+$U.Input.add_GotKeyboardFocus({ $U.InputBox.BorderBrush = Brush $C.accent })
+$U.Input.add_LostKeyboardFocus({ $U.InputBox.BorderBrush = Brush $C.line })
+$win.add_KeyDown({ param($s, $e) if ($e.Key -eq 'Escape') { Collapse } })
+
+$script:modal = $false
+function PaintPin {
+  $U.PinIcon.Stroke = Brush $(if ($script:set.pinned) { $C.accent } else { $C.muted })
+  if ($script:set.pinned) { $U.PinBtn.Background = Brush $C.accentSoft } else { $U.PinBtn.ClearValue([Windows.Controls.Border]::BackgroundProperty) }
+}
+$U.PinBtn.add_MouseLeftButtonUp({ $script:set.pinned = -not $script:set.pinned; SaveSet; PaintPin })
+$win.add_Deactivated({
+  if ($script:set.pinned -or $script:modal) { return }
+  Later 150 $null { if (-not $win.IsActive -and -not $script:menu.IsOpen -and -not $script:modal) { Collapse } } })
+
+# ---------- Munkanapló: a kipipált teendő bekerül a BREMAT Munkanaplóba ----------
+# Kipipáláskor egy „Kész: …” bejegyzés megy a mai napra; ha visszaveszed a pipát, törlődik.
+# A küldés a háttérben történik (a fül nem akad meg). Ha nincs net, sorban vár
+# (%APPDATA%\Teendoim\naplo.json), és percenként újrapróbálja. A belépési kód a
+# beallitas.json-ban titkosítva van (Windows-felhasználóhoz kötve).
+$naploUrl  = 'https://bremat-stuff.netlify.app/api/naplo'
+$naploPage = 'https://bremat-stuff.netlify.app/naplo/'
+$naploFile = Join-Path $dir 'naplo.json'
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch {}
+try { [Net.WebRequest]::DefaultWebProxy.Credentials = [Net.CredentialCache]::DefaultNetworkCredentials } catch {}
+$script:nHttp = $null
+try {
+  Add-Type -AssemblyName System.Net.Http
+  $script:nHttp = New-Object System.Net.Http.HttpClient
+  $script:nHttp.Timeout = [TimeSpan]::FromSeconds(30)
+} catch {}
+
+$script:nQueue = New-Object System.Collections.ArrayList   # várakozó műveletek: create / delete
+$script:nMap = @{}                                          # teendő id -> napló bejegyzés id
+if (Test-Path $naploFile) {
+  try {
+    $nj = ConvertFrom-Json ([IO.File]::ReadAllText($naploFile, $utf8))
+    foreach ($q in @($nj.queue)) { if ($q -and $q.op) { [void]$script:nQueue.Add([pscustomobject]@{ op = [string]$q.op; item = [string]$q.item; date = [string]$q.date; text = [string]$q.text }) } }
+    if ($nj.map) { foreach ($p in $nj.map.PSObject.Properties) { $script:nMap[$p.Name] = [string]$p.Value } }
+  } catch {}
+}
+function NaploSave {
+  try {
+    $json = ConvertTo-Json -InputObject @{ queue = @($script:nQueue); map = $script:nMap } -Depth 4
+    [IO.File]::WriteAllText("$naploFile.tmp", $json, $utf8)
+    Move-Item "$naploFile.tmp" $naploFile -Force
+  } catch {}
+}
+function NaploLog($msg) { try { [IO.File]::AppendAllText((Join-Path $dir 'hiba.txt'), "$(Get-Date -Format s) Munkanapló: $msg`r`n", $utf8) } catch {} }
+
+$script:nCode = $null
+function NaploCode {
+  if ($null -ne $script:nCode) { return $script:nCode }
+  $script:nCode = ''
+  if ($script:set.naploKod) {
+    try {
+      $ss = ConvertTo-SecureString ([string]$script:set.naploKod)
+      $b = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
+      try { $script:nCode = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($b) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b) }
+    } catch { $script:nCode = '' }
+  }
+  $script:nCode
+}
+
+$script:nReq = $null          # a most futó kérés: @{ task; op }
+$script:nNext = [int64]0      # ekkortól szabad újra próbálni
+$script:nStatus = ''          # utolsó állapot a menübe
+
+function NaploAdd($it, $force = $false) {
+  if (-not $script:set.naplo -and -not $force) { return }
+  # Utólagos beküldésnél a kipipálás napjára kerül, egyébként a mai napra
+  $date = $(if ($force -and $it.doneAt) { [DateTimeOffset]::FromUnixTimeMilliseconds([int64]$it.doneAt).LocalDateTime.ToString('yyyy-MM-dd') } else { TodayKey })
+  $t = "Kész: $($it.text)"
+  if ([int64]$it.spent -ge 60000) { $t += " (összesen $(FmtDur ([int64]$it.spent)))" }
+  if ($it.notes -and $it.notes.Trim()) { $t += "`n" + $it.notes.Trim() }
+  if ($t.Length -gt 3900) { $t = $t.Substring(0, 3900) + '…' }
+  [void]$script:nQueue.Add([pscustomobject]@{ op = 'create'; item = [string]$it.id; date = $date; text = $t })
+  $script:nNext = 0
+  NaploSave
+}
+function NaploUndo($it) {
+  $id = [string]$it.id
+  # Ha még el sem ment, elég kivenni a sorból
+  for ($i = $script:nQueue.Count - 1; $i -ge 0; $i--) {
+    $q = $script:nQueue[$i]
+    if ($q.op -eq 'create' -and $q.item -eq $id -and -not ($script:nReq -and $script:nReq.op -eq $q)) { $script:nQueue.RemoveAt($i); NaploSave; return }
+  }
+  $inFlight = $script:nReq -and $script:nReq.op.op -eq 'create' -and $script:nReq.op.item -eq $id
+  if ($script:nMap.ContainsKey($id) -or $inFlight) {
+    [void]$script:nQueue.Add([pscustomobject]@{ op = 'delete'; item = $id; date = ''; text = '' })
+    $script:nNext = 0
+    NaploSave
+  }
+}
+
+# A Teendőim állapota a Központ szigetéhez: hátralévő, fontos, mi fut most
+$script:segNext = [int64]0; $script:stNext = [int64]0; $script:stSent = ''
+function StatusObj {
+  $t = @(Todos)
+  $doing = @()
+  foreach ($r in @(RunningAll | Sort-Object @{ Expression = { $_.startedAt } })) {
+    if ($r.kind -eq 'brk') { continue }
+    $doing += @{ text = [string]$r.text; spent_ms = [int64]$r.spent; started_at = $(if ($r.startedAt) { [int64]$r.startedAt } else { $null }) }
+  }
+  @{ open = @($t | Where-Object { $_.state -ne 'done' }).Count; starred = @($t | Where-Object { $_.star -and $_.state -ne 'done' }).Count; doing = $doing }
+}
+function StatusSig { ConvertTo-Json -InputObject (StatusObj) -Depth 4 -Compress }
+
+# Tick-ből hívva: egyszerre egy kérés, sorban
+function NaploPump {
+  if ($script:nReq) {
+    if (-not $script:nReq.task.IsCompleted) { return }
+    $r = $script:nReq; $script:nReq = $null
+    NaploDone $r
+  }
+  if (-not $script:nHttp -or (NowMs) -lt $script:nNext) { return }
+  $now = NowMs
+  $timeDue = $script:set.naplo -and $script:segDirty.Count -and $now -ge $script:segNext
+  $stDue = $false
+  if ($script:set.naplo -and $now -ge $script:stNext) {
+    # legfeljebb 3 mp-enként néz rá, és csak akkor küld, ha változott
+    if ((StatusSig) -ne $script:stSent) { $stDue = $true } else { $script:stNext = $now + 3000 }
+  }
+  if (-not $script:nQueue.Count -and -not $timeDue -and -not $stDue) { return }
+  $code = NaploCode
+  if (-not $code) { $script:nStatus = 'Nincs megadva a belépési kód.'; return }
+  $name = $(if ($script:set.naploNev) { [string]$script:set.naploNev } else { [string]$env:USERNAME })
+  if (-not $script:nQueue.Count) {
+    if ($timeDue) {
+      # A legrégebbi elküldetlen nap, egészben (a szerver felülírja)
+      $d = @($script:segDirty.Keys | Sort-Object)[0]
+      $segs = @(); if ($script:seg[$d]) { foreach ($x in $script:seg[$d]) { $segs += @{ name = $x.name; kind = $x.kind; start = [int64]$x.start; end = $x.end } } }
+      $body = @{ action = 'time_day_set'; code = $code; name = $name; day = @{ date = $d; segments = $segs } }
+      $op = [pscustomobject]@{ op = 'time'; date = $d; gen = [int]$script:segDirty[$d] }
+      $script:segNext = $now + 5000
+    } else {
+      $sig = StatusSig
+      $body = @{ action = 'todo_status_set'; code = $code; name = $name; status = (StatusObj) }
+      $op = [pscustomobject]@{ op = 'status'; sig = $sig }
+      $script:stNext = $now + 3000
+    }
+    try {
+      $content = New-Object System.Net.Http.StringContent((ConvertTo-Json -InputObject $body -Depth 6 -Compress), [Text.Encoding]::UTF8, 'application/json')
+      $script:nReq = @{ task = $script:nHttp.PostAsync($naploUrl, $content); op = $op }
+    } catch { $script:nNext = (NowMs) + 60000; $script:nStatus = "Nem sikerült elküldeni: $($_.Exception.Message)" }
+    return
+  }
+  $op = $script:nQueue[0]
+  if ($op.op -eq 'create') {
+    $body = @{ action = 'create'; code = $code; name = $name; entry = @{ date = $op.date; text = $op.text } }
+  } else {
+    if (-not $script:nMap.ContainsKey($op.item)) { $script:nQueue.RemoveAt(0); NaploSave; return }
+    $body = @{ action = 'delete'; code = $code; name = $name; id = $script:nMap[$op.item] }
+  }
+  try {
+    $content = New-Object System.Net.Http.StringContent((ConvertTo-Json -InputObject $body -Depth 4 -Compress), [Text.Encoding]::UTF8, 'application/json')
+    $script:nReq = @{ task = $script:nHttp.PostAsync($naploUrl, $content); op = $op }
+  } catch { $script:nNext = (NowMs) + 60000; $script:nStatus = "Nem sikerült elküldeni: $($_.Exception.Message)" }
+}
+function NaploDone($r) {
+  $t = $r.task; $op = $r.op
+  if ($t.IsFaulted -or $t.IsCanceled) {
+    $script:nNext = (NowMs) + 60000; $script:nStatus = 'Nincs kapcsolat a naplóval – percenként újrapróbálom.'; return
+  }
+  $res = $t.Result
+  $status = [int]$res.StatusCode
+  $data = $null
+  try { $data = ConvertFrom-Json ($res.Content.ReadAsStringAsync().Result) } catch {}
+  $err = $(if ($data -and $data.error) { [string]$data.error } else { '' })
+  if ($op.op -eq 'time' -or $op.op -eq 'status') {
+    if ($status -eq 200 -or ($status -ge 400 -and $status -lt 500 -and $status -notin 401, 408, 429 -and $err)) {
+      if ($status -ne 200) { NaploLog "$($op.op) $($op.date) – elutasítva: $err" }
+      if ($op.op -eq 'time') { if ([int]$script:segDirty[$op.date] -eq [int]$op.gen) { $script:segDirty.Remove($op.date) }; SegSave }
+      else { $script:stSent = $op.sig }
+      if ($status -eq 200 -and -not $script:nQueue.Count) { $script:nStatus = 'Minden elküldve.' }
+    } elseif ($status -eq 401 -and $err) {
+      $script:set.naploKod = ''; $script:nCode = $null; SaveSet
+      $script:nStatus = 'Hibás a belépési kód – add meg újra (menü → Munkanapló).'
+    } else {
+      $script:nNext = (NowMs) + 60000
+      $script:nStatus = "A napló most nem érhető el ($status) – percenként újrapróbálom."
+    }
+    return
+  }
+  if ($status -eq 200) {
+    if ($op.op -eq 'create' -and $data.data.id) { $script:nMap[$op.item] = [string]$data.data.id }
+    if ($op.op -eq 'delete') { $script:nMap.Remove($op.item) }
+    $script:nQueue.Remove($op); NaploSave
+    $script:nStatus = 'Minden elküldve.'
+  } elseif ($status -eq 401 -and $err) {
+    # Rossz kód: amíg újat nem adsz meg, nem próbálkozik (a sor megmarad)
+    $script:set.naploKod = ''; $script:nCode = $null; SaveSet
+    $script:nStatus = 'Hibás a belépési kód – add meg újra (menü → Munkanapló).'
+  } elseif ($status -eq 404 -and $op.op -eq 'delete') {
+    $script:nMap.Remove($op.item); $script:nQueue.Remove($op); NaploSave
+    $script:nStatus = 'Minden elküldve.'
+  } elseif ($status -ge 400 -and $status -lt 500 -and $status -ne 401 -and $status -ne 408 -and $status -ne 429 -and $err) {
+    # A szerver elutasította (pl. hibás adat): kihagyjuk, hogy ne akassza meg a többit
+    NaploLog "$($op.op) – $($op.date) – elutasítva: $err"
+    $script:nQueue.Remove($op); NaploSave
+    $script:nStatus = "Egy bejegyzést a napló nem fogadott el: $err"
+  } else {
+    $script:nNext = (NowMs) + 60000
+    $script:nStatus = $(if ($status -eq 401) { 'A napló oldala nem nyilvános (Netlify: Make public) – percenként újrapróbálom.' } else { "A napló most nem érhető el ($status) – percenként újrapróbálom." })
+  }
+}
+
+function NaploSetup {
+  Add-Type -AssemblyName Microsoft.VisualBasic
+  $script:modal = $true
+  try {
+    $name0 = $(if ($script:set.naploNev) { [string]$script:set.naploNev } else { [string]$env:USERNAME })
+    $name = [Microsoft.VisualBasic.Interaction]::InputBox('Milyen névvel kerüljenek a bejegyzések a Munkanaplóba?', 'Teendőim – Munkanapló', $name0)
+    if (-not $name.Trim()) { return $false }
+    $code = [Microsoft.VisualBasic.Interaction]::InputBox("A Munkanapló belépési kódja (ugyanaz, mint a tableten):`n`nTitkosítva mentem ezen a gépen.", 'Teendőim – Munkanapló', '')
+    if (-not $code.Trim()) { return $false }
+    $script:set.naploNev = $name.Trim()
+    $script:set.naploKod = ConvertFrom-SecureString (ConvertTo-SecureString $code.Trim() -AsPlainText -Force)
+    $script:nCode = $null
+    $script:set.naplo = $true
+    SaveSet
+    # Próba: jó-e a kód (ha nincs net, nem baj – később küldi)
+    $msg = 'Bekapcsolva. A kipipált teendők és a napi idősáv (mettől meddig mi ment) mostantól bekerülnek a Munkanaplóba.'
+    try {
+      $resp = Invoke-WebRequest -Uri $naploUrl -Method Post -UseBasicParsing -TimeoutSec 15 -ContentType 'application/json; charset=utf-8' `
+        -Body ([Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{ action = 'ping'; code = $code.Trim() } -Compress)))
+      $script:nStatus = 'Kapcsolat rendben.'
+    } catch {
+      $e = $_; $st = 0; $txt = "$($e.ErrorDetails.Message)"
+      try { $st = [int]$e.Exception.Response.StatusCode } catch {}
+      if (-not $txt) { try { $txt = (New-Object IO.StreamReader($e.Exception.Response.GetResponseStream())).ReadToEnd() } catch {} }
+      if ($st -eq 401 -and $txt -match 'Hibás') {
+        $script:set.naploKod = ''; $script:nCode = $null; SaveSet
+        $msg = 'Hibás a belépési kód. Próbáld újra: menü → Munkanapló → Név és belépési kód.'
+      } elseif ($st -eq 401) {
+        $msg = "A kódot elmentettem, de a napló oldala most nem nyilvános (Netlify → Make public).`nAddig a kipipált teendők itt várnak, és magától elküldi őket, amint lehet."
+      } else {
+        $msg = "A kódot elmentettem, de most nem értem el a naplót.`nA kipipált teendők itt várnak, és magától elküldi őket, amint van kapcsolat."
+      }
+    }
+    $script:nNext = 0
+    [System.Windows.MessageBox]::Show($win, $msg, 'Teendőim – Munkanapló') | Out-Null
+    return $true
+  } finally { $script:modal = $false }
+}
+# A korábban (a naplózás előtt) kipipált teendők egyszeri beküldése
+function NaploBackfill {
+  $have = @{}
+  foreach ($q in $script:nQueue) { if ($q.op -eq 'create') { $have[[string]$q.item] = $true } }
+  $todo = @($script:items | Where-Object { $_.state -eq 'done' -and -not $script:nMap.ContainsKey([string]$_.id) -and -not $have.ContainsKey([string]$_.id) } | Sort-Object @{ Expression = { $_.doneAt } })
+  if (-not $todo.Count) { Ask 'Minden kész teendő benne van már a naplóban (vagy épp küldésre vár).'; return }
+  if (-not (NaploCode)) { if (-not (NaploSetup)) { return } }
+  $script:modal = $true
+  try {
+    $ans = [System.Windows.MessageBox]::Show($win, "$($todo.Count) kész teendő még nincs a naplóban.`n`nBeküldjem őket? Mindegyik arra a napra kerül, amikor kipipáltad.", 'Teendőim – Munkanapló', 'YesNo')
+  } finally { $script:modal = $false }
+  if ($ans -ne 'Yes') { return }
+  foreach ($x in $todo) { NaploAdd $x $true }
+  $script:nNext = 0
+  Ask "$($todo.Count) teendő küldésre vár – pár másodperc múlva a naplóban lesznek."
+}
+function NaploToggle {
+  if ($script:set.naplo) { $script:set.naplo = $false; SaveSet; return }
+  if (-not (NaploCode)) { [void](NaploSetup); return }
+  $script:set.naplo = $true; $script:nNext = 0; SaveSet
+}
+
+# ---------- Menü ----------
+$lnkPath = Join-Path ([Environment]::GetFolderPath('Startup')) 'Teendoim.lnk'
+function MakeShortcut {
+  $sh = New-Object -ComObject WScript.Shell
+  $l = $sh.CreateShortcut($lnkPath)
+  $l.TargetPath = Join-Path $PSHOME 'powershell.exe'
+  $l.Arguments = "-NoProfile -STA -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$PSCommandPath`""
+  $l.WorkingDirectory = Split-Path $PSCommandPath
+  $l.WindowStyle = 7; $l.Description = 'Teendőim'
+  $l.Save()
+}
+function ToggleAutostart {
+  $script:set.autostart = -not $script:set.autostart; SaveSet
+  try {
+    if ($script:set.autostart) { MakeShortcut } elseif (Test-Path $lnkPath) { Remove-Item $lnkPath -Force }
+  } catch { Fail "Az automatikus indítást nem sikerült beállítani: $_" }
+}
+function Ask($text) {
+  $script:modal = $true
+  try { [System.Windows.MessageBox]::Show($win, $text, 'Teendőim') | Out-Null } finally { $script:modal = $false }
+}
+function ImportClip {
+  $txt = [Windows.Clipboard]::GetText()
+  try { $parsed = ConvertFrom-Json $txt } catch { $parsed = $null }
+  $n = 0
+  foreach ($d in @($parsed)) {
+    if ($d -and $d.text -and -not ($d.id -and (FindItem $d.id))) {
+      $x = Norm $d; $x.order = OrderEdge $true
+      if ($x.state -eq 'doing') { $x.state = 'open'; $x.startedAt = $null }
+      [void]$script:items.Add($x); $script:fresh += $x.id; $n++
+    }
+  }
+  if ($n) { Commit; Ask "$n teendő átvéve." } else { Ask "A vágólapon nem találtam teendőlistát.`n`nA böngészős listából így másolod ki: nyisd meg a régi oldalt, nyomd meg az F12-t, a Console fülön írd be:`n`ncopy(localStorage.teendok)`n`nnyomj Entert, aztán itt válaszd újra az Importálást." }
+}
+function ResetTime {
+  foreach ($x in $script:items) { if ($x.state -ne 'done' -and -not (IsAct $x)) { $x.spent = [int64]0; if ($x.startedAt) { $x.startedAt = NowMs } } }
+  Commit
+}
+
+# ---------- BREMAT Központ helyi része (Valk fájlok) ----------
+# A BrematKozpont mappa a Teendoim mappa mellett (vagy benne) van. A Teendőim indításakor
+# a háttérben elindítja (ha már fut, nem indul kétszer), a menüből pedig megnyitható.
+$kozpontPs = $null
+if ($PSCommandPath) {
+  $here = Split-Path $PSCommandPath
+  foreach ($kpCand in (Join-Path (Split-Path $here) 'BrematKozpont\Kozpont.ps1'), (Join-Path $here 'BrematKozpont\Kozpont.ps1')) {
+    if (Test-Path -LiteralPath $kpCand) { $kozpontPs = $kpCand; break }
+  }
+}
+function KozpontStart($browser) {
+  if (-not $kozpontPs) {
+    [System.Windows.MessageBox]::Show($win, "Nem találom a BrematKozpont mappát.`n`nCsomagold ki a Teendoim mappa mellé (ugyanabba a mappába, ahol a Teendoim van).", 'Teendőim – BREMAT Központ') | Out-Null
+    return
+  }
+  $args2 = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$kozpontPs`""
+  if (-not $browser) { $args2 += ' -NoBrowser' }
+  try { Start-Process (Join-Path $PSHOME 'powershell.exe') -ArgumentList $args2 -WindowStyle Hidden } catch {}
+}
+
+# ---------- Önfrissítés ----------
+# A Teendőim (és a mellette lévő BrematKozpont) kódja magától frissül a bremat-stuff oldalról:
+# induláskor és 3 óránként megnézi a /frissites/manifest.json-t, és letölti azt, ami változott.
+# Csak programkód jön le (SHA-256 ellenőrző összeggel); a Valk fájlok és az adatok a gépen
+# maradnak, semmi nem megy fel. A lecserélt fájlok a %APPDATA%\Teendoim\frissites\regi\ alá
+# kerülnek; ha az új változat nem indul el, visszaáll a régire, és azt a változatot kihagyja.
+$updBase  = 'https://bremat-stuff.netlify.app/frissites/'
+$updDir   = Join-Path $dir 'frissites'
+$updState = Join-Path $updDir 'allapot.json'
+$kpBase   = 'http://localhost:47801/'
+$script:upd = @{ phase = 'idle'; next = (NowMs) + 20000; task = $null; man = $null; files = @(); msg = ''; force = $false
+                 note = $null; kpCheck = $null; kpEnd = 0; kpTask = $null }
+$script:updRestart = $false
+$script:kpHttp = $null
+try {
+  $kpH = New-Object System.Net.Http.HttpClientHandler; $kpH.UseProxy = $false   # a localhost ne menjen proxyn át
+  $script:kpHttp = New-Object System.Net.Http.HttpClient($kpH); $script:kpHttp.Timeout = [TimeSpan]::FromSeconds(4)
+} catch {}
+function UpdLog($m) { try { [IO.File]::AppendAllText((Join-Path $dir 'hiba.txt'), "$(Get-Date -Format s) Frissítés: $m`r`n", $utf8) } catch {} }
+function UpdRead { try { if (Test-Path -LiteralPath $updState) { return (ConvertFrom-Json ([IO.File]::ReadAllText($updState, $utf8))) } } catch {}; $null }
+function UpdWrite($o) {
+  try { New-Item -ItemType Directory -Force -Path $updDir | Out-Null; [IO.File]::WriteAllText($updState, (ConvertTo-Json -InputObject $o -Depth 5), $utf8) } catch { UpdLog "állapot: $_" }
+}
+function UpdSet($o, $name, $value) { $o | Add-Member -NotePropertyName $name -NotePropertyValue $value -Force }
+function Sha($bytes) {
+  $h = [Security.Cryptography.SHA256]::Create()
+  try { -join ($h.ComputeHash([byte[]]$bytes) | ForEach-Object { $_.ToString('x2') }) } finally { $h.Dispose() }
+}
+# A manifest útvonala → a helyi fájl ($null, ha az a rész nincs ezen a gépen vagy gyanús az út)
+function UpdLocal($p) {
+  if ($p -notmatch '^(Teendoim|BrematKozpont)/[A-Za-z0-9][A-Za-z0-9._/-]*$' -or $p -match '\.\.') { return $null }
+  $root = $(if ($p.StartsWith('Teendoim/')) { $here } elseif ($kozpontPs) { Split-Path $kozpontPs } else { $null })
+  if (-not $root) { return $null }
+  Join-Path $root ($p.Substring($p.IndexOf('/') + 1).Replace('/', '\'))
+}
+function KozpontStop {
+  if (-not $script:kpHttp) { return }
+  try {
+    $rq = New-Object System.Net.Http.HttpRequestMessage([System.Net.Http.HttpMethod]::Post, ($kpBase + 'api/stop'))
+    $rq.Headers.Add('X-Helyi', '1')
+    $rq.Content = New-Object System.Net.Http.StringContent('{}', [Text.Encoding]::UTF8, 'application/json')
+    [void]$script:kpHttp.SendAsync($rq).Result
+  } catch {}
+  Start-Sleep -Milliseconds 1200   # a szerver elengedi a portot
+}
+# Visszaállítás a mentésből (csak a megadott előtagú fájlok, pl. 'BrematKozpont/')
+function UpdRestore($files, $prefix = '') {
+  foreach ($f in @($files)) {
+    if (-not $f -or -not ([string]$f.p).StartsWith($prefix)) { continue }
+    try {
+      if ($f.backup -and (Test-Path -LiteralPath $f.backup)) { Copy-Item -LiteralPath $f.backup -Destination $f.local -Force }
+      elseif (-not $f.backup -and (Test-Path -LiteralPath $f.local)) { Remove-Item -LiteralPath $f.local -Force }
+    } catch { UpdLog "visszaállítás ($($f.p)): $_" }
+  }
+}
+function UpdPump {
+  $u = $script:upd
+  if (-not $script:nHttp -or -not $here) { return }
+  if ($u.note -and $script:open) { ShowNote $u.note; $u.note = $null }
+  # A frissített helyi Központ elindult-e (különben vissza a régire)
+  if ($u.kpCheck -and (NowMs) -ge $u.kpCheck -and $script:kpHttp) {
+    if (-not $u.kpTask) { $u.kpTask = $script:kpHttp.GetAsync($kpBase) }
+    elseif ($u.kpTask.IsCompleted) {
+      $t = $u.kpTask; $u.kpTask = $null
+      $good = $false; try { $good = -not $t.IsFaulted -and -not $t.IsCanceled -and [int]$t.Result.StatusCode -eq 200 } catch {}
+      if ($good) {
+        $u.kpCheck = $null; $st = UpdRead
+        if ($st) { UpdSet $st 'kozpontOk' $true; UpdSet $st 'phase' 'kesz'; UpdWrite $st }
+      } elseif ((NowMs) -ge $u.kpEnd) {
+        $u.kpCheck = $null; UpdLog 'a frissített helyi Központ nem indult el, visszaállok a régire'
+        $st = UpdRead
+        if ($st) { KozpontStop; UpdRestore $st.files 'BrematKozpont/'; UpdSet $st 'bad' $st.version; UpdSet $st 'phase' 'kesz'; UpdWrite $st }
+        KozpontStart $false
+        $u.note = 'A Valk fájlok frissítése nem sikerült, maradt a régi változat.'
+      } else { $u.kpCheck = (NowMs) + 3000 }
+    }
+  }
+  switch ($u.phase) {
+    'idle' {
+      if ((NowMs) -lt $u.next) { return }
+      $u.next = (NowMs) + 3 * 3600000
+      $u.task = $script:nHttp.GetStringAsync($updBase + 'manifest.json?t=' + (NowMs)); $u.phase = 'manifest'
+    }
+    'manifest' {
+      if (-not $u.task.IsCompleted) { return }
+      $t = $u.task; $u.task = $null; $u.phase = 'idle'
+      if ($t.IsFaulted -or $t.IsCanceled) { $u.msg = 'Most nem értem el, később újra megnézem.'; return }
+      try { $m = ConvertFrom-Json $t.Result } catch { $u.msg = 'Hibás frissítés-lista.'; return }
+      if (-not $m.version -or -not $m.files) { $u.msg = 'Hibás frissítés-lista.'; return }
+      $st = UpdRead
+      if ($st -and $st.bad -eq $m.version -and -not $u.force) { $u.msg = 'Az utolsó változat nálad nem indult el, kihagytam.'; return }
+      $u.force = $false
+      $todo = @()
+      foreach ($f in @($m.files)) {
+        $loc = UpdLocal ([string]$f.p)
+        if (-not $loc -or [string]$f.sha256 -notmatch '^[0-9a-f]{64}$' -or [string]$f.u -notmatch '^f/[0-9a-f]{64}$') { continue }
+        $cur = ''; try { if ([IO.File]::Exists($loc)) { $cur = Sha ([IO.File]::ReadAllBytes($loc)) } } catch {}
+        if ($cur -ne [string]$f.sha256) {
+          $todo += [pscustomobject]@{ p = [string]$f.p; sha = [string]$f.sha256; local = $loc; task = $script:nHttp.GetByteArrayAsync($updBase + [string]$f.u); bytes = $null }
+        }
+      }
+      if (-not $todo.Count) { $u.msg = 'Naprakész.'; return }
+      $u.man = $m; $u.files = $todo; $u.phase = 'files'
+    }
+    'files' {
+      foreach ($f in $u.files) { if (-not $f.task.IsCompleted) { return } }
+      $u.phase = 'idle'
+      foreach ($f in $u.files) {
+        if ($f.task.IsFaulted -or $f.task.IsCanceled) { $u.msg = 'A letöltés megszakadt, később újra próbálom.'; $u.next = (NowMs) + 600000; return }
+        $f.bytes = $f.task.Result
+        if ((Sha $f.bytes) -ne $f.sha) { UpdLog "rossz ellenőrző összeg: $($f.p)"; $u.msg = 'A letöltött fájl hibás volt, kihagytam.'; return }
+      }
+      $u.phase = 'ready'
+    }
+    'ready' {
+      # Ne használat közben cserélje: becsukott panel (vagy 1 perce nem nyúltál a géphez), nincs nyitott ablak, küldés
+      $busy = $script:open -and (-not $script:idleOk -or [TeendoimIdle]::IdleMs() -lt 60000)
+      if ($busy -or $script:modal -or $script:drag -or $script:editing -or $script:nReq) { return }
+      UpdApply
+    }
+  }
+}
+function UpdApply {
+  $u = $script:upd; $u.phase = 'idle'
+  $bdir = Join-Path $updDir 'regi'
+  $list = @()
+  try {
+    if (Test-Path -LiteralPath $bdir) { Remove-Item -LiteralPath $bdir -Recurse -Force }
+    foreach ($f in $u.files) {
+      $b = Join-Path $bdir ($f.p.Replace('/', '\'))
+      $had = [IO.File]::Exists($f.local)
+      if ($had) { New-Item -ItemType Directory -Force -Path (Split-Path $b) | Out-Null; Copy-Item -LiteralPath $f.local -Destination $b -Force }
+      $list += [pscustomobject]@{ p = $f.p; local = $f.local; backup = $(if ($had) { $b } else { $null }) }
+    }
+  } catch { UpdLog "a régi változat mentése: $_"; $u.msg = 'Nem tudtam elmenteni a régi változatot, kihagytam.'; return }
+  $self = @($u.files | Where-Object { $_.p.StartsWith('Teendoim/') -and $_.p -like '*.ps1' }).Count -gt 0
+  $kp = @($u.files | Where-Object { $_.p -eq 'BrematKozpont/Kozpont.ps1' }).Count -gt 0
+  $prev = UpdRead
+  UpdWrite ([ordered]@{ version = [string]$u.man.version; at = (Get-Date -Format s); phase = 'proba'; files = $list
+    teendoim = $(if ($self) { 'var' } else { 'ok' }); kozpont = $kp; kozpontOk = $false; bad = $(if ($prev) { $prev.bad } else { $null }) })
+  if ($kp) { KozpontStop }
+  try {
+    foreach ($f in $u.files) {
+      New-Item -ItemType Directory -Force -Path (Split-Path $f.local) | Out-Null
+      [IO.File]::WriteAllBytes("$($f.local).uj", [byte[]]$f.bytes)
+      Move-Item -LiteralPath "$($f.local).uj" -Destination $f.local -Force
+    }
+  } catch {
+    UpdLog "a fájlok cseréje: $_"; UpdRestore $list
+    $st = UpdRead; if ($st) { UpdSet $st 'phase' 'kesz'; UpdWrite $st }
+    if ($kp) { KozpontStart $false }
+    $u.msg = 'A fájlok cseréje nem sikerült, maradt a régi változat.'; return
+  }
+  $u.files = @(); $u.msg = 'Frissítve.'
+  if ($self) { $script:updRestart = $true; $win.Close(); return }   # a folytatás a program végén
+  if ($kp) {
+    KozpontStart $false
+    $u.kpCheck = (NowMs) + 3000; $u.kpEnd = (NowMs) + 60000
+  } else { $st = UpdRead; if ($st) { UpdSet $st 'phase' 'kesz'; UpdWrite $st } }
+  $u.note = 'Frissítve: új változat.'
+}
+# Az új példány indulás után jelzi, hogy rendben elindult (a régi példány erre vár)
+function UpdStartup {
+  $st = UpdRead; if (-not $st) { return }
+  if ($st.phase -eq 'proba') {
+    UpdSet $st 'teendoim' 'ok'
+    if ($st.kozpont -and -not $st.kozpontOk) { $script:upd.kpCheck = (NowMs) + 3000; $script:upd.kpEnd = (NowMs) + 60000 }
+    else { UpdSet $st 'phase' 'kesz' }
+    UpdWrite $st
+    $script:upd.note = 'Frissítve: új változat.'; $script:upd.msg = 'Frissítve.'
+  } elseif ($st.phase -eq 'visszaallitva') {
+    UpdSet $st 'phase' 'kesz'; UpdWrite $st
+    $script:upd.note = 'A frissítés nem sikerült, maradt a régi változat.'; $script:upd.msg = $script:upd.note
+  }
+}
+# A régi példány (az ablak már bezárult): elindítja az újat, és ha az 60 mp alatt nem jelez, visszaáll
+function UpdRelaunch {
+  try { $mutex.Dispose() } catch {}
+  $ps = Join-Path $PSHOME 'powershell.exe'
+  $a = "-NoProfile -STA -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$PSCommandPath`" -Frissult"
+  $p = $null
+  try { $p = Start-Process $ps -ArgumentList $a -WindowStyle Hidden -PassThru } catch { UpdLog "újraindítás: $_" }
+  $end = (Get-Date).AddSeconds(60)
+  while ($p -and (Get-Date) -lt $end) {
+    Start-Sleep -Milliseconds 500
+    $st = UpdRead
+    if ($st -and $st.teendoim -eq 'ok') { return }
+    if ($p.HasExited) { break }
+  }
+  UpdLog 'az új változat nem indult el, visszaállok a régire'
+  try { if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force } } catch {}
+  $st = UpdRead
+  if ($st) {
+    if ($st.kozpont) { KozpontStop }
+    UpdRestore $st.files
+    UpdSet $st 'bad' $st.version; UpdSet $st 'phase' 'visszaallitva'; UpdWrite $st
+  }
+  try { Start-Process $ps -ArgumentList $a -WindowStyle Hidden } catch {}
+}
+
+$script:menu = New-Object Windows.Controls.ContextMenu
+function AddMenu($header, [scriptblock]$click) {
+  $m = New-Object Windows.Controls.MenuItem; $m.Header = $header; $m.add_Click($click)
+  [void]$script:menu.Items.Add($m); $m
+}
+[void](AddMenu 'Indítás a Windows-zal' { ToggleAutostart })
+$singleMenu = AddMenu 'Egyszerre csak egy óra fusson (váltás)' { $script:set.single = -not $script:set.single; SaveSet
+  if ($script:set.single) { $r = @(RunningAll | Sort-Object @{ Expression = { $_.startedAt } } -Descending); for ($i = 1; $i -lt $r.Count; $i++) { StopRun $r[$i]; $r[$i].state = 'open' }; Commit } }
+$singleMenu.IsCheckable = $true
+[void](AddMenu 'Új tevékenység-gomb…' { ActAdd })
+[void](AddMenu 'Kész tételek törlése' { ClearDone })
+[void](AddMenu 'Hátralévők idejének nullázása' { ResetTime })
+[void](AddMenu 'Importálás vágólapról' { ImportClip })
+$naploMenu = New-Object Windows.Controls.MenuItem; $naploMenu.Header = 'Munkanapló'
+$nmOn = New-Object Windows.Controls.MenuItem; $nmOn.Header = 'Beírás a naplóba (kész teendők, napi idősáv)'; $nmOn.IsCheckable = $true
+$nmOn.add_Click({ NaploToggle })
+$nmSetup = New-Object Windows.Controls.MenuItem; $nmSetup.Header = 'Név és belépési kód…'
+$nmSetup.add_Click({ [void](NaploSetup) })
+$nmBack = New-Object Windows.Controls.MenuItem; $nmBack.Header = 'Korábbi kész teendők beküldése…'
+$nmBack.add_Click({ NaploBackfill })
+$nmOpen = New-Object Windows.Controls.MenuItem; $nmOpen.Header = 'Napló megnyitása a böngészőben'
+$nmOpen.add_Click({ try { Start-Process $naploPage } catch {} })
+$nmInfo = New-Object Windows.Controls.MenuItem; $nmInfo.IsEnabled = $false
+foreach ($m in $nmOn, $nmSetup, $nmBack, $nmOpen, (New-Object Windows.Controls.Separator), $nmInfo) { [void]$naploMenu.Items.Add($m) }
+[void]$script:menu.Items.Add($naploMenu)
+$kozMenu = New-Object Windows.Controls.MenuItem; $kozMenu.Header = 'BREMAT Központ'
+$kmWeb = New-Object Windows.Controls.MenuItem; $kmWeb.Header = 'Központ megnyitása'
+$kmWeb.add_Click({ if ($kozpontPs) { KozpontStart $false }; try { Start-Process 'https://bremat-stuff.netlify.app/?helyi=1' } catch {} })
+$kmFiles = New-Object Windows.Controls.MenuItem; $kmFiles.Header = 'Valk fájlok (ezen a gépen)'
+$kmFiles.add_Click({ KozpontStart $true })
+foreach ($m in $kmWeb, $kmFiles) { [void]$kozMenu.Items.Add($m) }
+[void]$script:menu.Items.Add($kozMenu)
+$updMenu = New-Object Windows.Controls.MenuItem; $updMenu.Header = 'Frissítés'
+$umNow = New-Object Windows.Controls.MenuItem; $umNow.Header = 'Frissítés keresése most'
+$umNow.add_Click({ if ($script:upd.phase -eq 'idle') { $script:upd.force = $true; $script:upd.next = 0; $script:upd.msg = 'Keresem…' } })
+$umInfo = New-Object Windows.Controls.MenuItem; $umInfo.IsEnabled = $false
+foreach ($m in $umNow, (New-Object Windows.Controls.Separator), $umInfo) { [void]$updMenu.Items.Add($m) }
+[void]$script:menu.Items.Add($updMenu)
+[void]$script:menu.Items.Add((New-Object Windows.Controls.Separator))
+[void](AddMenu 'Kilépés' { $win.Close() })
+$idleMenu = New-Object Windows.Controls.MenuItem; $idleMenu.Header = 'Automatikus szünet, ha nem használod a gépet'
+foreach ($opt in 0, 2, 5, 10, 15, 30) {
+  $mi = New-Object Windows.Controls.MenuItem
+  $mi.Header = $(if ($opt) { "$opt perc után" } else { 'Kikapcsolva' }); $mi.Tag = $opt; $mi.IsCheckable = $true
+  $mi.add_Click({ param($s, $e) $script:set.idleMin = [int]$s.Tag; SaveSet })
+  [void]$idleMenu.Items.Add($mi)
+}
+if (-not $script:idleOk) { $idleMenu.IsEnabled = $false }
+$script:menu.Items.Insert(1, $idleMenu)
+$script:menu.add_Opened({ param($s, $e)
+  foreach ($m in $s.Items) { if ($m.Header -eq 'Indítás a Windows-zal') { $m.IsCheckable = $true; $m.IsChecked = [bool]$script:set.autostart } }
+  foreach ($m in $idleMenu.Items) { $m.IsChecked = ([int]$m.Tag -eq [int]$script:set.idleMin) }
+  $nmOn.IsChecked = [bool]$script:set.naplo
+  $singleMenu.IsChecked = [bool]$script:set.single
+  $ust = UpdRead
+  $umInfo.Header = $(if ($ust -and $ust.at) { "Utolsó frissítés: $(([datetime]$ust.at).ToString('yyyy.MM.dd. HH:mm'))" } else { 'Még nem frissült magától.' }) + $(if ($script:upd.msg) { " $($script:upd.msg)" } else { '' })
+  $n = $script:nQueue.Count + $(if ($script:set.naplo) { $script:segDirty.Count } else { 0 })
+  $nmInfo.Header = $(if (-not $script:set.naplo -and -not $n) { 'Kikapcsolva' } elseif ($n) { "$n bejegyzés vár küldésre. $script:nStatus" } elseif ($script:nStatus) { $script:nStatus } else { 'Minden elküldve.' }) })
+$U.Tab.ContextMenu = $script:menu
+$U.MenuBtn.add_MouseLeftButtonUp({ param($s, $e)
+  $script:menu.PlacementTarget = $U.MenuBtn; $script:menu.Placement = 'Bottom'; $script:menu.IsOpen = $true })
+
+# ---------- Indítás ----------
+$vsL = [Windows.SystemParameters]::VirtualScreenLeft; $vsT = [Windows.SystemParameters]::VirtualScreenTop
+$vsW = [Windows.SystemParameters]::VirtualScreenWidth; $vsH = [Windows.SystemParameters]::VirtualScreenHeight
+$wa = [Windows.SystemParameters]::WorkArea
+$x = $(if ($null -ne $script:set.x) { [double]$script:set.x } else { $wa.Right - 230 })
+$y = $(if ($null -ne $script:set.y) { [double]$script:set.y } else { $wa.Top + 6 })
+$x = [Math]::Min([Math]::Max($x, $vsL), $vsL + $vsW - 120)
+$y = [Math]::Min([Math]::Max($y, $vsT), $vsT + $vsH - 40)
+$win.Left = $x - 16; $win.Top = $y - 16          # 16 = az árnyék körüli margó
+$script:ax = $win.Left; $script:ay = $win.Top
+# Kilépéskor a futó óra megáll, az idő megmarad
+$win.add_Closing({
+  # frissítés miatti újraindítás: a futó órák nem állnak meg, az új példány folytatja őket
+  if ($script:updRestart) { SaveData; $script:set.lastSeen = NowMs; SaveSet; FlushNow; return }
+  foreach ($r in @(RunningAll)) { StopRun $r; $r.state = 'open' }
+  SaveData; $script:set.lastSeen = NowMs; SaveSet; FlushNow
+})
+# Minden indításkor frissíti a Windows-indítás parancsikonját (ha a mappát áthelyezted, az új helyre mutat)
+if ($script:set.autostart -and $PSCommandPath) { try { MakeShortcut } catch {} }
+
+# Egy kezeletlen hiba ne állítsa le a programot: naplóba kerül, a fül fut tovább
+$win.Dispatcher.add_UnhandledException({ param($s, $e)
+  $e.Handled = $true
+  try { [IO.File]::AppendAllText((Join-Path $dir 'hiba.txt'), "$(Get-Date -Format s) $($e.Exception.Message)`r`n", $utf8) } catch {}
+})
+
+PaintPin
+SaveData
+Render
+if ($kozpontPs) { KozpontStart $false }
+$clock = New-Object Windows.Threading.DispatcherTimer
+$clock.Interval = [TimeSpan]::FromSeconds(1)
+$clock.add_Tick({ Tick })
+$clock.Start()
+Later 3000 $null { try { UpdStartup } catch { UpdLog "$_" } }
+try { [void]$win.ShowDialog() } catch { Fail "$_" }
+FlushNow
+try { $mutex.ReleaseMutex() } catch {}
+if ($script:updRestart) { UpdRelaunch }
