@@ -348,3 +348,17 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Biztonság: HTTPS, csak a bremat-stuff oldalról, csak a manifestben felsorolt utakra
   (`Teendoim/…`, `BrematKozpont/…`, `..` tilos). Aki a main-re pushol, az kódot futtat Alex gépén –
   ezért a main-re továbbra is csak Alex szavára megy bármi.
+
+## Teendőim: idő módosítása, gyorsítás (2026. november 13., Alex kérése)
+- **Idő ± (`AdjustTime`, `AskTime`):** a lenyitott sorban „Idő:” gombok, jobb klikkre közös menü
+  (`$script:timeMenu`, egy példány, a `ContextMenuOpening` adja a teendő id-ját). Az `Elapsed`-et
+  állítja: ha fut az óra és a levonás több, mint az eddigi idő, a `startedAt` tolódik. A `todayMs` is
+  változik (szünetnél nem); a napi idősáv (`ido.json`, napló) nem. Kész teendőn és tevékenység-gombon nincs.
+- **Akadozás okai és javítás:** (1) futó óránál 5 végtelen animáció ment 60 kép/mp-vel egy átlátszó
+  (`AllowsTransparency`) ablakon – a ragyogás `BlurRadius`-a is animált volt, ami minden képkockánál
+  újraszámolt árnyékot jelent. Most: a ragyogás áll, a többi 20–30 kép/mp (`Forever … $fps`),
+  az árnyékok `RenderingBias=Performance`. (2) Minden kattintás 2–3 `ConvertTo-Json` fájlírást
+  csinált a felület szálán. Most: `SaveData` / `SegSave` / `SaveSet` csak megjelöl, a `FlushNow`
+  ~0,3 mp múlva ír (kilépéskor, újraindításkor azonnal). (3) Ecsetek és ikon-alakzatok fagyasztva,
+  gyorsítótárból (`Brush`, `Icon`); animált ecsethez `NewBrush`.
+- PowerShell csapda itt is: függvényen belül se legyen `$c` nevű változó (a `$C` paletta!).

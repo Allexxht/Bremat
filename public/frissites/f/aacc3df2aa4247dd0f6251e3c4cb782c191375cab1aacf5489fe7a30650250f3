@@ -56,7 +56,15 @@ if ($dark) {
           tab='#1C1F24'; tabLine='#1C1F24'; tabFg='#FFFFFF'; tabChip='#353A42'; toast='#1C1F24'; toastFg='#FFFFFF' }
 }
 $C.mono = 'Cascadia Mono, Consolas'
-function Brush($hex) { New-Object Windows.Media.SolidColorBrush ([Windows.Media.ColorConverter]::ConvertFromString($hex)) }
+# Ecsetek: színenként egy, fagyasztva (a WPF gyorsabban rajzolja, és nem kell minden sornál újat gyártani).
+# Animálni csak saját, nem fagyasztott ecsetet lehet – arra: NewBrush.
+$script:brushes = @{}
+function NewBrush($hex) { New-Object Windows.Media.SolidColorBrush ([Windows.Media.ColorConverter]::ConvertFromString($hex)) }
+function Brush($hex) {
+  $b = $script:brushes[$hex]
+  if (-not $b) { $b = NewBrush $hex; $b.Freeze(); $script:brushes[$hex] = $b }
+  $b
+}
 
 # ---------- Idő ----------
 function NowMs { [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
@@ -115,7 +123,7 @@ function OrderEdge($max) {
   $m = $o | Measure-Object -Maximum -Minimum
   if ($max) { $m.Maximum + 1 } else { $m.Minimum - 1 }
 }
-function SaveData {
+function SaveDataNow {
   try {
     $json = ConvertTo-Json -InputObject @($script:items) -Depth 3
     [IO.File]::WriteAllText("$dataFile.tmp", $json, $utf8)
@@ -130,7 +138,23 @@ if (Test-Path $setFile) {
     foreach ($k in @($script:set.Keys)) { if ($null -ne $s.$k) { $script:set[$k] = $s.$k } }
   } catch {}
 }
-function SaveSet { try { [IO.File]::WriteAllText($setFile, (ConvertTo-Json $script:set), $utf8) } catch {} }
+function SaveSetNow { try { [IO.File]::WriteAllText($setFile, (ConvertTo-Json $script:set), $utf8) } catch {} }
+# A JSON-írás (ConvertTo-Json) lassú: kattintáskor csak megjelöljük, és ~0,3 mp múlva, a képernyő
+# frissítése után írjuk ki egyben. Kilépéskor / újraindításkor FlushNow azonnal ír.
+$script:pend = @{ data = $false; seg = $false; set = $false }
+$script:flushTimer = New-Object Windows.Threading.DispatcherTimer
+$script:flushTimer.Interval = [TimeSpan]::FromMilliseconds(300)
+$script:flushTimer.add_Tick({ param($s, $e) $s.Stop(); FlushNow })
+function FlushSoon { if (-not $script:flushTimer.IsEnabled) { $script:flushTimer.Start() } }
+function FlushNow {
+  $script:flushTimer.Stop()
+  if ($script:pend.data) { $script:pend.data = $false; SaveDataNow }
+  if ($script:pend.seg) { $script:pend.seg = $false; SegSaveNow }
+  if ($script:pend.set) { $script:pend.set = $false; SaveSetNow }
+}
+function SaveData { $script:pend.data = $true; FlushSoon }
+function SaveSet { $script:pend.set = $true; FlushSoon }
+function SegSave { $script:pend.seg = $true; FlushSoon }
 
 # Első indításkor két állandó tevékenység: „Általános” (ami nem fér bele egy konkrét teendőbe) és „Szünet”
 if (-not $script:set.actsInit) {
@@ -163,7 +187,7 @@ if (Test-Path $segFile) {
   } catch { Copy-Item $segFile "$segFile.hibas" -Force }
 }
 function DayOf($ms) { [DateTimeOffset]::FromUnixTimeMilliseconds([int64]$ms).LocalDateTime.ToString('yyyy-MM-dd') }
-function SegSave {
+function SegSaveNow {
   try {
     $old = (Get-Date).AddDays(-21).ToString('yyyy-MM-dd')
     foreach ($k in @($script:seg.Keys)) { if ($k -lt $old) { $script:seg.Remove($k); $script:segDirty.Remove($k) } }
@@ -322,7 +346,7 @@ $xaml = @'
     <!-- A fül -->
     <Border x:Name="Tab" Grid.Row="0" HorizontalAlignment="Left" CornerRadius="12" Background="{{tab}}"
             BorderBrush="{{tabLine}}" BorderThickness="1" Padding="11,7,10,7" Cursor="Hand" RenderTransformOrigin="0.5,0.5">
-      <Border.Effect><DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.3"/></Border.Effect>
+      <Border.Effect><DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.3" RenderingBias="Performance"/></Border.Effect>
       <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
       <StackPanel Orientation="Horizontal">
         <Grid Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center">
@@ -361,7 +385,7 @@ $xaml = @'
     <!-- A lenyíló panel -->
     <Border x:Name="Panel" Grid.Row="1" Width="460" Margin="0,8,0,0" HorizontalAlignment="Left"
             Background="{{bg}}" BorderBrush="{{line}}" BorderThickness="1" CornerRadius="16" Visibility="Collapsed">
-      <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.28"/></Border.Effect>
+      <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.28" RenderingBias="Performance"/></Border.Effect>
       <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
       <Grid>
         <StackPanel x:Name="Body" Margin="14,12,14,12">
@@ -520,8 +544,11 @@ function Anim($target, $prop, $from, $to, $ms, $ease = $easeOut, $delay = 0) {
   if ($delay) { $a.BeginTime = [TimeSpan]::FromMilliseconds($delay) }
   $target.BeginAnimation($prop, $a)
 }
-function Forever($target, $prop, $from, $to, $ms, $reverse = $true, $ease = $null) {
+# A végtelen (háttér) animációk 24 kép/mp-vel mennek: így alig terhelik a gépet, és a kattintásokra
+# jobban reagál a fül (az átlátszó ablakot a Windows minden képkockánál újra összerakja).
+function Forever($target, $prop, $from, $to, $ms, $reverse = $true, $ease = $null, $fps = 24) {
   $a = New-Object Windows.Media.Animation.DoubleAnimation
+  [Windows.Media.Animation.Timeline]::SetDesiredFrameRate($a, $fps)
   if ($ease) { $a.EasingFunction = $ease }
   $a.From = $from; $a.To = $to; $a.AutoReverse = $reverse
   $a.Duration = New-Object Windows.Duration ([TimeSpan]::FromMilliseconds($ms))
@@ -529,7 +556,7 @@ function Forever($target, $prop, $from, $to, $ms, $reverse = $true, $ease = $nul
   $target.BeginAnimation($prop, $a)
 }
 function Pop($scale, $from = 0.6, $ms = 380) { Anim $scale $SX $from 1 $ms $backOut; Anim $scale $SY $from 1 $ms $backOut }
-function Pulse($el) { Forever $el $OP 1 0.25 900 $true $easeIO }
+function Pulse($el) { Forever $el $OP 1 0.25 900 $true $easeIO 20 }
 # Rámutatásra finoman megnő, elhagyva visszaáll
 function Hoverable($el, $to = 1.14) {
   $el.RenderTransformOrigin = [Windows.Point]::new(0.5, 0.5)
@@ -578,9 +605,12 @@ $ICON = @{
   grip  = 'M5,6 L5,6.01 M10,6 L10,6.01 M5,10 L5,10.01 M10,10 L10,10.01 M5,14 L5,14.01 M10,14 L10,14.01'
   clock = 'M10,3.5 A6.5,6.5 0 1,1 9.99,3.5 M10,6.5 V10 L12.5,11.5'
 }
+$script:geoms = @{}
 function Icon($data, $fill, $stroke, $thick = 1.6, $size = 20) {
   $p = New-Object Windows.Shapes.Path
-  $p.Data = [Windows.Media.Geometry]::Parse($data)
+  $geo = $script:geoms[$data]
+  if (-not $geo) { $geo = [Windows.Media.Geometry]::Parse($data); $geo.Freeze(); $script:geoms[$data] = $geo }
+  $p.Data = $geo
   if ($fill) { $p.Fill = $fill }
   if ($stroke) { $p.Stroke = $stroke; $p.StrokeThickness = $thick; $p.StrokeLineJoin = 'Round'; $p.StrokeStartLineCap = 'Round'; $p.StrokeEndLineCap = 'Round' }
   $p.Width = 20; $p.Height = 20; $p.HorizontalAlignment = 'Center'; $p.VerticalAlignment = 'Center'
@@ -629,7 +659,7 @@ function Row($it) {
   $done = $it.state -eq 'done'
   $row = New-Object Windows.Controls.Border
   $row.Style = $win.Resources['Row']; $row.Tag = $it.id; $row.Margin = '0,1,0,1'
-  $bgb = Brush $C.hoverT; $row.Background = $bgb
+  $bgb = NewBrush $C.hoverT; $row.Background = $bgb   # ezt animálja a rámutatás, ezért saját
   $tt = New-Object Windows.Media.TranslateTransform; $row.RenderTransform = $tt
   $g = New-Object Windows.Controls.Grid
   foreach ($w in [Windows.GridLength]::Auto, [Windows.GridLength]::Auto, [Windows.GridLength]::new(1, 'Star'), [Windows.GridLength]::Auto, [Windows.GridLength]::Auto, [Windows.GridLength]::Auto, [Windows.GridLength]::Auto) { [void]$g.ColumnDefinitions.Add((Col $w)) }
@@ -753,8 +783,22 @@ function Row($it) {
   $dc.Child = $ds
   $dc.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; OnDelete $s.Tag })
   [Windows.Controls.Grid]::SetColumn($dc, 2); [void]$acts.Children.Add($dc)
+  if (-not $done) {
+    # Idő módosítása: ha elfelejtetted elindítani / megállítani az órát
+    $trw = New-Object Windows.Controls.WrapPanel; $trw.Margin = '0,8,0,0'
+    $tlb = Txt 'Idő:' 12 $C.muted 'SemiBold'; $tlb.Margin = '4,0,6,4'; [void]$trw.Children.Add($tlb)
+    foreach ($q in @(@('−15 p', -15), @('−5 p', -5), @('+5 p', 5), @('+15 p', 15), @('+1 ó', 60), @('Beírás…', 0))) {
+      $tcb = New-Object Windows.Controls.Border; $tcb.Style = $win.Resources['Chip']; $tcb.Padding = '8,3'; $tcb.Margin = '0,0,5,4'
+      $tcb.Tag = @($it.id, ([int64]$q[1] * 60000))
+      $tcb.Child = Txt $q[0] 12 $C.fg 'SemiBold'
+      $tcb.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; if ($s.Tag[1]) { AdjustTime $s.Tag[0] $s.Tag[1] } else { AskTime $s.Tag[0] } })
+      [void]$trw.Children.Add($tcb)
+    }
+    [void]$det.Children.Add($trw)
+  }
   [void]$det.Children.Add($acts)
   [void]$g.Children.Add($det)
+  if (-not $done) { UseTimeMenu $row }
 
   if (-not $done) {
     $pb = New-Object Windows.Controls.Border
@@ -862,6 +906,7 @@ function RunItem($it, $first) {
     [void]$bt.Children.Add($ok)
   }
   [void]$g.Children.Add($bt)
+  if (-not (IsAct $it)) { UseTimeMenu $b }
   if ($script:fresh -contains $it.id) {
     $b.Opacity = 0
     Anim $ls $SY 0 1 440; Anim $b $OP 0 1 420 $easeOut 90; Anim $tt $TY 14 0 520 $easeOut 90
@@ -878,7 +923,8 @@ foreach ($st in @(@($C.accent, 0.0), @($C.accent, 0.36), @($C.accentHi, 0.5), @(
 }
 $script:shineT = New-Object Windows.Media.TranslateTransform; $script:shine.RelativeTransform = $script:shineT
 $script:glow = New-Object Windows.Media.Effects.DropShadowEffect
-$script:glow.Color = [Windows.Media.ColorConverter]::ConvertFromString($C.accent); $script:glow.ShadowDepth = 0; $script:glow.Opacity = 0.55; $script:glow.BlurRadius = 14
+$script:glow.Color = [Windows.Media.ColorConverter]::ConvertFromString($C.accent); $script:glow.ShadowDepth = 0; $script:glow.Opacity = 0.5; $script:glow.BlurRadius = 18
+$script:glow.RenderingBias = 'Performance'
 $script:focusOn = $false
 function RenderRun {
   $U.RunList.Children.Clear()
@@ -895,11 +941,10 @@ function RenderRun {
       $script:focusOn = $true
       $U.Focus.Visibility = 'Visible'; $U.Focus.Background = $script:shine; $U.Focus.Effect = $script:glow
       Anim $U.Focus.LayoutTransform $SY 0 1 460; Anim $U.Focus $OP 0 1 420
-      Forever $script:shineT $TX -1 1 3400 $false $easeIO
-      Forever $script:glow ([Windows.Media.Effects.DropShadowEffect]::BlurRadiusProperty) 10 26 1700 $true $easeIO
+      Forever $script:shineT $TX -1 1 4200 $false $easeIO 30
       Pulse $U.FocusDot
-      Forever $U.TabRing.RenderTransform $SX 1 2.6 1600 $false $easeOut; Forever $U.TabRing.RenderTransform $SY 1 2.6 1600 $false $easeOut
-      Forever $U.TabRing $OP 0.9 0 1600 $false $easeOut
+      Forever $U.TabRing.RenderTransform $SX 1 2.6 2200 $false $easeOut 20; Forever $U.TabRing.RenderTransform $SY 1 2.6 2200 $false $easeOut 20
+      Forever $U.TabRing $OP 0.9 0 2200 $false $easeOut 20
     }
   } else {
     if ($script:away.Count) {
@@ -913,7 +958,7 @@ function RenderRun {
       Anim $U.Focus.LayoutTransform $SY $null 0 360 $easeIO; Anim $U.Focus $OP $null 0 300 $easeIn
       Later 380 $null { if (-not $script:focusOn) {
         $U.Focus.Visibility = 'Collapsed'
-        $script:shineT.BeginAnimation($TX, $null); $script:glow.BeginAnimation([Windows.Media.Effects.DropShadowEffect]::BlurRadiusProperty, $null) } }
+        $script:shineT.BeginAnimation($TX, $null) } }
       $U.TabRing.RenderTransform.BeginAnimation($SX, $null); $U.TabRing.RenderTransform.BeginAnimation($SY, $null)
       $U.TabRing.BeginAnimation($OP, $null); $U.TabRing.Opacity = 0
     }
@@ -1141,6 +1186,68 @@ function OnPlay($id) {
   if ($it.state -eq 'doing') { StopRun $it; $it.state = 'open' } else { StartRun $it }
   $script:fresh += $id
   Commit
+}
+# ---------- Idő hozzáadása / levonása ----------
+# Ha elfelejtetted elindítani vagy megállítani az órát. A teendő összes idejét és a mai összesítőt
+# módosítja; a napi idősávba nem kerül új szakasz (ott csak a valóban mért idő van).
+function AdjustTime($id, $delta) {
+  $it = FindItem $id; if (-not $it -or (IsAct $it) -or $it.state -eq 'done') { return }
+  $cur = [int64](Elapsed $it)
+  $target = [int64][Math]::Max([int64]0, $cur + [int64]$delta)
+  $real = $target - $cur
+  if ($real -eq 0) { return }
+  $shift = [int64]0
+  if ($it.state -eq 'doing' -and $it.startedAt) {
+    # fut az óra: előbb az eddigi időből vonunk le, ha az kevés, a mostani futásból
+    $run = (NowMs) - [int64]$it.startedAt
+    $sp = $target - $run
+    if ($sp -lt 0) { $shift = -$sp; $it.startedAt = [int64]$it.startedAt + $shift; $sp = 0 }
+    $it.spent = [int64]$sp
+  } else { $it.spent = [int64]$target }
+  if ($it.kind -ne 'brk') {
+    if ($script:set.today -ne (TodayKey)) { $script:set.today = TodayKey; $script:set.todayMs = 0 }
+    $script:set.todayMs = [int64][Math]::Max([int64]0, [int64]$script:set.todayMs + $real + $shift)
+    SaveSet
+  }
+  Commit
+  $sign = $(if ($real -gt 0) { '+' } else { '−' })
+  ShowNote ($sign + (FmtDur ([Math]::Abs($real))) + '  ·  ' + $it.text + ': ' + (FmtDur (Elapsed $it)))
+}
+function AskTime($id) {
+  $it = FindItem $id; if (-not $it) { return }
+  $nl = [Environment]::NewLine
+  $q = 'Idő módosítása: ' + $it.text + $nl + 'Eddig: ' + (FmtDur (Elapsed $it)) + $nl + $nl +
+       '+30  = hozzáad 30 percet' + $nl + '-15  = levon 15 percet' + $nl + '+1:30  = hozzáad 1 óra 30 percet' + $nl +
+       '2:00  (előjel nélkül) = legyen összesen ennyi'
+  $a = AskText $q
+  if (-not $a) { return }
+  $a = $a.ToLower().Replace(' ', '').Replace('−', '-').Replace('–', '-')
+  $m = [regex]::Match($a, '^([+-])?(\d{1,4})(?::(\d{1,2}))?(p|perc|ó|o|óra|ora)?$')
+  if (-not $m.Success) { Ask 'Ezt nem értem. Példák: +30, -15, +1:30, 2:00'; return }
+  $min = [int64]$m.Groups[2].Value
+  if ($m.Groups[3].Success) { $min = $min * 60 + [int64]$m.Groups[3].Value }
+  elseif ($m.Groups[4].Value -match '^(ó|o)') { $min = $min * 60 }
+  $ms = $min * 60000
+  $delta = $(if ($m.Groups[1].Value -eq '+') { $ms } elseif ($m.Groups[1].Value -eq '-') { -$ms } else { $ms - [int64](Elapsed $it) })
+  AdjustTime $id $delta
+}
+# Jobb klikk egy teendőn (a listában vagy a narancs kártyán): egy közös menü, nem soronként új
+$script:timeMenuId = $null
+$script:timeMenu = New-Object Windows.Controls.ContextMenu
+foreach ($q in @(@('+5 perc', 5), @('+15 perc', 15), @('+30 perc', 30), @('+1 óra', 60), @('−5 perc', -5), @('−15 perc', -15), @('−30 perc', -30))) {
+  $tmi = New-Object Windows.Controls.MenuItem; $tmi.Header = $q[0]; $tmi.Tag = [int64]$q[1] * 60000
+  $tmi.add_Click({ param($s, $e) if ($script:timeMenuId) { AdjustTime $script:timeMenuId $s.Tag } })
+  [void]$script:timeMenu.Items.Add($tmi)
+}
+[void]$script:timeMenu.Items.Insert(4, (New-Object Windows.Controls.Separator))
+[void]$script:timeMenu.Items.Add((New-Object Windows.Controls.Separator))
+$tmi = New-Object Windows.Controls.MenuItem; $tmi.Header = 'Idő beírása…'
+$tmi.add_Click({ if ($script:timeMenuId) { AskTime $script:timeMenuId } })
+[void]$script:timeMenu.Items.Add($tmi)
+$script:timeMenu.add_Opened({ $script:modal = $true }); $script:timeMenu.add_Closed({ $script:modal = $false })
+function UseTimeMenu($el) {
+  $el.ContextMenu = $script:timeMenu
+  $el.add_ContextMenuOpening({ param($s, $e) $script:timeMenuId = $s.Tag })
 }
 # A sor elúszik, aztán a futók közé kerül
 function PlayFromRow($pb) { $row = $pb.Parent.Parent; RowOut $row $pb.Tag { param($id) OnPlay $id } }
@@ -1955,9 +2062,9 @@ $script:ax = $win.Left; $script:ay = $win.Top
 # Kilépéskor a futó óra megáll, az idő megmarad
 $win.add_Closing({
   # frissítés miatti újraindítás: a futó órák nem állnak meg, az új példány folytatja őket
-  if ($script:updRestart) { SaveData; $script:set.lastSeen = NowMs; SaveSet; return }
+  if ($script:updRestart) { SaveData; $script:set.lastSeen = NowMs; SaveSet; FlushNow; return }
   foreach ($r in @(RunningAll)) { StopRun $r; $r.state = 'open' }
-  SaveData; $script:set.lastSeen = NowMs; SaveSet
+  SaveData; $script:set.lastSeen = NowMs; SaveSet; FlushNow
 })
 # Minden indításkor frissíti a Windows-indítás parancsikonját (ha a mappát áthelyezted, az új helyre mutat)
 if ($script:set.autostart -and $PSCommandPath) { try { MakeShortcut } catch {} }
@@ -1978,5 +2085,6 @@ $clock.add_Tick({ Tick })
 $clock.Start()
 Later 3000 $null { try { UpdStartup } catch { UpdLog "$_" } }
 try { [void]$win.ShowDialog() } catch { Fail "$_" }
+FlushNow
 try { $mutex.ReleaseMutex() } catch {}
 if ($script:updRestart) { UpdRelaunch }

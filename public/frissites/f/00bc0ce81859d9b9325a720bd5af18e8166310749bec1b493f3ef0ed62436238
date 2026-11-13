@@ -75,6 +75,14 @@ BREMAT Központ és Valk fájlok
     Valk fájlok (ezen a gépen) = a rajzok, STEP és PDF fájlok, előnézettel.
 - Részletek: a BrematKozpont mappában az OLVASS.txt.
 
+Idő hozzáadása / levonása (ha elfelejtetted elindítani vagy megállítani az órát)
+- Kattints egy teendő címére: a lenyíló részben "Idő:" gombok: −15 p, −5 p, +5 p, +15 p, +1 ó, Beírás…
+- Vagy jobb klikk a teendőn (a listában vagy a narancs kártyán): +5 / +15 / +30 perc, +1 óra, −5 / −15 / −30 perc,
+  Idő beírása…
+- Beírásnál: +30 = hozzáad 30 percet, -15 = levon 15 percet, +1:30 = hozzáad 1 óra 30 percet,
+  2:00 (előjel nélkül) = legyen összesen ennyi.
+- A teendő összes ideje és a "ma" összesítő változik. A napi idősávba nem kerül új szakasz.
+
 Frissítés (magától)
 - A Teendőim induláskor és 3 óránként megnézi, van-e új változat
   (https://bremat-stuff.netlify.app/frissites/). Ha van, letölti, és amikor a panel csukva van
