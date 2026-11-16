@@ -131,7 +131,7 @@ function SaveDataNow {
   } catch { Fail "Nem sikerült menteni: $_" }
 }
 
-$script:set = @{ x = $null; y = $null; pinned = $false; showDone = $false; autostart = $true; today = ''; todayMs = 0; lastSeen = $null; idleMin = 2; naplo = $false; naploNev = ''; naploKod = ''; single = $true; actsInit = $false }
+$script:set = @{ x = $null; y = $null; pinned = $false; showDone = $false; autostart = $true; today = ''; todayMs = 0; lastSeen = $null; idleMin = 2; naplo = $false; naploNev = ''; naploKod = ''; single = $true; actsInit = $false; idleMig = $false }
 if (Test-Path $setFile) {
   try {
     $s = ConvertFrom-Json ([IO.File]::ReadAllText($setFile, $utf8))
@@ -214,6 +214,58 @@ function SegClose($it, $at) {
     }
   }
   if ($hit) { SegSave }
+}
+# ---------- Amikor nem vagy a gépnél ----------
+# A műszak szünetei (helyi idő): 8:00–8:15, 10:15–10:30, 12:00–12:30. Ha az óra azért állt meg, mert
+# nem nyúltál a géphez, a távollétből ami ezekbe esik, az „Szünet”; a többi „Megállt az időmérés”
+# (pl. otthagytad a gépet, és elfelejtetted megállítani). A Szünet gomb mindig szünet marad.
+$script:breakWins = @(@(8, 0, 8, 15), @(10, 15, 10, 30), @(12, 0, 12, 30))
+$idleName = 'Megállt az időmérés'
+function AwaySegs($from, $to) {
+  $from = [int64]$from; $to = [int64]$to
+  $out = @()
+  if ($to -le $from) { return ,$out }
+  $wins = @()
+  $day = [DateTimeOffset]::FromUnixTimeMilliseconds($from).LocalDateTime.Date
+  $lastDay = [DateTimeOffset]::FromUnixTimeMilliseconds($to).LocalDateTime.Date
+  while ($day -le $lastDay) {
+    foreach ($bw in $script:breakWins) {
+      $wins += , @([DateTimeOffset]::new($day.AddMinutes($bw[0] * 60 + $bw[1])).ToUnixTimeMilliseconds(),
+                   [DateTimeOffset]::new($day.AddMinutes($bw[2] * 60 + $bw[3])).ToUnixTimeMilliseconds())
+    }
+    $day = $day.AddDays(1)
+  }
+  $t = $from
+  foreach ($bw in $wins) {
+    $wa = [Math]::Max([int64]$bw[0], $t); $wb = [Math]::Min([int64]$bw[1], $to)
+    if ($wb -le $wa) { continue }
+    if ($wa -gt $t) { $out += , @('idle', $t, $wa) }
+    $out += , @('break', $wa, $wb); $t = $wb
+  }
+  if ($to -gt $t) { $out += , @('idle', $t, $to) }
+  return ,$out
+}
+function AwayName($kind) { if ($kind -eq 'break') { 'Szünet' } else { $idleName } }
+# A távollét az idősávba: szünetidőben „Szünet”, azon kívül „Megállt az időmérés”
+function AddAway($from, $to) {
+  foreach ($p in (AwaySegs $from $to)) { SegAdd '' (AwayName $p[0]) $p[0] $p[1] $p[2] }
+}
+# Egyszeri átírás: a korábbi automatikus „Szünet” szakaszok (item nélkül) a fenti szabály szerint,
+# és a napló is megkapja őket újra (a megváltozott napokat a Teendőim egészben újraküldi).
+if (-not $script:set.idleMig) {
+  foreach ($d in @($script:seg.Keys)) {
+    $nl2 = New-Object System.Collections.ArrayList; $ch = $false
+    foreach ($x in $script:seg[$d]) {
+      if ($x.kind -eq 'break' -and -not $x.item -and $null -ne $x.end) {
+        foreach ($p in (AwaySegs $x.start $x.end)) {
+          [void]$nl2.Add([pscustomobject]@{ item = ''; name = (AwayName $p[0]); kind = $p[0]; start = [int64]$p[1]; end = [int64]$p[2] })
+        }
+        $ch = $true
+      } else { [void]$nl2.Add($x) }
+    }
+    if ($ch) { $script:seg[$d] = $nl2; SegTouch $d }
+  }
+  $script:set.idleMig = $true; SaveSet; SegSave
 }
 # Egy tétel mai ideje a szakaszokból (a tevékenység-gombokon látszik)
 function SegToday($id) {
@@ -423,7 +475,7 @@ $xaml = @'
                   <TextBlock Text="Dolgoztam közben, számold bele" Foreground="{{fg}}" FontWeight="SemiBold" FontSize="13"/>
                 </Border>
                 <Border x:Name="AwayKeep" Style="{StaticResource Chip}" Margin="0,0,6,6" Padding="12,6">
-                  <TextBlock Text="Maradjon szünet" Foreground="{{fg}}" FontWeight="SemiBold" FontSize="13"/>
+                  <TextBlock Text="Maradjon megállítva" Foreground="{{fg}}" FontWeight="SemiBold" FontSize="13"/>
                 </Border>
               </WrapPanel>
             </StackPanel>
@@ -1124,8 +1176,8 @@ function ShowAway {
   $names = @($script:away | ForEach-Object { $x = FindItem $_; if ($x) { $x.text } })
   if (-not $names.Count) { $script:away = @(); Render; return }
   $at = [DateTimeOffset]::FromUnixTimeMilliseconds([int64]$script:awayFrom).LocalDateTime.ToString('HH:mm')
-  $U.AwayTitle.Text = "Szünetet tartottál – $mins percig nem nyúltál a géphez."
-  $U.AwaySub.Text = "Az órát $at-kor megállítottam, a közben eltelt időt nem számoltam bele: " + ($names -join ', ')
+  $U.AwayTitle.Text = "$mins percig nem nyúltál a géphez – megállt az időmérés."
+  $U.AwaySub.Text = "Az órát $at-kor megállítottam, a közben eltelt időt nem számoltam bele: " + ($names -join ', ') + '. A naplóban szünetidőben (8:00, 10:15, 12:00) Szünet, azon kívül Megállt az időmérés lesz.'
   $U.Away.Visibility = 'Visible'
   Anim $U.Away.LayoutTransform $SY 0 1 420; Anim $U.Away $OP 0 1 380
   if (-not $script:open) { Expand $true }
@@ -1136,8 +1188,8 @@ function CloseAway {
   Later 330 $null { if (-not $script:away.Count) { $U.Away.Visibility = 'Collapsed' } }
 }
 function ResumeAway($count) {
-  # Ha nem számolom bele, a távollét szünetként kerül az idősávba
-  if (-not $count -and $script:awayFrom) { SegAdd '' 'Szünet' 'break' ([int64]$script:awayFrom) (NowMs) }
+  # Ha nem számolom bele, a távollét az idősávba kerül: szünetidőben Szünet, azon kívül Megállt az időmérés
+  if (-not $count -and $script:awayFrom) { AddAway ([int64]$script:awayFrom) (NowMs) }
   foreach ($id in $script:away) {
     $x = FindItem $id
     if ($x -and $x.state -eq 'open') {
@@ -1151,7 +1203,7 @@ function ResumeAway($count) {
 $U.AwayGo.add_MouseLeftButtonUp({ ResumeAway $false })
 $U.AwayCount.add_MouseLeftButtonUp({ ResumeAway $true })
 $U.AwayKeep.add_MouseLeftButtonUp({
-  if ($script:awayFrom) { SegAdd '' 'Szünet' 'break' ([int64]$script:awayFrom) (NowMs) }
+  if ($script:awayFrom) { AddAway ([int64]$script:awayFrom) (NowMs) }
   CloseAway; Render })
 
 # ---------- Műveletek ----------

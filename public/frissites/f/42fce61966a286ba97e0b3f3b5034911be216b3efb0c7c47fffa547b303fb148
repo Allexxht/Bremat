@@ -31,9 +31,9 @@ A böngészős lista átvétele (egyszer)
 2. F12 → Console fül → írd be (ne bemásold):  copy(localStorage.teendok)  → Enter.
 3. A fülön jobb klikk → Importálás vágólapról.
 
-- Automatikus szünet: ha 2 percig nem nyúlsz a géphez (egér, billentyű), a futó órák megállnak –
+- Automatikus megállítás: ha 2 percig nem nyúlsz a géphez (egér, billentyű), a futó órák megállnak –
   pontosan ott, ahol utoljára mozdultál. Visszatéréskor a panel magától lenyílik és megkérdezi:
-  Folytatás / Dolgoztam közben, számold bele / Maradjon szünet. Az időt a menüben állíthatod
+  Folytatás / Dolgoztam közben, számold bele / Maradjon megállítva. Az időt a menüben állíthatod
   (Kikapcsolva, 2, 5, 10, 15, 30 perc).
 - Amíg fut óra, a fülön egy kis narancs ❚❚ gomb van: egy kattintással megállít mindent, kinyitás nélkül.
 
@@ -44,8 +44,10 @@ Mivel foglalkozom (tevékenység-gombok, váltás)
   (Ha mégis több órát akarsz egyszerre futtatni: menü → „Egyszerre csak egy óra fusson” kikapcsolva.)
 - Új gomb: a sor végén a + (vagy menü → Új tevékenység-gomb…). Jobb klikk egy gombon: átnevezés, törlés.
 - A gombon látszik, ma mennyi ment rá.
-- Szünet közben nem kérdez rá a tétlenségre. Ha az automatikus szünetnél azt választod, hogy
-  „Folytatás” vagy „Maradjon szünet”, a távollét szünetként kerül az idősávba.
+- Szünet közben nem kérdez rá a tétlenségre. Ha az automatikus megállításnál azt választod, hogy
+  „Folytatás” vagy „Maradjon megállítva”, a távollét így kerül az idősávba: ami a műszak szüneteibe
+  esik (8:00–8:15, 10:15–10:30, 12:00–12:30), az „Szünet”, a többi „Megállt az időmérés”.
+  A Szünet gombbal indított idő mindig szünet.
 
 Munkanapló (BREMAT, https://bremat-stuff.netlify.app/naplo/)
 - Bekapcsolás: jobb klikk a fülre (vagy ⋯) → Munkanapló → Kipipált teendők beírása a naplóba.

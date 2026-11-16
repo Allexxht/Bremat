@@ -377,3 +377,14 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   ~0,3 mp múlva ír (kilépéskor, újraindításkor azonnal). (3) Ecsetek és ikon-alakzatok fagyasztva,
   gyorsítótárból (`Brush`, `Icon`); animált ecsethez `NewBrush`.
 - PowerShell csapda itt is: függvényen belül se legyen `$c` nevű változó (a `$C` paletta!).
+
+## Megállt az időmérés (2026. november 16., Alex kérése)
+- Eddig az automatikus megállítás (2 perc tétlenség) utáni távollét „Szünet”-ként került az idősávba.
+  Alex: ez többnyire nem szünet, hanem otthagyta a gépet, és elfelejtette megállítani az órát.
+- A műszak szünetei: **8:00–8:15, 10:15–10:30, 12:00–12:30**, műszak vége 15:00 (`$script:breakWins`
+  a Teendőimben). A távollétből ami ezekbe esik, `break` „Szünet”; a többi új fajta: `idle`
+  „Megállt az időmérés” (`AwaySegs`, `AddAway`). A Szünet gombbal indított idő mindig `break`.
+- Egyszeri átírás (`idleMig` a beállításokban): az `ido.json` régi, item nélküli `break` szakaszai a
+  fenti szabály szerint; a megváltozott napokat a Teendőim újraküldi a naplóba (21 nap).
+- Szerver: `TIME_KINDS` + `idle`. Napló oldal: az `idle` se munka, se szünet; a fejlécben „megállt: X”,
+  a sávon narancs csíkos, a listában „megállt az időmérés (nem voltál a gépnél)”.
