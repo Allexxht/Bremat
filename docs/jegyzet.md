@@ -211,18 +211,33 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   tároló, `o/<id>` kulcs (`lib/kozpont-core.mjs`: `idea_list`, `idea_add`, `idea_update`, `idea_delete`).
   Ez az első adat, amit a Központ maga tárol. Demóban (`?demo`) memóriában, mintaötletekkel.
 
-## Nyitó animáció (2026. november 5.)
+## Nyitó animáció (2026. november 5–16.)
 - A Központ kezdőlapján a köszönés fölött (`#hero`, 3:1): `public/kozpont/intro.webm` (VP9 + alfa,
-  960×320, 30 kép/mp) – a BREMAT FT3 konténer felépül, felkerül a kamionra, a kamion elhúz –, és
-  a videó `LOGO_AT` (8,6 mp, a kamion indulása) idejétől SVG-ben kirajzolódik a BREMAT logó
-  (a videó alatt, így a kamion eltakarja; Archivo Black, betűnként kígyós maszk-felfedés, felemelkedés, keret, fénycsík). A felhasználó
-  kérése: nincs színes „vezető fej”, és a betűk nem ugranak meg. A logó utána ott marad.
+  1200×400, 30 kép/mp, 10 mp). Történet: a BREMAT FT3 konténer váza felépül – ahol egy vázelem a
+  helyére kerül, ott hegesztés (szikra + villódzó ívfény) –, a konténer kész, a kamion tolatva
+  beáll, a konténer felemelkedik és a platóra ereszkedik, a kamion jobbra elhúz. Alacsony,
+  oldalsó kamera; alaplap („sziget”) nincs, a jelenet közvetlenül az oldalra épül, csak árnyék.
+- A logó SVG-ben, a videó `LOGO_AT` (8,5 mp, a kamion indulása) idejétől. A videó a logó fölött
+  van, így a kamion eltakarja: kicsiben, középen (`LOGO_FROM`) a plató mögül bukkan elő, betűnként
+  kígyós maszk-felfedéssel (Archivo Black), felnő a helyére, körbefut a keret, végül fénycsík.
+  A keret az eredeti logó arányait követi (a betűmagasságból számolva): felső vonal közvetlenül a
+  betűk fölött, a jobb oldal végig lemegy, az alsó vonal ferdén a bal alsó sarokba fut.
+- Alex kérései (ezekhez ne nyúlj): nincs színes „vezető fej” a betűkön, a betűk nem ugranak meg,
+  nincs por, a szikra ne merev pálcika („sült krumpli”) legyen. A minta az Univerzális adapter
+  bemutatójának hegesztős filmje volt.
 - Lejátszás a napi első megnyitáskor, utána legfeljebb 2,5 óránként (`kozpont-intro` localStorage);
-  máskor és `prefers-reduced-motion`-nál csak a kész logó. Koppintásra átugorható, kész állapotban koppintásra újraindul. Safari (nincs
-  átlátszó WebM) és hibás videó esetén csak a logó-animáció megy.
-- A 3D jelenet forrása nincs a repóban (Blender-program a Claude-munkamenetben; a felhasználó
-  otthon nagy felbontásban rendereli). Új render: PNG-kockákból
-  `ffmpeg -framerate 30 -i w_%04d.png -c:v libvpx-vp9 -pix_fmt yuva420p -crf 34 -b:v 0 intro.webm`.
+  máskor és `prefers-reduced-motion`-nál csak a kész logó. Lejátszás közben koppintásra a végére
+  ugrik; kész állapotban koppintásra újraindul. Safari (nincs átlátszó WebM) és hibás videó esetén
+  csak a logó-animáció megy.
+- Szikrák (Blender, Geometry Nodes): minden szikra előre kisorsolt pont (születés, élettartam,
+  kezdősebesség); a pályát a csomópontok számolják gravitációval, és a szikra a pályája utolsó
+  ~90 ms-án húz vékony, elvékonyodó, halványuló csíkot (sárgán izzó → narancs → vörös). Külön
+  render-rétegen, zajszűrés nélkül (a zajszűrő kimosná), Bloom ráfényléssel; a ráfénylés
+  átlátszóságát a fényerőből számoljuk, hogy átlátszó háttéren is megmaradjon.
+- A 3D jelenet programja (`build.py`, Blender 5.2) nincs a repóban: a konténer a partner rajzának
+  méreteiből készült, a repó pedig nyilvános. Alex megkapta zipben (`.blend` + programok).
+  Új videó a PNG-kockákból:
+  `ffmpeg -framerate 30 -i f_%04d.png -c:v libvpx-vp9 -pix_fmt yuva420p -crf 30 -b:v 0 intro.webm`.
 
 ## Teendőim állapot (2026. november 4.)
 - `/api/naplo` `todo_status_set` (`status`: `open`, `starred`, `doing[]` = `text`, `spent_ms`,

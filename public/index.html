@@ -708,27 +708,33 @@ async function intro(hero, force = false) {
   hero.appendChild(svg);
   const play = buildLogo(svg);
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // kész állapotban egy koppintás újraindítja az introt
-  const replayOnTap = () => { hero.classList.add('static'); hero.addEventListener('click', () => { hero.replaceChildren(); hero.classList.remove('static'); intro(hero, true); }, { once: true }); };
-  if (!force && (calm || !introDue())) { play().forEach((a) => a.finish()); return replayOnTap(); }
+  // kész állapot: a logó áll, és egy koppintás újraindítja az introt
+  let done = false, anims = null, raf = 0, video = null;
+  const finish = () => {
+    if (done) return; done = true;
+    hero.removeEventListener('click', skip);
+    hero.classList.add('static');
+    hero.addEventListener('click', () => { hero.replaceChildren(); hero.classList.remove('static'); intro(hero, true); }, { once: true });
+  };
+  if (!force && (calm || !introDue())) { play().forEach((a) => a.finish()); return finish(); }
   store.set('kozpont-intro', String(Date.now()));
-  let anims = null, raf = 0;
-  const startLogo = () => { if (!anims) anims = play(); };
-  const skip = () => { cancelAnimationFrame(raf); if (video) { video.pause(); video.style.opacity = 0; } startLogo(); anims.forEach((a) => a.finish()); replayOnTap(); };
-  hero.addEventListener('click', skip, { once: true });
-  let video = null;
-  if (!alphaVideo()) {   // videó nélkül: a logó végén is koppintásra újraindul
-    startLogo();
-    Promise.all(anims.map((x) => x.finished)).then(() => { hero.removeEventListener('click', skip); if (!hero.classList.contains('static')) replayOnTap(); }, () => {});
-    return;
-  }
+  // a logó a kamion indulásakor kezd kirajzolódni; ha végigért, jön a kész állapot
+  const startLogo = () => {
+    if (anims) return;
+    anims = play();
+    Promise.all(anims.map((a) => a.finished)).then(finish, () => {});
+  };
+  // lejátszás közben egy koppintás átugorja a végére
+  function skip() { cancelAnimationFrame(raf); if (video) { video.pause(); video.style.opacity = 0; } startLogo(); anims.forEach((a) => a.finish()); finish(); }
+  hero.addEventListener('click', skip);
+  if (!alphaVideo()) return startLogo();   // videó nélkül (Safari): csak a logó rajzolódik ki
   video = document.createElement('video');
   Object.assign(video, { muted: true, playsInline: true, preload: 'auto', src: INTRO_SRC });
   video.setAttribute('aria-hidden', 'true');
   hero.appendChild(video);   // a videó a logó fölött: a kamion eltakarja, mögötte bukkan elő
   const watch = () => { if (!hero.isConnected) return video.pause(); if (video.currentTime >= LOGO_AT) return startLogo(); raf = requestAnimationFrame(watch); };
   video.addEventListener('error', startLogo, { once: true });
-  video.addEventListener('ended', () => { startLogo(); hero.removeEventListener('click', skip); replayOnTap(); }, { once: true });
+  video.addEventListener('ended', startLogo, { once: true });
   video.play().then(() => { raf = requestAnimationFrame(watch); }, startLogo);
 }
 
