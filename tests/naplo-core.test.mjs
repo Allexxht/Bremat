@@ -128,11 +128,12 @@ test('napi idősáv: mentés, felülírás, lekérés', async () => {
     { name: 'Általános', kind: 'activity', start: t0, end: t0 + 3600000 },
     { name: '', kind: 'break', start: t0 + 1800000, end: t0 + 2400000 },
     { name: 'Furcsa', kind: 'semmi', start: t0, end: t0 },
+    { name: '', kind: 'idle', start: t0 + 2400000, end: t0 + 3000000 },
   ])), true);
   let r = await call(s, { action: 'time_range', from: '2026-11-02', to: '2026-11-08' });
   assert.equal(r.length, 1);
-  assert.deepEqual(r[0].segments.map((x) => [x.name, x.kind]), [['Általános', 'activity'], ['Furcsa', 'todo'], ['Szünet', 'break'], ['DPTS', 'todo']]);
-  assert.equal(r[0].segments[3].end, null);
+  assert.deepEqual(r[0].segments.map((x) => [x.name, x.kind]), [['Általános', 'activity'], ['Furcsa', 'todo'], ['Szünet', 'break'], ['Megállt az időmérés', 'idle'], ['DPTS', 'todo']]);
+  assert.equal(r[0].segments[4].end, null);
   // Felülírás: a teljes nap újra
   await set(day([{ name: 'Általános', kind: 'activity', start: t0, end: t0 + 60000 }]));
   await set(day([{ name: 'E-mail', kind: 'activity', start: t0, end: null }], '2026-11-04'));
