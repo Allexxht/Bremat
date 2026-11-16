@@ -145,8 +145,19 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   Műveletek: `idle_list`, `idle_mark` (nem jövőbeli, max. ~1 éves hét; nem jelölhető, ha arra
   a hétre már van lap), `idle_unmark` (visszavonás, nyom nélkül törli – csak egy jelölés).
   A jelölt hét nem számít kimaradtnak; ha utólag mégis kitöltenek rá lapot, a lap számít
-  (a kitöltésnél figyelmeztetés). A ritkább feladatok esedékessége ettől **nem** változik,
-  továbbra is naptár szerint számol.
+  (a kitöltésnél figyelmeztetés). A ritkább feladatok esedékességéről lásd lent: „Robot állt”.
+- **„Robot állt” – határidő kitolása** (2026. november 16., Alex kérése): a robot hetekig
+  állt, és közben lejártak a használattól kopó feladatok. A `tasks.js`-ben `use: true` jelöli
+  ezeket: légszűrő tisztítása, kerítés, sűrített levegő, radiátor, görgők, Panasonic 500 órás,
+  zsírzás, biztonsági mentés (álló robotnál a program sem változik). Minden „Nem üzemelt” hét,
+  amely az utolsó elvégzés (vagy az üzembe helyezés) hetétől a határidőig esik, +7 nap; a
+  kitolt határidőbe eső újabb jelölt hetek is számítanak. Lapos hétre a jelölés nem számít.
+  A többi (hűtővíz, éves és több éves szervizek) naptár szerint marad. Csak a kliens számol
+  (`historyOf` → `idleMons`, `dueInfo` → `pushed`), a szerver nem változott, `FORM_VERSION`
+  sem (a heti kulcsok és az ellenőrzés szabálya ugyanaz). Az Ütemezés fülön „használattól” és
+  „+N hét állás miatt” látszik. A „Nem üzemelt” ablakban **Meddig nem ment?**: a hét utáni,
+  egymást követő lap nélküli hetek egyszerre jelölhetők (a kliens hetenként hívja az
+  `idle_mark`-ot).
 - A `list` minden lapot teljes tartalommal ad vissza (hetente egy lap, évente ~52 blob –
   sok év után is kicsi). Ha valaha lassú lenne, akkor jöhet egy összesítő index-blob.
 

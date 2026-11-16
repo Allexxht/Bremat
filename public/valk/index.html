@@ -507,6 +507,8 @@ function toast(msg, bad = false) {
    a lapra, ha esedékesek: utolsó elvégzés (vagy, ha még nem volt, az
    üzembe helyezés napja) + az időköz. Ami elmaradt („Nem csináltam
    meg”), az nem számít elvégzésnek, tehát a következő héten is ott lesz.
+   A használattól kopó feladatokat (use: true) a „Nem üzemelt” hetek
+   kitolják: minden ilyen hét +7 nap. A többi naptár szerint számol.
    ================================================================ */
 const STATUS_TXT = { ok: 'Rendben', action: 'Beavatkozás', skip: 'Nem csinálta meg' };
 const STATUS_BADGE = { ok: 'ok', action: 'warn', skip: 'bad' };
@@ -514,7 +516,10 @@ const isDone = (x) => x && (x.status === 'ok' || x.status === 'action');
 const nextDue = (t, from) => (t.freq.m ? addMonths(from, t.freq.m) : addDays(from, t.freq.d));
 
 // A 3. változattól a tételek kulccsal vannak tárolva; a régebbi lapok tételei mások voltak.
-function historyOf(list, robot) {
+// Az ISO-hét hétfője.
+const isoMonday = (y, w) => addDays(mondayOf(`${y}-01-04`), (w - 1) * 7);
+
+function historyOf(list, robot, idle = []) {
   const recs = list.filter((r) => r.robot === robot && (r.form_version || 1) >= 3)
     .sort((a, b) => a.check_date.localeCompare(b.check_date) || a.created_at.localeCompare(b.created_at));
   const lastDone = {}; const lastSeen = {};
@@ -527,12 +532,27 @@ function historyOf(list, robot) {
   list.filter((r) => r.robot === robot && r.cooling_water_changed).forEach((r) => {
     if (!lastDone['hutoviz-csere'] || r.cooling_water_changed > lastDone['hutoviz-csere']) lastDone['hutoviz-csere'] = r.cooling_water_changed;
   });
-  return { lastDone, lastSeen };
+  // „Nem üzemelt” hetek hétfői. Lapos hétre a jelölés nem számít.
+  const lapWeeks = new Set(recs.map((r) => mondayOf(r.check_date)));
+  const idleMons = [...new Set(idle.filter((x) => x.robot === robot).map((x) => isoMonday(x.iso_year, x.iso_week)))]
+    .filter((m) => !lapWeeks.has(m)).sort();
+  return { lastDone, lastSeen, idleMons };
 }
+// Használatfüggő feladatnál minden „Nem üzemelt” hét, amely az alap hetétől a
+// (már kitolt) határidőig esik, +7 nap. Addig ismételjük, amíg nem jön újabb hét.
 function dueInfo(t, hist, weekMonday) {
   const last = hist.lastDone[t.key] || null;
-  const due = nextDue(t, last || LOCAL.COMMISSIONING_DATE);
-  return { last, due, onLap: due <= addDays(weekMonday, 6), overdue: due < weekMonday };
+  const base = last || LOCAL.COMMISSIONING_DATE;
+  let due = nextDue(t, base); let pushed = 0;
+  if (t.use && hist.idleMons?.length) {
+    const from = mondayOf(base);
+    for (;;) {
+      const n = hist.idleMons.filter((m) => m >= from && m <= due).length;
+      if (n === pushed) break;
+      pushed = n; due = addDays(nextDue(t, base), 7 * n);
+    }
+  }
+  return { last, due, pushed, onLap: due <= addDays(weekMonday, 6), overdue: due < weekMonday };
 }
 // Az adott hét lapja, útvonal szerinti sorrendben (a katalógus sorrendje).
 function tasksForWeek(dateYmd, hist) {
@@ -815,7 +835,7 @@ async function renderOverview() {
   const weeks = buildWeeks(list, robot, idle);
   const thisWeek = weeks[0];
   const recs = list.filter((r) => r.robot === robot);
-  const hist = historyOf(list, robot);
+  const hist = historyOf(list, robot, idle);
   const sched = scheduleRows(hist);
   const skips = openSkips(hist);
   const overdue = sched.filter((s) => s.info.overdue);
@@ -904,16 +924,16 @@ async function renderOverview() {
     <p class="small muted">Egy sorra kattintva megnyílik a teljes lap; a sor végén a „Törlés” gombbal törölhető. Ha a robot egész héten nem ment, a lap nélküli hét sorában a „Nem üzemelt” gombbal jelölhető – ez a hét nem számít kimaradtnak. „Hiányzik” = lejárt hét kitöltött lap nélkül (${fmtDate(CONFIG.START_DATE)} óta figyelve, vagy a legelső laptól, ha az korábbi).</p>`;
 
   const scheduleHtml = `
-    <p class="small muted" style="margin-top:0">A heti feladatok minden lapon szerepelnek. Ezek a ritkábbak: a kitöltendő lapra csak akkor kerülnek fel, amikor esedékesek. Ami még nem volt kész, azt az üzembe helyezéstől (${fmtDate(LOCAL.COMMISSIONING_DATE)}) számolja.</p>
+    <p class="small muted" style="margin-top:0">A heti feladatok minden lapon szerepelnek. Ezek a ritkábbak: a kitöltendő lapra csak akkor kerülnek fel, amikor esedékesek. Ami még nem volt kész, azt az üzembe helyezéstől (${fmtDate(LOCAL.COMMISSIONING_DATE)}) számolja. A <b>használattól kopó</b> feladatokat minden „Nem üzemelt” hét egy héttel kitolja; a többi naptár szerint jár.</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Feladat</th><th>Gyakoriság</th><th>Ki végzi</th><th>Utoljára</th><th>Következő</th><th>Állapot</th></tr></thead>
         <tbody>${sched.map(({ t, info, st }) => `
           <tr><td><b>${esc(t.title)}</b>${t.freqNote ? `<br><span class="small muted">${esc(t.freqNote)}</span>` : ''}</td>
-            <td>${esc(t.freq.label)}</td>
+            <td>${esc(t.freq.label)}${t.use ? '<br><span class="small muted">használattól</span>' : ''}</td>
             <td>${esc(WHO_SHORT[t.who || 'kezelo'])}</td>
             <td>${info.last ? fmtDate(info.last) : '<span class="muted">még nem</span>'}</td>
-            <td>${fmtDate(info.due)}</td>
+            <td>${fmtDate(info.due)}${info.pushed ? `<br><span class="small muted">+${info.pushed} hét állás miatt</span>` : ''}</td>
             <td><span class="badge ${st.cls}">${esc(st.txt)}</span></td></tr>`).join('')}
         </tbody>
       </table>
@@ -948,7 +968,7 @@ async function renderOverview() {
   $$('[data-idle]', app).forEach((b) => b.addEventListener('click', (e) => {
     e.preventDefault();
     const w = weekOf(b.dataset.idle);
-    if (w) confirmIdle(w, robot, () => renderOverview());
+    if (w) confirmIdle(w, robot, () => renderOverview(), weeks);
   }));
   $$('[data-unidle]', app).forEach((b) => b.addEventListener('click', (e) => {
     e.preventDefault();
@@ -1023,7 +1043,7 @@ async function renderForm(reuse = false) {
   const { draft: d, restored } = loadDraft();
   const saveDraft = () => { store.set(DRAFT_KEY, JSON.stringify(d)); };
   const names = [...new Set(list.map((r) => r.inspector))].sort((a, b) => a.localeCompare(b, 'hu'));
-  const hist = historyOf(list, d.robot);
+  const hist = historyOf(list, d.robot, formIdle || []);
   const lap = tasksForWeek(d.check_date || today(), hist);
   lap.forEach(({ t }) => { if (!d.items[t.key]) d.items[t.key] = { status: null, note: '' }; });
   const state = (t) => d.items[t.key];
@@ -1303,19 +1323,32 @@ function confirmDelete(r, done) {
 
 /* ================================================================
    „Nem üzemelt” hét – a robot nem ment, ezért nem volt ellenőrzés.
-   A hét nem számít kimaradtnak; visszavonható. A ritkább feladatok
-   esedékessége ettől nem változik (naptár szerint számol).
+   A hét nem számít kimaradtnak; visszavonható. A használattól kopó
+   ritkább feladatokat (use: true) egy héttel kitolja, a többi naptár
+   szerint számol. Egyszerre több egymás utáni, lap nélküli hét is
+   jelölhető („Meddig?”).
    ================================================================ */
 const idleText = (x) => `${x.reason || 'Nem volt ellenőrzés'} – ${x.marked_by}, ${fmtDT(x.created_at)}`;
 const weekRange = (w) => `${fmtShort(w.monday)} – ${fmtShort(addDays(w.monday, 6))}`;
 
-function confirmIdle(w, robot, done) {
+// A w utáni, egymást követő, lap és jelölés nélküli hetek (w-vel együtt, időrendben).
+function idleRun(w, weeks) {
+  const i = weeks.findIndex((x) => x.key === w.key);
+  if (i < 0) return [w];
+  const run = [w];
+  for (let j = i - 1; j >= 0 && (weeks[j].status === 'missing' || weeks[j].status === 'due'); j--) run.push(weeks[j]);
+  return run;
+}
+
+function confirmIdle(w, robot, done, weeks = []) {
   const dlg = $('#dlg');
+  const run = idleRun(w, weeks);
   dlg.innerHTML = `
     <h3>Nem üzemelt a robot ezen a héten?</h3>
     <p><b>${w.year}. ${w.week}. hét</b> · ${weekRange(w)}</p>
-    <p class="small">A hét lap nélkül marad, de nem számít kimaradtnak. Ha mégis ment a robot, a jelölés visszavonható, vagy a lap utólag is kitölthető.</p>
+    <p class="small">A hét lap nélkül marad, de nem számít kimaradtnak. A használattól kopó feladatok (pl. légszűrő, radiátor, görgők) határideje egy héttel kitolódik. Ha mégis ment a robot, a jelölés visszavonható, vagy a lap utólag is kitölthető.</p>
     <form id="idleForm" class="field" style="gap:12px">
+      ${run.length > 1 ? `<label class="field"><span>Meddig nem ment?</span><select id="idleUntil">${run.map((x, i) => `<option value="${i}">${i ? `${x.year}. ${x.week}. hét végéig (${i + 1} hét)` : 'Csak ez a hét'}</option>`).join('')}</select></label>` : ''}
       <label class="field"><span>Miért? (nem kötelező)</span><input type="text" id="idleReason" maxlength="300" autocomplete="off" placeholder="pl. nem volt gyártás, szabadság, javításra vár"></label>
       <label class="field"><span>Ki jelöli?</span><input type="text" id="idleName" maxlength="120" autocomplete="off" required></label>
       <p class="err" id="idleErr" hidden></p>
@@ -1330,14 +1363,22 @@ function confirmIdle(w, robot, done) {
     const er = $('#idleErr');
     if (!name) { er.hidden = false; er.textContent = 'Írd be a nevedet.'; return; }
     const yes = $('#idleYes'); yes.disabled = true; yes.textContent = 'Mentés…';
+    const sel = $('#idleUntil');
+    const todo = run.slice(0, (sel ? Number(sel.value) : 0) + 1);
+    const reason = $('#idleReason').value.trim();
+    let ok = 0;
     try {
-      await call(() => api.idleMark(getCode(), { robot, iso_year: w.year, iso_week: w.week, reason: $('#idleReason').value.trim(), marked_by: name }));
+      for (const x of todo) {
+        await call(() => api.idleMark(getCode(), { robot, iso_year: x.year, iso_week: x.week, reason, marked_by: name }));
+        ok++;
+      }
       formList = null;
       dlg.close();
-      toast(`${w.week}. hét: a robot nem üzemelt.`);
+      toast(todo.length > 1 ? `${todo.length} hét (${w.week}–${todo[todo.length - 1].week}.): a robot nem üzemelt.` : `${w.week}. hét: a robot nem üzemelt.`);
       done();
     } catch (err) {
       if (err instanceof AccessError) { dlg.close(); return; }
+      if (ok) { formList = null; dlg.close(); toast(`${ok} hét megjelölve, a többi nem sikerült: ${err.message}`, true); done(); return; }
       er.hidden = false; er.textContent = `Nem sikerült: ${err.message}`;
       yes.disabled = false; yes.textContent = 'Újrapróbálom';
     }
