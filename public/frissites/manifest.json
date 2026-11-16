@@ -1,11 +1,11 @@
 {
-  "version": "ad11f65a3bef",
+  "version": "bbd47b02b600",
   "files": [
     {
       "p": "Teendoim/Teendoim.ps1",
-      "sha256": "aacc3df2aa4247dd0f6251e3c4cb782c191375cab1aacf5489fe7a30650250f3",
-      "size": 116910,
-      "u": "f/aacc3df2aa4247dd0f6251e3c4cb782c191375cab1aacf5489fe7a30650250f3"
+      "sha256": "e10deb58be4d40da4c659aadb671134273fb4274e9e3c4b1d7b5032eb56fc1f2",
+      "size": 119623,
+      "u": "f/e10deb58be4d40da4c659aadb671134273fb4274e9e3c4b1d7b5032eb56fc1f2"
     },
     {
       "p": "Teendoim/Teendoim.bat",
@@ -15,9 +15,9 @@
     },
     {
       "p": "Teendoim/OLVASS.txt",
-      "sha256": "00bc0ce81859d9b9325a720bd5af18e8166310749bec1b493f3ef0ed62436238",
-      "size": 7114,
-      "u": "f/00bc0ce81859d9b9325a720bd5af18e8166310749bec1b493f3ef0ed62436238"
+      "sha256": "42fce61966a286ba97e0b3f3b5034911be216b3efb0c7c47fffa547b303fb148",
+      "size": 7317,
+      "u": "f/42fce61966a286ba97e0b3f3b5034911be216b3efb0c7c47fffa547b303fb148"
     },
     {
       "p": "BrematKozpont/Kozpont.ps1",
