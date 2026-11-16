@@ -1,0 +1,47 @@
+{
+  "version": "ad11f65a3bef",
+  "files": [
+    {
+      "p": "Teendoim/Teendoim.ps1",
+      "sha256": "aacc3df2aa4247dd0f6251e3c4cb782c191375cab1aacf5489fe7a30650250f3",
+      "size": 116910,
+      "u": "f/aacc3df2aa4247dd0f6251e3c4cb782c191375cab1aacf5489fe7a30650250f3"
+    },
+    {
+      "p": "Teendoim/Teendoim.bat",
+      "sha256": "69d2dfe03d76d3ecf6994c26b6c03e7ed9375d0424eab5a0d90ff269468f6cd3",
+      "size": 122,
+      "u": "f/69d2dfe03d76d3ecf6994c26b6c03e7ed9375d0424eab5a0d90ff269468f6cd3"
+    },
+    {
+      "p": "Teendoim/OLVASS.txt",
+      "sha256": "00bc0ce81859d9b9325a720bd5af18e8166310749bec1b493f3ef0ed62436238",
+      "size": 7114,
+      "u": "f/00bc0ce81859d9b9325a720bd5af18e8166310749bec1b493f3ef0ed62436238"
+    },
+    {
+      "p": "BrematKozpont/Kozpont.ps1",
+      "sha256": "27a12b0e8867913d0d1761f45a3a352ec1b267de3b0fc95ad871c9f3a2f7d98f",
+      "size": 22629,
+      "u": "f/27a12b0e8867913d0d1761f45a3a352ec1b267de3b0fc95ad871c9f3a2f7d98f"
+    },
+    {
+      "p": "BrematKozpont/Kozpont.bat",
+      "sha256": "0ce1b526725dfaba4736cf42e2f2e6a607fa366bfb5f838aa5bc275b4c9c3e04",
+      "size": 116,
+      "u": "f/0ce1b526725dfaba4736cf42e2f2e6a607fa366bfb5f838aa5bc275b4c9c3e04"
+    },
+    {
+      "p": "BrematKozpont/OLVASS.txt",
+      "sha256": "35515ad6407cef8c3a143f54e1de09a76ed380b2d66f39f76ed8c55e423f2267",
+      "size": 4763,
+      "u": "f/35515ad6407cef8c3a143f54e1de09a76ed380b2d66f39f76ed8c55e423f2267"
+    },
+    {
+      "p": "BrematKozpont/web/index.html",
+      "sha256": "e85512553517be7ad9f6924c88e3c5467cd8aa0e33819773efc006cb4fc4bd47",
+      "size": 111839,
+      "u": "f/e85512553517be7ad9f6924c88e3c5467cd8aa0e33819773efc006cb4fc4bd47"
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+﻿BREMAT KÖZPONT – HELYI RÉSZ (Valk fájlok)
+=========================================
+
+Mi ez
+- A BREMAT Központ gépen futó része: a Valk cellák, jigek, adapterek és termékek egy helyen,
+  a hozzájuk tartozó adatokkal, jegyzetekkel és fájlokkal (rajz, STEP, PDF).
+- A fájlok a gépen maradnak, a netre nem kerülnek fel. Csak ez a gép éri el
+  (http://localhost:47801/), a hálózat többi gépe és a tablet sem.
+- A napló, a heti lap és a projektek továbbra is a webes Központban vannak
+  (https://bremat-stuff.netlify.app). Onnan a "Valk fájlok" menüpont ide hoz.
+
+Telepítés
+1. Csomagold ki a BrematKozpont mappát a Teendoim mappa MELLÉ, pl.:
+     Dokumentumok\Teendoim
+     Dokumentumok\BrematKozpont
+   (Így a Teendőim menüjéből indítható, és a Teendőimmel együtt indul.)
+2. Dupla kattintás: Kozpont.bat. Megnyílik a böngészőben a Valk fájlok oldal.
+3. A Központ gombbal a webes Központ nyílik. Ezen a gépen ott is megjelenik
+   a "Valk fájlok" menüpont és a kezdőlapon a "Valk fájlok" sziget.
+
+Felépítés
+- Kezdőlap: 3 cella (1. és 2. = a robot két manipulátora, 3. = Siegmund asztal).
+  A cellának is lehet képe: a cella kártyáján a kamera gomb, vagy cella oldal → "Kép".
+- A 3. cellában (Siegmund asztal) nincs adapter: a jig alatt egyből a termékek vannak.
+  A cella oldalán átkapcsolható ("Adapter nélkül" / "Adapterek bekapcsolása").
+- Cella → jigek (szigetek képpel) → jig oldal: a rajta lévő adapterek
+  → adapter oldal: a rajta lévő termékek → termék oldal.
+- Jig, adapter és termék oldalon: kép / 3D, saját Adatok (te adod meg: pl. Anyag: S235),
+  Jegyzetek dátummal, és a kiválasztott fájlok (Rajzok, 3D, Képek, Egyéb).
+- Fent a sáv mutatja, hol vagy: Kezdőlap › Cella › Jig › Adapter › Termék, színnel,
+  az aktuális kiemelve. Rákattintva visszaugrasz. Mellette ← → gomb: vissza / előre.
+- Egy termék több adapteren is lehet (Másik adapter gomb) – ugyanaz a termék, nem másolat.
+- Felül a kereső: jig, adapter, termék, adat, jegyzet és fájlnév egyszerre. A "/" billentyű
+  egyből a keresőbe ugrik. Nyilakkal és Enterrel is választhatsz.
+
+Új jig / adapter / termék
+- Cella → "Új jig", Jig → "Új adapter", Adapter → "Termék hozzáadása":
+  név + "Fájlok kiválasztása": magukat a fájlokat jelölöd ki (pl. csak az adapter STEP-jét),
+  nem a mappát. Többet is kijelölhetsz, több mappából is. A név magától kitöltődik.
+- Később: "Fájl hozzáadása" gomb. A ⋯ menüben "Leválasztás": a fájl a helyén marad.
+- A régi, mappával kötött elemeknél a mappa összes fájlja látszik; "Mappa leválasztása".
+- Az 1. változatban jigre tett termékek a jig oldalán "Adapter nélküli termékek" alatt
+  vannak: nyisd meg, és "Adapterre".
+- A kép magától elkészül a kiválasztott fájlok legnagyobb STEP-jéből. Másik kép: "Kép" gomb,
+  vagy a 3D nézetben "Ez legyen a kép" (abból a nézőpontból).
+
+Fájlok
+- A fájlok a helyükön maradnak, az oldal csak összeköti őket a jiggel / adapterrel / termékkel.
+- Kattintás: előnézet (PDF, kép, STEP / STL 3D). Dupla kattintás: saját programjával.
+- Feltöltés: "Feltöltés" gomb, vagy húzd a fájlokat az oldalra. Az első kiválasztott fájl
+  mappájába kerül, és magától hozzá is adódik. Ha már van ilyen nevű, rákérdez.
+- "Mappa feltöltése": egy egész mappa a gép bármely helyéről, az almappáival együtt
+  (a Fájlok oldalon a kiválasztott helyre). Mappát be is húzhatsz az oldalra.
+- A sor végén a ⋯ gomb: átnevezés, áthelyezés, megmutatás a mappában,
+  törlés (a Lomtárba kerül, onnan visszaállítható).
+- Fent a "Fájlok" gomb: minden mappa, a megszokott mappaszerkezetben.
+
+Mappák
+- Alapból ez a két mappa látszik:
+    Asztal\Alex\manipulator
+    Asztal\Alex\Products
+- Más mappa bekötése: Beállítások → "Újabb gyökérmappa bekötése" (ez NEM hoz létre
+  mappát a gépen). Új mappát a gépen: Fájlok oldal → "Új mappa" (kiírja a teljes útvonalat).
+
+Adatok, mentés
+- A cellák, jigek, adapterek, termékek, adatok és jegyzetek: %APPDATA%\BrematKozpont\adatok.json
+- Naponta mentés: %APPDATA%\BrematKozpont\mentes\ (60 napig).
+- Beállítások → "Adatok letöltése": egy mentés a Letöltések mappába.
+
+Ha valami nem megy
+- "A helyi program nem válaszol": indítsd el újra a Kozpont.bat-ot.
+- Hibák naplója: %APPDATA%\BrematKozpont\hiba.txt
+- Leállítás: Feladatkezelő → Windows PowerShell (Kozpont), vagy kijelentkezés.
+
+Frissítés
+- A Teendőim magától frissíti ezt a mappát is (menü → Frissítés). Kézzel letölteni nem kell.
