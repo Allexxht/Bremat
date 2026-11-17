@@ -334,7 +334,8 @@ const fig = (key, file) => {
    szemrevételezések (look), aztán a beavatkozások (do).
    Mezők: key, title, route, kind, freq, who, src, tools, steps, bad,
    more, figs, nk (általános gyakorlat), pending (pontosítás alatt),
-   extra ('gas' = gázáramlás mező).
+   extra ('gas' = gázáramlás mező), use (használattól kopik: a „Nem üzemelt”
+   hetek kitolják az esedékességét; a többi naptár szerint számol).
    ================================================================ */
 export const TASKS = [
   // ---------------- A · Elöl, leállított robottal – szemrevételezés
@@ -381,7 +382,7 @@ export const TASKS = [
     steps: ['A kaparókés ép, nem kopott.', 'Van elég fröccsgátló folyadék.'],
     bad: 'Kopott kés vagy kevés folyadék: a „Pisztolytisztító kitakarítása” feladatnál cseréld, töltsd utána, és ott jelöld Beavatkozásként.',
     more: pick('cleaner', 'Hogyan működik', 'Biztonság'), figs: [fig('cleaner', 'cleaner.jpg')] },
-  { key: 'gorgo', title: 'Huzaladagoló görgői', route: 'A', kind: 'look', freq: M2,
+  { key: 'gorgo', title: 'Huzaladagoló görgői', route: 'A', kind: 'look', freq: M2, use: true,
     src: 'Panasonic R 8.7.1 (2–3 havonta)', tools: ['zseblámpa', 'tartalék görgő MDR00053 (ha kopott)'],
     pending: 'A huzaladagoló fedelének nyitása és a görgők elérése a fotók alapján kerül ide.',
     steps: ['Mielőtt hozzányúlsz: minden tápot kapcsolj le, az elosztószekrényt is.',
@@ -436,12 +437,12 @@ export const TASKS = [
     steps: ['Töröld tisztára a fénykapuk tükreit és lencséit.'],
     bad: 'Ha sérült vagy elmozdult: karbantartás.',
     more: pick('fence', 'Fénysorompók', 'Szabály'), figs: [] },
-  { key: 'kerites', title: 'Kerítés letörlése', route: 'A', kind: 'do', freq: M1,
+  { key: 'kerites', title: 'Kerítés letörlése', route: 'A', kind: 'do', freq: M1, use: true,
     src: 'Valk 6.6/9', freqNote: 'A Valk hetente írja; a sérülést hetente nézed a „Fénykapuk és kerítés” feladatnál.',
     tools: ['tiszta rongy'],
     steps: ['Töröld le a kerítéselemeket és a szervizajtót.'],
     bad: 'Sérülést találsz: karbantartás.', more: [], figs: [] },
-  { key: 'kar-500', title: 'Panasonic 500 órás ellenőrzés', route: 'A', kind: 'do', freq: M3, who: 'karbantarto',
+  { key: 'kar-500', title: 'Panasonic 500 órás ellenőrzés', route: 'A', kind: 'do', freq: M3, use: true, who: 'karbantarto',
     src: 'Panasonic R 8.3, V 7.3, P 12.2', tools: ['csavarkulcs-készlet', 'csavarhúzó'],
     steps: ['Robot: rögzítőcsavarok és fedélcsavarok ellenőrzése, ha kell, utánhúzás; az összekötő kábelek csatlakozói (tapintással).',
       'Huzaladagoló: adagológörgő, adagoló- és hajtófogaskerék – a horony és a fogak kopása, deformációja; jelentős sérülésnél csere.',
@@ -450,7 +451,7 @@ export const TASKS = [
     bad: 'Ha az ok nem világos: Panasonic szerviz.',
     more: [['Időköz', '<p>A Panasonic 500 óránként vagy 3 havonta írja, amelyik előbb eljön. Az üzemóra a vezérlő bekapcsolt ideje (R 8., V 7.1). Nálatok a vezérlő csak használatkor megy (kb. napi 4 óra), így a 3 hónap jön el előbb.</p>']],
     figs: [] },
-  { key: 'zsirzas', title: 'Huzaladagoló zsírzása és csavarnyomatékai', route: 'A', kind: 'do', freq: Y1, who: 'karbantarto',
+  { key: 'zsirzas', title: 'Huzaladagoló zsírzása és csavarnyomatékai', route: 'A', kind: 'do', freq: Y1, use: true, who: 'karbantarto',
     src: 'Panasonic R 8.6, 8.7.1', tools: ['Alvania S2 zsír', 'nyomatékkulcs', 'védőszemüveg', 'vastag kesztyű'],
     steps: ['A csigahajtásra (worm gear, worm wheel) 5 g Alvania S2 zsír a GREASE INLET nyíláson.',
       'A huzaladagoló csavarjainak nyomatéka: M8×15 (1 db, a másik oldalon is) – 23 N·m; M5×55 (3 db) – 5,5 N·m; M6×15 (4 + 4 db) – 7,3 N·m.'],
@@ -477,7 +478,7 @@ export const TASKS = [
     steps: ['Nézd meg a vezérlő oldalpaneljein lévő légszűrőket: nincsenek-e eltömődve porral, fröccsel.'],
     bad: 'Eltömődött szűrő: tisztítsd ki most is (lásd a „Vezérlő légszűrőinek tisztítása” feladatot), és jelöld Beavatkozásként.',
     more: pick('controller', 'Légszűrő (Panasonic V 7.2)'), figs: [fig('controller', 'controller-filter.jpg')] },
-  { key: 'levego', title: 'Sűrített levegő', route: 'B', kind: 'look', freq: M1,
+  { key: 'levego', title: 'Sűrített levegő', route: 'B', kind: 'look', freq: M1, use: true,
     src: 'Valk 6.6/13', freqNote: 'A Valk hetente írja.', tools: ['szivárgáskereső spray vagy szappanos víz'],
     steps: ['A levegőegység nyomásmérője a megszokott értéket mutatja.',
       'Nincs szivárgás (sziszegés) a csatlakozásoknál és a tömlőknél. Gyanús helyen: szappanos víz vagy szivárgáskereső spray.'],
@@ -494,7 +495,7 @@ export const TASKS = [
     bad: 'Ha olyan szennyeződést találsz, ami nem jön le (pl. ráolvadt fröccs), vagy sérülést: jelezd a Valk-nak.',
     more: [['Honnan van ez', NK + '<p>A sínre nincs gyártói leírás nálunk. Ha a Valk ad hozzá előírást, az felülírja ezt.</p>']],
     figs: [] },
-  { key: 'szuro', title: 'Vezérlő légszűrőinek tisztítása', route: 'B', kind: 'do', freq: W2,
+  { key: 'szuro', title: 'Vezérlő légszűrőinek tisztítása', route: 'B', kind: 'do', freq: W2, use: true,
     src: 'Valk 6.6/1–2 · Panasonic V 7.2', freqNote: 'A Valk hetente írja. Ha W1210 / W1220 hibaüzenet jön, azonnal.',
     tools: ['csavarhúzó', 'ecset', 'tartalék szűrő (ha sérült)'],
     steps: ['Kapcsold le a robotvezérlő főkapcsolóját, és várj, amíg lehűl.',
@@ -504,7 +505,7 @@ export const TASKS = [
     bad: 'Ha a „Temperature error” (W1210, W1220) a szűrő tisztítása után is visszajön: Panasonic.',
     more: pick('controller', 'Főkapcsolók – melyik mit kapcsol', 'Mielőtt hozzányúlsz', 'A ventilátorok nem indulnak azonnal'),
     figs: [fig('controller', 'controller-filter.jpg'), fig('controller', 'main-switches.jpg')] },
-  { key: 'radiator', title: 'Hűtő radiátorának kifúvatása', route: 'B', kind: 'do', freq: M1,
+  { key: 'radiator', title: 'Hűtő radiátorának kifúvatása', route: 'B', kind: 'do', freq: M1, use: true,
     src: 'Valk 6.6/3', freqNote: 'A Valk hetente írja.', tools: ['sűrített levegő pisztoly', 'védőszemüveg'],
     steps: ['Kapcsold ki a hűtőt (kapcsoló a hátoldalán).',
       'Fúvasd ki a radiátort és a ventilátort – a hűtőt szabad sűrített levegővel. Védőszemüveg.'],
@@ -578,7 +579,7 @@ export const TASKS = [
       ...pick('gas', 'Ha kevesebb a mért érték'),
     ],
     figs: [] },
-  { key: 'mentes', title: 'Robot biztonsági mentése', route: 'D', kind: 'do', freq: M1,
+  { key: 'mentes', title: 'Robot biztonsági mentése', route: 'D', kind: 'do', freq: M1, use: true,
     src: 'Valk 5.9 („rendszeresen”)', tools: ['SD-kártya vagy USB-meghajtó'],
     steps: ['Első alkalommal hozz létre mappát: SET → Advanced settings → Folder settings → Edit folder → F1 (new), név (pl. ROB 1), Enter; utána Cancel, amíg vissza nem érsz a főképernyőre.',
       'SET → Back-up → Save.',
