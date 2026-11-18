@@ -91,7 +91,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
     (`pos: 'szerviz'`, `SERVICE_POS` a `tasks.js`-ben). Ok: kikapcsolt robotnál a robot alaphelyzetben
     (home pos) áll, ott a huzaladagoló és a kar egy része nem érhető el; bekapcsolva lent, szerviz-
     pozícióba kell állítani, utána vészleállító be, a huzaladagolóhoz a robotvezérlőt is lekapcsolva
-    (Panasonic R 8.7) – a robot a helyén marad. Hogy melyik programmal áll szerviz-pozícióba: pontosítás alatt.
+    (Panasonic R 8.7) – a robot a helyén marad. A szerviz-pozícióba állító programot Alex később elkészíti (pontosítás alatt); ha megvan, a neve a `SERVICE_POS`-ba és a lépésekbe kerül.
   - **A sín egy feladat:** a „Robot sínje” (`sin-nez`) megszűnt, a `sin` lett „Robot sínje: átnézés,
     takarítás” (átnézi, és ha kell, lesöpri). Emiatt változott a heti kör → 4. változat. A régi lapokon
     a `sin-nez` tétel a beküldéskori címével olvasható; a CSV-ben a megszűnt feladatok tételei az utolsó oszlopba kerülnek.

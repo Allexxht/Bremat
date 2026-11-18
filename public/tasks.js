@@ -41,7 +41,7 @@ export const ROUTES = {
 export const SERVICE_POS = {
   title: '4 · Elöl, szerviz-pozícióban',
   intro: 'Bekapcsolt robottal állítsd a robotot szerviz-pozícióba (lent). Utána vészleállító benyomva; a huzaladagolóhoz nyúlás előtt a robotvezérlőt is kapcsold le – a robot a helyén marad.',
-  pending: 'Hogy melyik programmal vagy hogyan áll a robot szerviz-pozícióba, a helyi leírás alapján kerül ide.',
+  pending: 'Szerviz-pozíció program készül: a robot olyan helyzetbe áll vele, ahol minden része jól elérhető. Amíg nincs, kézzel (Teach módban) állítsd oda. A program neve ide kerül.',
 };
 
 export const KINDS = {
