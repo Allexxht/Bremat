@@ -14,7 +14,7 @@
    LEGACY_TITLES-be (régi lapok így is olvashatók maradnak).
    ================================================================ */
 
-export const FORM_VERSION = 3;
+export const FORM_VERSION = 4;   // 4: a „Robot sínje” és a „Sín átsöprése” egy feladat lett (2026. 11. 18.)
 
 // Helyi értékek. A gáz irányértéke általános gyakorlat (EWM: 10–12 × huzalátmérő
 // l/min), amíg a hegesztési utasításból vagy a Valk-tól nincs pontos érték.
@@ -33,6 +33,15 @@ export const ROUTES = {
   C: { title: 'C · Bekapcsolva – hátul', intro: 'Bekapcsolás: I/O vezérlő → szűrődoboz → robotvezérlő. Előtte nézd meg, hogy senki nincs a robot munkaterében.' },
   D: { title: 'D · Bekapcsolva – elöl', intro: 'A próbákat és a programokat Teach módban, a feladatnál leírt módon végezd.' },
   E: { title: 'E · Szerviz – emlékeztető', intro: 'Ezeket nem a kezelő végzi. Rendben = megtörtént vagy időpont egyeztetve.' },
+};
+
+// Szerviz-pozíció (maintenance position): ezek a feladatok a D útvonal végén jönnek, a próbák után –
+// a robotot bekapcsolva lent, szerviz-pozícióba állítod (alaphelyzetben, home pos-ban a huzaladagoló
+// és a kar egy része nem érhető el). A feladat mezője: pos: 'szerviz'.
+export const SERVICE_POS = {
+  title: '4 · Elöl, szerviz-pozícióban',
+  intro: 'Bekapcsolt robottal állítsd a robotot szerviz-pozícióba (lent). Utána vészleállító benyomva; a huzaladagolóhoz nyúlás előtt a robotvezérlőt is kapcsold le – a robot a helyén marad.',
+  pending: 'Hogy melyik programmal vagy hogyan áll a robot szerviz-pozícióba, a helyi leírás alapján kerül ide.',
 };
 
 export const KINDS = {
@@ -338,6 +347,7 @@ const fig = (key, file) => {
    A kártya nagy része: title + todo (egy rövid mondat: mit kell csinálni,
    legfeljebb 80 karakter) + warn (ha veszélyes: rövid figyelmeztetés).
    Minden más (steps, tools, bad, more, figs, src) a lenyitható „Bővebben”-be kerül.
+   pos: 'szerviz' = szerviz-pozícióban végzendő (a D útvonal végén, SERVICE_POS).
    ================================================================ */
 export const TASKS = [
   // ---------------- A · Elöl, leállított robottal – szemrevételezés
@@ -390,14 +400,17 @@ export const TASKS = [
     steps: ['A kaparókés ép, nem kopott.', 'Van elég fröccsgátló folyadék.'],
     bad: 'Kopott kés vagy kevés folyadék: a „Pisztolytisztító kitakarítása” feladatnál cseréld, töltsd utána, és ott jelöld Beavatkozásként.',
     more: pick('cleaner', 'Hogyan működik', 'Biztonság'), figs: [fig('cleaner', 'cleaner.jpg')] },
-  { key: 'gorgo', title: 'Huzaladagoló görgői', route: 'A', kind: 'look', freq: M2,
-    todo: `Nézd meg a görgőket: ${LOCAL.WIRE_MM} mm-es jelölés, a horony nem kopott.`, warn: 'Előbb minden tápot kapcsolj le!',
-    src: 'Panasonic R 8.7.1 (2–3 havonta)', tools: ['zseblámpa', 'tartalék görgő MDR00053 (ha kopott)'],
-    pending: 'A huzaladagoló fedelének nyitása és a görgők elérése a fotók alapján kerül ide.',
-    steps: ['Mielőtt hozzányúlsz: minden tápot kapcsolj le, az elosztószekrényt is.',
-      `A görgők a ${LOCAL.WIRE_MM} mm-es huzalhoz valók – a görgőn a huzalátmérő jelölése elöl látszik.`,
-      'A görgők hornya nem kopott, nem repedt.'],
-    bad: `Kopott vagy repedt görgő: csere (${LOCAL.WIRE_MM} mm-es huzalhoz: MDR00053) – a lépések a „Bővebben” részben. Jelöld Beavatkozásként.`,
+  { key: 'gorgo', title: 'Huzaladagoló görgői', route: 'D', pos: 'szerviz', kind: 'look', freq: M2,
+    todo: `Nyisd ki a huzaladagolót: ${LOCAL.WIRE_MM} mm-es görgő, a horony nem kopott, nem repedt.`, warn: 'Előbb kapcsold le a robotvezérlőt!',
+    src: 'Panasonic R 8.7.1 (2–3 havonta), 8.7.2', tools: ['zseblámpa', 'tartalék görgő MDR00053 (ha kopott)'],
+    pending: 'A huzaladagoló fedelének nyitása a fotók alapján kerül ide.',
+    steps: ['Bekapcsolt robottal állítsd a robotot szerviz-pozícióba (lent) – alaphelyzetben a huzaladagoló nem érhető el.',
+      'Nyomd be a vészleállítót, majd kapcsold le a robotvezérlőt és az elosztószekrényt. A robot a helyén marad; bekapcsolt tápnál áramütés veszélye (R 8.7).',
+      'Nyisd ki a huzaladagoló fedelét.',
+      'Húzd magad felé a nyomóanyákat ①, hogy a nyomókarok ② kioldjanak, és hajtsd fel a nyomókarokat (a kép számai, R 8.7.2).',
+      `Nézd meg mindkét adagológörgőt ④: elöl a jelölés ${LOCAL.WIRE_MM} mm-es huzalhoz való, és a horony nem kopott, nem repedt.`,
+      'Hajtsd vissza a nyomókarokat, billentsd vissza a nyomóanyákat, és zárd be a fedelet.'],
+    bad: `Kopott vagy repedt görgő: csere (${LOCAL.WIRE_MM} mm-es huzalhoz: MDR00053) – a lépések lent, a „Görgő és csövek cseréje” részben. Jelöld Beavatkozásként.`,
     more: pick('feeder', 'Mielőtt hozzányúlsz', 'Részei (a kép számai)', 'Görgők – 2–3 havonta (R 8.7.1)', 'Görgő és csövek cseréje (R 8.7.2)'),
     figs: [fig('feeder', 'feeder-parts.jpg')] },
 
@@ -410,10 +423,11 @@ export const TASKS = [
       'A szerszámok tiszták, épek, és a helyükön vannak.'],
     bad: 'Hiányzó vagy sérült szerszám: pótold, vagy írd be.',
     more: pick('area', 'Miért fontos', 'Vigyázz', 'Hová a hulladék'), figs: [] },
-  { key: 'kar-tisztit', title: 'Robotkar letörlése', route: 'A', kind: 'do', freq: W1,
-    todo: 'Töröld le a kart ronggyal, a kifolyt zsírt is.', warn: 'Sűrített levegő és víz tilos!',
+  { key: 'kar-tisztit', title: 'Robotkar letörlése', route: 'D', pos: 'szerviz', kind: 'do', freq: W1,
+    todo: 'Szerviz-pozícióban töröld le a kart ronggyal, a kifolyt zsírt is.', warn: 'Sűrített levegő és víz tilos!',
     src: 'Valk 6.6/1 · Panasonic R 8.1.1', tools: ['tiszta rongy'],
-    steps: ['Töröld le a port és a fröccsöt ronggyal. <b>Sűrített levegő és víz tilos</b> – bejut a robotba.',
+    steps: ['A robot szerviz-pozícióban (lent), vészleállító benyomva – így a kar minden része elérhető.',
+      'Töröld le a port és a fröccsöt ronggyal. <b>Sűrített levegő és víz tilos</b> – bejut a robotba.',
       'A kifolyt zsírt töröld le.'],
     bad: 'Ha a letörölt zsír a következő héten megint ott van: jelezd (Panasonic szerviz).',
     more: pick('arm', 'Tisztítás'), figs: [] },
@@ -425,12 +439,15 @@ export const TASKS = [
     bad: 'Ha a gázfúvókát is cserélni kellett: Beavatkozás kellett, és írd be. Az O-gyűrűkhöz ennél a feladatnál nem kell hozzányúlni – mi ez és hol van, lásd „Bővebben”.',
     more: pick('torch', 'Részei', 'Áramátadó', 'O-gyűrű – mi ez', 'O-gyűrű – hol van (Valk 6.8, 6.10)', 'O-gyűrű – mikor nézd meg', 'A pisztoly levétele (Valk 6.8)'),
     figs: [fig('torch', 'torch-orings.jpg'), fig('torch', 'torch-unlock.jpg')] },
-  { key: 'adagolo', title: 'Huzaladagoló: forgács kitakarítása', route: 'A', kind: 'do', freq: W1,
-    todo: 'Ecsettel szedd ki a huzalforgácsot a görgők környékéről.', warn: 'Előbb minden tápot kapcsolj le! Sűrített levegő tilos.',
+  { key: 'adagolo', title: 'Huzaladagoló: forgács kitakarítása', route: 'D', pos: 'szerviz', kind: 'do', freq: W1,
+    todo: 'Ecsettel szedd ki a huzalforgácsot a görgők környékéről.', warn: 'Előbb kapcsold le a robotvezérlőt! Sűrített levegő tilos.',
     src: 'Panasonic R 8.7.1 (hetente)', tools: ['ecset'],
     pending: 'A huzaladagoló fedelének nyitása a fotók alapján kerül ide.',
-    steps: ['Mielőtt hozzányúlsz: minden tápot kapcsolj le, az elosztószekrényt is.',
-      'Szedd ki ecsettel a huzalforgácsot a görgők környékéről, a rozsdamentes cső és a központi cső bemenetéből. <b>Sűrített levegő tilos.</b>'],
+    steps: ['A robot szerviz-pozícióban (lent), ugyanúgy, mint a görgőknél.',
+      'Nyomd be a vészleállítót, majd kapcsold le a robotvezérlőt és az elosztószekrényt (R 8.7).',
+      'Nyisd ki a huzaladagoló fedelét.',
+      'Szedd ki ecsettel a huzalforgácsot a görgők környékéről, a rozsdamentes cső és a központi cső bemenetéből. <b>Sűrített levegő tilos.</b>',
+      'Zárd be a fedelet.'],
     bad: 'Ha a forgács feltűnően sok: rossz görgő vagy cső a huzalhoz, vagy rossz az igazítás – jelezd.',
     more: pick('feeder', 'Mielőtt hozzányúlsz', 'Részei (a kép számai)', 'Hetente (R 8.7.1)', 'Szigetelt rögzítés', 'Nem heti, de ide tartozik'),
     figs: [fig('feeder', 'feeder-parts.jpg'), fig('feeder', 'feeder-insulation.jpg')] },
@@ -479,15 +496,6 @@ export const TASKS = [
     figs: [] },
 
   // ---------------- B · Hátul, leállított robottal – szemrevételezés
-  { key: 'sin-nez', title: 'Robot sínje', route: 'B', kind: 'look', freq: W1, nk: true,
-    todo: 'Nézd végig a sínt: nincs rajta idegen tárgy, sérülés, becsípett kábel.',
-    src: 'Általános gyakorlat – a kapott kézikönyvek nem írnak a sínről', tools: ['zseblámpa'],
-    steps: ['Nézd végig a sínt: nincs-e rajta fröccs, huzaldarab, csavar vagy más idegen tárgy, ami a robot útjába kerülhet.',
-      'A sínen és a végeinél nincs látható sérülés, deformáció.',
-      'A robothoz menő kábelek és tömlők vezetése rendben van: nem lógnak a sín útjába, nincsenek becsípődve, kidörzsölve.'],
-    bad: 'Idegen tárgyat távolíts el (csak álló robotnál). Sérülés, deformáció, becsípődött kábel: ne indítsd a robotot, jelezd a Valk-nak – a sín beállítása, kenése, javítása az ő dolguk.',
-    more: [['Honnan van ez', NK + '<p>A sínre nincs gyártói leírás nálunk, és a sínen nincs adattábla vagy kenőpont. Ha a Valk ad hozzá előírást, az felülírja ezt.</p>']],
-    figs: [] },
   { key: 'huto-nez', title: 'Hűtő: vízszint, szivárgás', route: 'B', kind: 'look', freq: W1,
     todo: 'Hűtő: a víz a jelölésig ér, sehol nem szivárog.',
     src: 'Valk 6.6/3 · napi B6', tools: ['zseblámpa', 'hűtőfolyadék (a hűtő sajátja)'],
@@ -509,15 +517,16 @@ export const TASKS = [
     more: pick('air', 'Hol van', 'Elzárás karbantartáshoz', 'Szivárgáskeresés'), figs: [fig('air', 'air-unit.jpg')] },
 
   // ---------------- B · Hátul, leállított robottal – beavatkozás
-  { key: 'sin', title: 'Sín átsöprése', route: 'B', kind: 'do', freq: W1, nk: true,
-    todo: 'Söpörd le a sínt és a környékét.', warn: 'Csak álló robotnál! Sűrített levegő és olaj tilos.',
-    src: 'Általános gyakorlat – a kapott kézikönyvek nem írnak a sínről', tools: ['seprű és lapát', 'kesztyű'],
+  { key: 'sin', title: 'Robot sínje: átnézés, takarítás', route: 'B', kind: 'do', freq: W1, nk: true,
+    todo: 'Nézd végig a sínt, és ha kell, söpörd le.', warn: 'Csak álló robotnál! Sűrített levegő és olaj tilos.',
+    src: 'Általános gyakorlat – a kapott kézikönyvek nem írnak a sínről', tools: ['zseblámpa', 'seprű és lapát', 'kesztyű'],
     steps: ['Csak álló robotnál (vészleállító benyomva) lépj a sín közelébe.',
-      'Söpörd le a sínt és a környékét: fröccs, huzalvég, por.',
-      'A sínt ne fúvasd sűrített levegővel: a port és a fröccsöt a mozgó részek közé fújhatod.',
-      'Olajat, zsírt ne tegyél rá – a kenés, ha kell, a Valk dolga.'],
-    bad: 'Ha olyan szennyeződést találsz, ami nem jön le (pl. ráolvadt fröccs), vagy sérülést: jelezd a Valk-nak.',
-    more: [['Honnan van ez', NK + '<p>A sínre nincs gyártói leírás nálunk. Ha a Valk ad hozzá előírást, az felülírja ezt.</p>']],
+      'Nézd végig a sínt: nincs-e rajta fröccs, huzaldarab, csavar vagy más idegen tárgy, sérülés, deformáció.',
+      'A robothoz menő kábelek és tömlők nem lógnak a sín útjába, nincsenek becsípődve, kidörzsölve.',
+      'Ha koszos: söpörd le a sínt és a környékét. Ha tiszta, nem kell takarítani – akkor is Rendben.',
+      'A sínt ne fúvasd sűrített levegővel, olajat, zsírt ne tegyél rá – a kenés, ha kell, a Valk dolga.'],
+    bad: 'Sérülés, deformáció, becsípődött kábel, vagy ráolvadt szennyeződés, ami nem jön le: ne indítsd a robotot, jelezd a Valk-nak.',
+    more: [['Honnan van ez', NK + '<p>A sínre nincs gyártói leírás nálunk, és a sínen nincs adattábla vagy kenőpont. Ha a Valk ad hozzá előírást, az felülírja ezt.</p>']],
     figs: [] },
   { key: 'szuro', title: 'Vezérlő légszűrőinek tisztítása', route: 'B', kind: 'do', freq: W2,
     todo: 'Vedd ki és tisztítsd ki a vezérlő légszűrőit.', warn: 'Előbb kapcsold le a vezérlő főkapcsolóját!',
@@ -593,10 +602,13 @@ export const TASKS = [
     more: pick('safety', 'Vészleállítók', 'Újraindítás vészleállítás után (Valk 5.7)', 'Újraindítás doorstop után (Valk 5.6)', 'Szervizajtó zárása (Valk 3.2.1)', 'Állomás resetelése (Valk 3.2.1, 5.3)'),
     figs: [fig('safety', 'service-door-buttons.jpg'), fig('safety', 'safety-console.jpg')] },
   { key: 's11', title: 'Pisztolyhelyzet (S11)', route: 'D', kind: 'look', freq: W1,
-    todo: 'Futtasd az S11-et: a pisztoly pontosan a referenciapontra áll.',
+    todo: 'Futtasd az S11-et, és nézd meg: a huzalvég pontosan a referenciacsúcson áll?', warn: 'A program nem jelez hibát – szemmel kell megnézni!',
     src: 'Valk napi B7 · 5.8', tools: [],
-    steps: ['Futtasd az S11 Reference Tool 1 programot: a pisztoly pontosan a kalibráló jig referenciapontjára áll.'],
-    bad: 'Ha eltér: ne hegessz vele, szólj a kalibrálásért felelősnek – a robotot kalibrálni kell (PPS).',
+    steps: ['Vágd le a huzalt a szokásos kinyúlásra (S60 / S61 / S62 – 17 / 22 / 26 mm), hogy mindig ugyanúgy mérj.',
+      'Teach módban futtasd az S11 Reference Tool 1 programot. A program csak odaviszi a pisztolyt a kalibráló jig referenciacsúcsához – azt nem írja ki, hogy jó-e.',
+      'Nyomd be a vészleállítót, menj közel, és nézd meg több irányból: a huzal vége pontosan a referenciacsúcs hegyén áll, nincs oldalra vagy fel-le elcsúszva.',
+      'Ha pontosan ott áll: Rendben. Utána vidd vissza a robotot alaphelyzetbe.'],
+    bad: 'Ha szemmel látható az eltérés: ne hegessz vele, szólj a kalibrálásért felelősnek – a robotot kalibrálni kell (PPS). Ütközés után mindig nézd meg.',
     more: pick('ref', 'Mire való', 'Automatikus ellenőrzés (ATC)', 'Kalibrálás (PPS)', 'Huzalkinyúlás'), figs: [] },
   { key: 'gazaramlas', title: 'Gázáramlás a pisztolynál', route: 'D', kind: 'look', freq: W1, extra: 'gas',
     todo: `Mérd meg a gázt a pisztolynál, és írd be (${LOCAL.GAS_FLOW_TARGET} l/min).`,
@@ -614,14 +626,14 @@ export const TASKS = [
     ],
     figs: [] },
   { key: 'mentes', title: 'Robot biztonsági mentése', route: 'D', kind: 'do', freq: M1,
-    todo: 'Mentsd el a robotot SD-kártyára vagy USB-re (All data).',
-    src: 'Valk 5.9 („rendszeresen”)', tools: ['SD-kártya vagy USB-meghajtó'],
-    steps: ['Első alkalommal hozz létre mappát: SET → Advanced settings → Folder settings → Edit folder → F1 (new), név (pl. ROB 1), Enter; utána Cancel, amíg vissza nem érsz a főképernyőre.',
+    todo: 'Mentsd a robotot pendrive-ra: SET → Back-up → Save → USB → All data.',
+    src: 'Valk 5.9 („rendszeresen”) · a lépések a helyi gyakorlat szerint', tools: ['pendrive (rajta egy „backup” mappa)'],
+    steps: ['Kell egy pendrive, rajta egy „backup” mappa. Dugd be a teach pendantba.',
       'SET → Back-up → Save.',
-      'Válaszd a helyet (SD Memory vagy USB Memory) és a mappát (pl. ROB 1).',
-      'Válaszd az All data lehetőséget.',
+      'Hely: USB.',
+      'All data.',
       '„Verify?” → Yes. Ha minden csoport OK, kész.'],
-    bad: 'Ha valamelyik csoport hibás: ismételd meg, és ments másik memóriára vagy kártyára.',
+    bad: 'Ha valamelyik csoport hibás: ismételd meg, és ments másik pendrive-ra.',
     more: [['Visszatöltésnél vigyázz (Valk 5.9)', '<p>Az All data visszatöltése az origin adatokat is visszatölti – ha a mentés a kalibrálás előtt készült, a robot vagy a külső tengely pozíciója elcsúszhat. Egy-egy elveszett fájl visszaállítása: File → Transfer.</p>']],
     figs: [] },
 

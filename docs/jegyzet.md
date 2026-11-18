@@ -85,6 +85,20 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   az utolsó után bezárul. Esc vagy ✕ bezárja. Beküldéskor hiba: a hibás sorok pirosak, és az első
   hibás feladat kártyája nyílik meg. A „Mit vigyél magaddal” és a „Hogyan töltsd ki?” egy sorban,
   lenyitható – hogy a tábla minél feljebb legyen.
+- **4. változat (2026. november 18., Alex kérése; `FORM_VERSION` = 4):**
+  - **Szerviz-pozíció:** a huzaladagoló görgői, a forgács kitakarítása és a robotkar letörlése
+    (`gorgo`, `adagolo`, `kar-tisztit`) a 4. oszlop (D) végére került, „Szerviz-pozícióban” alcímmel
+    (`pos: 'szerviz'`, `SERVICE_POS` a `tasks.js`-ben). Ok: kikapcsolt robotnál a robot alaphelyzetben
+    (home pos) áll, ott a huzaladagoló és a kar egy része nem érhető el; bekapcsolva lent, szerviz-
+    pozícióba kell állítani, utána vészleállító be, a huzaladagolóhoz a robotvezérlőt is lekapcsolva
+    (Panasonic R 8.7) – a robot a helyén marad. Hogy melyik programmal áll szerviz-pozícióba: pontosítás alatt.
+  - **A sín egy feladat:** a „Robot sínje” (`sin-nez`) megszűnt, a `sin` lett „Robot sínje: átnézés,
+    takarítás” (átnézi, és ha kell, lesöpri). Emiatt változott a heti kör → 4. változat. A régi lapokon
+    a `sin-nez` tétel a beküldéskori címével olvasható; a CSV-ben a megszűnt feladatok tételei az utolsó oszlopba kerülnek.
+  - **S11:** a program nem jelez hibát, csak a referenciacsúcshoz viszi a pisztolyt – szemmel kell
+    megnézni, hogy a huzalvég pontosan a csúcson áll-e (előtte huzalvágás azonos kinyúlásra).
+  - **Biztonsági mentés:** Alex gyakorlata szerint: pendrive „backup” mappával, SET → Back-up → Save →
+    USB → All data → „Verify?” Yes (mappát a pendanton nem kell létrehozni).
 - **A kártya (2026. november 17., Alex jóváhagyta):** fent nagy betűvel a feladat neve, alatta a
   `todo` (egy mondat), ha van, a piros `warn`. Minden más – lépések, „Kell hozzá”, „Ha nincs
   rendben”, gyakoriság, a régi „Bővebben” szakaszok, képek, forrás – a lenyitható „Bővebben – ha

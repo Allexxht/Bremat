@@ -465,6 +465,9 @@ details.howto[open] > summary { margin-bottom: 8px; }
 .pw.be { background: color-mix(in srgb, #138a4a 14%, #fff); color: #138a4a; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; width: 100%; min-height: 50px; padding: 9px 12px; border: 0; border-bottom: 1px solid rgba(16, 20, 28, .06); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: background .2s var(--ease); }
 .row:last-child { border-bottom: 0; }
+.rows .subh { display: flex; flex-direction: column; padding: 9px 12px 7px; border-top: 2px solid color-mix(in srgb, var(--hot) 35%, transparent); border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--hot) 6%, #fff); color: var(--hot-text); font-size: 12.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.rows .subh span { color: var(--muted); font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .row:hover { background: rgba(16, 20, 28, .035); }
 .row .dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(16, 20, 28, .25); flex: none; display: grid; place-items: center; font-size: 13px; font-weight: 900; color: #fff; }
 .row.st-ok .dot { background: var(--ok); border-color: var(--ok); }
@@ -547,7 +550,7 @@ details.howto[open] > summary { margin-bottom: 8px; }
    A feladatok a közös katalógusból jönnek (public/tasks.js) – ugyanezt
    tölti be a szerver is az ellenőrzéshez.
    ================================================================ */
-import { FORM_VERSION, LOCAL, ROUTES, KINDS, WHO, WHO_SHORT, TASKS, TASK_BY_KEY, isWeekly, LEGACY_TITLES } from '/tasks.js';
+import { FORM_VERSION, LOCAL, ROUTES, SERVICE_POS, KINDS, WHO, WHO_SHORT, TASKS, TASK_BY_KEY, isWeekly, LEGACY_TITLES } from '/tasks.js';
 
 /* ================================================================
    CONFIG
@@ -658,6 +661,7 @@ function moreHtml(t) {
     <summary><span>Bővebben – ha nem tudod, hogyan kell</span>${n ? `<span class="cnt">${n} kép</span>` : ''}</summary>
     <div class="more-body">
       ${t.pending ? `<p class="pending"><b>Pontosítás alatt:</b> ${esc(t.pending)}</p>` : ''}
+      ${t.pos ? `<p class="pending"><b>Pontosítás alatt:</b> ${esc(SERVICE_POS.pending)}</p>` : ''}
       <section><h4>Lépésről lépésre</h4><ol>${t.steps.map((x) => `<li>${x}</li>`).join('')}</ol></section>
       ${t.tools.length ? `<section><h4>Kell hozzá</h4><p>${t.tools.map(esc).join(' · ')}</p></section>` : ''}
       <section><h4>Ha nincs rendben</h4><p>${esc(t.bad)}</p></section>
@@ -1079,7 +1083,9 @@ function downloadCsv(rows) {
     const v = r.form_version || 1;
     if (v >= 3) {
       const by = Object.fromEntries((r.items || []).map((x) => [x.key, x]));
-      return [...TASKS.flatMap((t) => { const x = by[t.key]; return x ? [STATUS_TXT[x.status] || '', x.note || ''] : ['', '']; }), ''];
+      const gone = (r.items || []).filter((x) => !TASK_BY_KEY[x.key])
+        .map((x) => `${x.title || x.key}: ${STATUS_TXT[x.status] || ''}${x.note ? ` – ${x.note}` : ''}`).join(' | ');
+      return [...TASKS.flatMap((t) => { const x = by[t.key]; return x ? [STATUS_TXT[x.status] || '', x.note || ''] : ['', '']; }), gone];
     }
     const find = (no) => (r.items || []).find((y) => y.no === no) || {};
     const old = legacyTitles(r).map((t, i) => { const x = find(i + 1); return `${i + 1}. ${t}: ${STATUS_TXT[x.status] || ''}${x.note ? ` – ${x.note}` : ''}`; }).join(' | ');
@@ -1151,9 +1157,12 @@ async function renderForm(reuse = false) {
 
   // A feladatok sorrendje: a bejárás (1 elöl → 2 hátul → 3 bekapcsolva hátul → 4 elöl), állomáson
   // belül előbb a szemrevételezések, utána a beavatkozások; a szerviz-emlékeztetők a végén.
+  // A szerviz-pozícióban végzendők (pos) a D útvonal végén, a próbák után jönnek.
   const byRoute = (rk) => {
     const xs = lap.filter(({ t }) => t.route === rk);
-    return rk === 'E' ? xs : [...xs.filter(({ t }) => t.kind === 'look'), ...xs.filter(({ t }) => t.kind === 'do')];
+    if (rk === 'E') return xs;
+    const lk = (a) => [...a.filter(({ t }) => t.kind === 'look'), ...a.filter(({ t }) => t.kind === 'do')];
+    return [...lk(xs.filter(({ t }) => !t.pos)), ...lk(xs.filter(({ t }) => t.pos))];
   };
   const ORDER = Object.keys(ROUTES).flatMap(byRoute);
   const KEYS = ORDER.map(({ t }) => t.key);
@@ -1216,7 +1225,8 @@ async function renderForm(reuse = false) {
     if (!xs.length) return '';
     return `<section class="col ${extra}" data-r="${rk}" aria-label="${esc(STA_TITLE[rk])}">
       <header class="ch"><div class="r1"><span class="n">${label}</span><span class="t">${rk === 'E' ? 'Szerviz – emlékeztető' : STA[rk][0]}</span>${rk === 'E' ? '' : PW[STA[rk][1]]}<span class="c" id="cnt-${rk}"></span></div><div class="b"><i id="bar-${rk}"></i></div></header>
-      <div class="rows">${xs.map(rowHtml).join('')}</div></section>`;
+      <div class="rows">${xs.map((x, i) => (x.t.pos && !(xs[i - 1] && xs[i - 1].t.pos)
+        ? `<div class="subh">Szerviz-pozícióban<span>robot lent, vészleállító be</span></div>` : '') + rowHtml(x)).join('')}</div></section>`;
   };
   const cardsHtml = ORDER.map(itemHtml).join('');
   const boardHtml = `
@@ -1252,7 +1262,7 @@ async function renderForm(reuse = false) {
     </details>
     <details class="howto">
       <summary><b>Hogyan töltsd ki?</b></summary>
-      <p>Koppints egy feladatra: oldalt megnyílik a kártyája. A sorrend a bejárást követi: 1 elöl, 2 hátul (kikapcsolt robot), 3 hátul a bekapcsolás után, 4 elöl. A szem a szemrevételezés (csak megnézed vagy kipróbálod), a villáskulcs a beavatkozás (tenned is kell valamit). „Rendben” után magától jön a következő feladat.</p>
+      <p>Koppints egy feladatra: oldalt megnyílik a kártyája. A sorrend a bejárást követi: 1 elöl, 2 hátul (kikapcsolt robot), 3 hátul a bekapcsolás után, 4 elöl; a 4. oszlop végén a szerviz-pozícióban végzendők (huzaladagoló, a kar letörlése). A szem a szemrevételezés (csak megnézed vagy kipróbálod), a villáskulcs a beavatkozás (tenned is kell valamit). „Rendben” után magától jön a következő feladat.</p>
       <p><b class="t-ok">Rendben</b> – elvégezted, és a leírt rutinon (tisztítás, heti áramátadó-csere) felül nem kellett semmi.
          <b class="t-action">Beavatkozás kellett</b> – ezen felül cseréltél, javítottál, utántöltöttél, vagy hibát találtál.
          <b class="t-skip">Nem csináltam meg</b> – írd be, miért; a következő lapon újra ott lesz.</p>
@@ -1343,8 +1353,8 @@ async function renderForm(reuse = false) {
     cur = key;
     const sec = secOf(key); sec.hidden = false;
     document.getElementById(`row-${key}`)?.classList.add('sel');
-    $('#drawerTitle').textContent = STA_TITLE[t.route];
-    $('#drawerIntro').textContent = ROUTES[t.route].intro;
+    $('#drawerTitle').textContent = t.pos ? SERVICE_POS.title : STA_TITLE[t.route];
+    $('#drawerIntro').textContent = t.pos ? SERVICE_POS.intro : ROUTES[t.route].intro;
     const i = KEYS.indexOf(key);
     $('#drawerPos').textContent = `${i + 1} / ${KEYS.length}`;
     $('#dPrev').disabled = i === 0;
