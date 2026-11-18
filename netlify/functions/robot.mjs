@@ -15,7 +15,14 @@ function blobStore() {
     get: (k) => s.get(k, { type: 'json' }),
     async getWithEtag(k) {
       const r = await s.getWithMetadata(k, { type: 'json' });
-      return r ? { data: r.data, etag: r.etag } : null;
+      if (!r) return null;
+      if (r.etag) return { data: r.data, etag: r.etag };
+      // Ha a GET nem ad etaget (pl. a helyi Blobs szerver), a listából vesszük –
+      // előbb az etag, utána az adat: ha közben változott, a feltételes írás elutasít.
+      const { blobs } = await s.list({ prefix: k });
+      const b = blobs.find((x) => x.key === k);
+      const data = b ? await s.get(k, { type: 'json' }) : null;
+      return data ? { data, etag: b.etag } : null;
     },
     async setIfNew(k, v) { return (await s.setJSON(k, v, { onlyIfNew: true })).modified; },
     async setIfMatch(k, v, etag) { return (await s.setJSON(k, v, { onlyIfMatch: etag })).modified; },
