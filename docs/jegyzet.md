@@ -309,6 +309,20 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   A rögzített fejléc és a Beküldés-sáv majdnem tömör (`.97`), hogy a szöveg ne lássék át.
   A működéshez nem nyúl – kinézet-változásnál ezt a blokkot szerkeszd.
 
+## Új kinézet (2026. november 18., Alex kérése: „dizájnold újra”)
+- Design system (privát Claude-oldal): https://claude.ai/artifact/J6QdPwvcieRZj62W1x5Gw1 – tokenek,
+  komponensek, márkakönyv. Kipróbálható demó (mintaadatokkal): https://claude.ai/artifact/M6BHSrskeRvj592wDaG37P
+- Irány: üzemi, tiszta, jól olvasható. Az üveg és a WebGL „selyemszalag” háttér kikerült: tömör
+  `--ground` háttér halvány pontráccsal, a szigetek tömör kártyák kerettel, tetejükön 3px-es hang-színű csík.
+- Betűk: Archivo (cím, szöveg, a szigetek nagy száma), IBM Plex Mono (fejléc hét-száma, dátumok a
+  projektlistában), Archivo Black (logó). A Sora + Manrope kikerült a Központból.
+- Fejléc a lap tetejéhez tapad: bal oldalt „BREMAT Központ”, jobb oldalt a hét és a menügomb; a menü jobbról nyílik.
+  A menüpontok maradtak (Kezdőlap, Beállítások – a 3. változat döntése).
+- Sziget: új „nagy szám” (`.stat`, `fillIsland(..., { stat: { n, t } })`): napló = e heti kész,
+  Valk = a hét száma + állapot, Ötletek = nyitott, Projektek = oldalak száma.
+- A `.proj` rácsstílus `div.proj`-ra szűkült (ütközött a Projektek sziget `proj` osztályával).
+- A nyitó animáció, a téma-váltás, az adatréteg változatlan. A Valk lap és a napló még a régi „üveg réteg” kinézetű.
+
 ## Munkamódszer
 - A magyarázatok magyarul szóljanak, de a menü- és beállításneveket angolul írd
   (az eszközök angol felületűek).

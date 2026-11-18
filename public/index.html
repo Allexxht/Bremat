@@ -3,149 +3,146 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#eceef2">
+<meta name="theme-color" content="#ffffff">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <title>BREMAT Központ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Black&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <!-- Ikonok: Lucide (nyílt forrású ikonkészlet) -->
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 <!--
   =====================================================================
   BREMAT Központ – a bremat-stuff kezdőlapja.
-  Felül középen a cím, bal oldalt lenyitható menü, a cím alatt két
-  „sziget”: Munkanapló és Valk heti lap, értesítés-jelvénnyel.
-  Háttér: animált, hajlított „selyemszalagok” (canvas). Alapból világos,
-  a Beállításokban sötétre váltható.
+  Kinézet: a „BREMAT Központ” design system (2026. november 18.) – üzemi,
+  tiszta, jól olvasható. Fejléc: bal oldalt a logó, jobb oldalt a hét és a
+  menü (jobbról nyílik). Alatta a nyitó animáció, a köszönés és a szigetek
+  (Munkanapló, Valk heti lap, Ötletek, Projektek), értesítés-jelvénnyel.
+  Háttér: tömör, halvány pontráccsal. Alapból világos, a Beállításokban
+  sötétre váltható.
   A Központ nem tárol semmit: a meglévő szerverfüggvényeket kérdezi
   (/api/naplo, /api/km, /api/kozpont).
   =====================================================================
 -->
 <style>
-/* ---------- Színek (tokenek): világos alap, sötét változat ---------- */
+/* ---------- Színek (tokenek) – a „BREMAT Központ” design system szerint:
+   üzemi, tiszta, jól olvasható. Alapból világos, a Beállításokban sötétre váltható. ---------- */
 :root {
-  --bg: #eceef2;
-  --glass: rgba(255, 255, 255, .62);
-  --glass-strong: rgba(255, 255, 255, .86);
-  --glass-line: rgba(255, 255, 255, .85);
-  --line: rgba(16, 20, 28, .1);
-  --shadow: 0 12px 40px rgba(24, 30, 44, .12);
-  --text: #12151b;
-  --muted: #586070;
-  --hover: rgba(16, 20, 28, .055);
-  --active: rgba(16, 20, 28, .085);
-  --accent: #c8102e;
-  --scrim: rgba(20, 24, 33, .22);
-  --naplo: #0e8ea3;  --naplo-soft: rgba(14, 142, 163, .13);
-  --valk: #c8102e;   --valk-soft: rgba(200, 16, 46, .1);
-  --idea: #b86e00;   --idea-soft: rgba(214, 140, 0, .13);
-  --proj: #6a4bc4;   --proj-soft: rgba(106, 75, 196, .12);
-  --ok: #1e9a4e; --warn: #c27c00; --bad: #c8102e;
-  --badge-ink: #ffffff;
-  --display: 'Sora', 'Segoe UI', system-ui, sans-serif;
-  --body: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+  --ground: #f2f0eb;
+  --surface: #ffffff;
+  --sunken: #e8e5de;
+  --line: #d9d5cc;
+  --line-control: #86837b;
+  --text: #16181c;
+  --muted: #585b61;
+  --brand: #c8102e;   --on-brand: #ffffff;   --brand-soft: #f9e3e6;
+  --naplo: #0a7385;   --naplo-soft: #dcf0f3;
+  --valk: var(--brand); --valk-soft: var(--brand-soft);
+  --idea: #925708;    --idea-soft: #f6ead4;
+  --proj: #3a5793;    --proj-soft: #e2e8f4;
+  --on-tone: #ffffff;
+  --ok: #1d7a43;      --ok-soft: #dff0e5;
+  --bad: var(--brand);
+  --signal: #f2c200;  --on-signal: #16181c;
+  --focus: #16181c;
+  --scrim: rgba(17, 18, 20, .35);
+  --shadow: 0 1px 0 rgba(22, 24, 28, .04), 0 10px 24px -16px rgba(22, 24, 28, .28);
+  --shadow-overlay: 0 24px 60px -20px rgba(22, 24, 28, .4);
+  --display: 'Archivo', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Archivo', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  --logo: 'Archivo Black', 'Arial Black', sans-serif;
+  --r-sm: 4px; --r-md: 8px; --r-lg: 12px;
   --ease: cubic-bezier(.22, .8, .24, 1);
   color-scheme: light;
 }
 :root[data-theme="dark"] {
-  --bg: #0b0c0e;
-  --glass: rgba(22, 24, 28, .55);
-  --glass-strong: rgba(20, 22, 26, .86);
-  --glass-line: rgba(255, 255, 255, .12);
-  --line: rgba(255, 255, 255, .1);
-  --shadow: 0 12px 40px rgba(0, 0, 0, .5);
-  --text: #eef1f6; --muted: #9aa3b2;
-  --hover: rgba(255, 255, 255, .06); --active: rgba(255, 255, 255, .1);
-  --accent: #ff5468; --scrim: rgba(0, 0, 0, .4);
-  --naplo: #4cc7da; --naplo-soft: rgba(76, 199, 218, .14);
-  --valk: #ff5468;  --valk-soft: rgba(255, 84, 104, .14);
-  --idea: #f2b84b;  --idea-soft: rgba(242, 184, 75, .14);
-  --proj: #a990ff;  --proj-soft: rgba(169, 144, 255, .15);
-  --ok: #4ad37f; --warn: #f2b84b; --bad: #ff5468;
+  --ground: #111214; --surface: #1a1b1e; --sunken: #26272b;
+  --line: #33353a; --line-control: #74777f;
+  --text: #eceae6; --muted: #a4a7ae;
+  --brand: #ff5a6b; --on-brand: #1c0407; --brand-soft: #3a161b;
+  --naplo: #52c6d8; --naplo-soft: #102f35;
+  --idea: #f2b84b;  --idea-soft: #372a10;
+  --proj: #93b2ee;  --proj-soft: #1c2840;
+  --on-tone: #111214;
+  --ok: #5fd18d; --ok-soft: #123222;
+  --focus: #f2c200;
+  --scrim: rgba(0, 0, 0, .6);
+  --shadow: 0 1px 0 rgba(0, 0, 0, .5), 0 12px 28px -14px rgba(0, 0, 0, .8);
+  --shadow-overlay: 0 24px 60px -16px rgba(0, 0, 0, .9);
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; min-height: 100%; }
-body { background: var(--bg); color: var(--text); font-family: var(--body); font-size: 16px; line-height: 1.5; overflow-x: hidden; }
+body { background-color: var(--ground); color: var(--text); font-family: var(--body); font-size: 16px; line-height: 1.5; overflow-x: hidden; -webkit-font-smoothing: antialiased;
+  /* halvány pontrács – mint egy műszaki rajzlap */
+  background-image: radial-gradient(var(--line) 1px, transparent 1.2px); background-size: 24px 24px; background-attachment: fixed; }
 a { color: inherit; }
-button, input { font: inherit; color: inherit; }
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+b, .num { font-variant-numeric: tabular-nums; }
 
-/* ---------- Háttér: a szalagokat a canvas rajzolja (lásd 1. pont a scriptben) ---------- */
-#silk { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; display: block; }
+/* ---------- Felület (a régi „üveg” helyett tömör kártya, kerettel) ---------- */
+.glass { background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
 
-/* ---------- Üveg ---------- */
-.glass {
-  background: var(--glass);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
-  backdrop-filter: blur(22px) saturate(160%);
-  border: 1px solid var(--glass-line);
-  box-shadow: var(--shadow);
-}
-
-/* ---------- Fejléc: bal oldalt menügomb, középen a cím ---------- */
+/* ---------- Fejléc: bal oldalt a logó, jobb oldalt a hét és a menügomb ---------- */
 .topbar {
-  position: fixed; z-index: 20;
-  top: calc(12px + env(safe-area-inset-top, 0px));
-  left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
-  height: 64px; border-radius: 20px;
-  display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; padding: 0 10px;
-  animation: dropIn .7s var(--ease) both;
+  position: sticky; top: 0; z-index: 20;
+  height: calc(60px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) max(8px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 0; border-bottom: 1px solid var(--line); box-shadow: none;
 }
-.title { grid-column: 2; text-align: center; margin: 0; font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .02em; }
-.title a { text-decoration: none; }
-.title span { color: var(--muted); font-weight: 500; }
-@keyframes dropIn { from { opacity: 0; transform: translateY(-14px); } }
+.title { margin: 0; font-size: inherit; line-height: 1; }
+.title a { display: flex; align-items: baseline; gap: 8px; text-decoration: none; }
+.title b { font-family: var(--logo); font-weight: 400; font-size: 22px; letter-spacing: .01em; }
+.title span { font-family: var(--body); font-weight: 600; font-size: 15px; color: var(--muted); }
+.topbar .end { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.topbar .week { font: 500 14px/20px var(--mono); color: var(--muted); padding: 0 8px; white-space: nowrap; }
 
-.icon-btn { width: 44px; height: 44px; border-radius: 14px; border: 1px solid transparent; display: grid; place-items: center; background: transparent; color: var(--text); cursor: pointer;
-  transition: background .25s var(--ease), transform .2s var(--ease), border-color .25s; }
-.icon-btn:hover { background: var(--hover); border-color: var(--glass-line); }
-.icon-btn:active { transform: scale(.94); }
-.icon-btn svg { width: 22px; height: 22px; stroke-width: 1.8; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon-btn { width: 44px; height: 44px; border-radius: var(--r-md); border: 1px solid transparent; display: grid; place-items: center; background: transparent; color: var(--text); cursor: pointer;
+  transition: background .15s; }
+.icon-btn:hover { background: var(--sunken); }
+.icon-btn:active { transform: translateY(1px); }
+.icon-btn svg { width: 22px; height: 22px; stroke-width: 2; }
 
-/* ---------- Lenyitható menü ---------- */
-.scrim { position: fixed; inset: 0; z-index: 30; background: var(--scrim); opacity: 0; pointer-events: none; transition: opacity .35s var(--ease); }
+/* ---------- Menü-fiók: jobbról nyílik (telefonon hüvelykujjal elérhető) ---------- */
+.scrim { position: fixed; inset: 0; z-index: 30; background: var(--scrim); opacity: 0; pointer-events: none; transition: opacity .25s var(--ease); }
 .drawer {
   position: fixed; z-index: 31;
-  top: calc(12px + env(safe-area-inset-top, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  left: max(12px, env(safe-area-inset-left, 0px)); width: min(300px, calc(100vw - 24px));
-  border-radius: 24px; padding: 14px; background: var(--glass-strong);
-  display: flex; flex-direction: column; gap: 6px; overflow-y: auto;
-  transform: translateX(calc(-100% - 24px)); visibility: hidden;
-  transition: transform .45s var(--ease), visibility 0s linear .45s;
+  top: calc(8px + env(safe-area-inset-top, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  right: max(8px, env(safe-area-inset-right, 0px)); width: min(300px, calc(100vw - 16px));
+  border-radius: var(--r-lg); padding: 12px; box-shadow: var(--shadow-overlay);
+  display: flex; flex-direction: column; gap: 4px; overflow-y: auto;
+  transform: translateX(calc(100% + 24px)); visibility: hidden;
+  transition: transform .3s var(--ease), visibility 0s linear .3s;
 }
 body.menu-open .scrim { opacity: 1; pointer-events: auto; }
-body.menu-open .drawer { transform: none; visibility: visible; transition: transform .45s var(--ease), visibility 0s; }
-.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 12px 10px; }
-.drawer-head b { font-family: var(--display); font-weight: 600; font-size: 17px; }
+body.menu-open .drawer { transform: none; visibility: visible; transition: transform .3s var(--ease), visibility 0s; }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 0 0 8px 12px; }
+.drawer-head b { font-family: var(--display); font-weight: 700; font-size: 17px; }
 .nav { display: flex; flex-direction: column; gap: 4px; }
-.nav .label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 14px 12px 4px; }
-.nav a { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px; border-radius: 14px; text-decoration: none; font-weight: 600;
-  transition: background .25s var(--ease); opacity: 0; transform: translateX(-10px); }
-.nav a svg { width: 20px; height: 20px; stroke-width: 1.8; color: var(--muted); flex: none; transition: color .25s; }
-.nav a .ext { margin-left: auto; width: 15px; height: 15px; }
-.nav a:hover { background: var(--hover); }
-.nav a:hover svg, .nav a[aria-current="page"] svg { color: var(--accent); }
-.nav a[aria-current="page"] { background: var(--active); }
-body.menu-open .nav a { opacity: 1; transform: none; transition: opacity .4s var(--ease) calc(var(--i) * 40ms + 120ms), transform .4s var(--ease) calc(var(--i) * 40ms + 120ms), background .25s var(--ease); }
-.drawer-foot { margin-top: auto; padding: 12px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
+.nav a { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: var(--r-md); text-decoration: none; font-weight: 600; transition: background .15s; }
+.nav a svg { width: 20px; height: 20px; stroke-width: 2; color: var(--muted); flex: none; }
+.nav a:hover { background: var(--sunken); }
+.nav a[aria-current="page"] { background: var(--sunken); }
+.nav a[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--brand); }
+.nav a[aria-current="page"] svg { color: var(--brand); }
+.drawer-foot { margin-top: auto; padding: 12px 12px 4px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
 
 /* ---------- Tartalom ---------- */
 main {
   position: relative; z-index: 1;
-  padding-top: calc(112px + env(safe-area-inset-top, 0px)); padding-bottom: 48px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding: 24px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px));
   display: flex; flex-direction: column; align-items: center; gap: 16px;
 }
-.page { width: min(860px, 100%); display: flex; flex-direction: column; gap: 16px; }
-.greet { text-align: center; animation: rise .7s var(--ease) both; }
-.greet h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: clamp(24px, 4vw, 32px); text-wrap: balance; }
-.greet p { margin: 2px 0 0; color: var(--muted); }
-@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+.page { width: min(960px, 100%); display: flex; flex-direction: column; gap: 16px; }
+.greet { animation: rise .4s var(--ease) both; margin-bottom: 8px; }
+.greet h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(30px, 5vw, 40px); line-height: 1.1; letter-spacing: -.02em; text-wrap: balance; }
+.greet p { margin: 4px 0 0; color: var(--muted); }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 
 /* ---------- Nyitó animáció: konténer + kamion (videó), utána a kígyós BREMAT logó ---------- */
 .hero { position: relative; width: min(100%, 760px); aspect-ratio: 3 / 1; margin: -8px auto -4px; cursor: pointer; }
@@ -155,106 +152,110 @@ main {
 .hero .logo { transform-box: view-box; transform-origin: 0 0; }
 .hero.static { cursor: pointer; }
 
-/* Szigetek */
-.islands { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px; }
+/* ---------- Szigetek ---------- */
+.islands { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 16px; }
 .island {
-  --tone: var(--naplo); --tone-soft: var(--naplo-soft);
-  position: relative; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 26px; text-decoration: none;
-  animation: rise .8s var(--ease) both; animation-delay: calc(var(--i) * 90ms + 150ms);
-  transition: transform .35s var(--ease), border-color .35s var(--ease);
+  --tone: var(--naplo); --tone-soft: var(--naplo-soft); --tone-ink: var(--on-tone);
+  position: relative; display: flex; flex-direction: column; gap: 16px; padding: 24px; border-radius: var(--r-lg); text-decoration: none;
+  animation: rise .45s var(--ease) both; animation-delay: calc(var(--i) * 60ms + 60ms);
+  transition: transform .2s var(--ease), border-color .2s;
 }
-.island.valk { --tone: var(--valk); --tone-soft: var(--valk-soft); }
+.island::after { content: ""; position: absolute; left: 24px; right: 24px; top: -1px; height: 3px; border-radius: 0 0 3px 3px; background: var(--tone); }
+.island.valk { --tone: var(--valk); --tone-soft: var(--valk-soft); --tone-ink: var(--on-brand); }
 .island.idea { --tone: var(--idea); --tone-soft: var(--idea-soft); }
 .island.proj { --tone: var(--proj); --tone-soft: var(--proj-soft); }
-.island::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(120% 70% at 0% 0%, var(--tone-soft), transparent 60%); transition: opacity .35s var(--ease); }
-.island:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--tone) 45%, var(--glass-line)); }
-.island:active { transform: translateY(-1px) scale(.99); }
-.island .head { position: relative; display: flex; align-items: center; gap: 14px; }
-.island .ico { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; background: var(--tone-soft); color: var(--tone); flex: none; }
-.island .ico svg { width: 24px; height: 24px; stroke-width: 1.8; }
-.island h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 19px; line-height: 1.2; }
-.island .sub { color: var(--muted); font-size: 14px; }
-.island .go { margin-left: auto; color: var(--muted); transition: transform .35s var(--ease), color .35s; }
+.island:hover { transform: translateY(-2px); border-color: var(--tone); }
+.island:active { transform: translateY(0); }
+.island .head { display: flex; align-items: center; gap: 12px; }
+.island .ico { width: 44px; height: 44px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--tone-soft); color: var(--tone); flex: none; }
+.island .ico svg { width: 22px; height: 22px; stroke-width: 2; }
+.island h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 19px; line-height: 1.25; }
+.island .sub { color: var(--muted); font-size: 14px; font-weight: 500; }
+.island .go { margin-left: auto; color: var(--muted); transition: transform .2s var(--ease), color .2s; }
 .island .go svg { width: 20px; height: 20px; }
-.island:hover .go { transform: translateX(4px); color: var(--tone); }
-.island ul { position: relative; list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 9px; font-size: 14.5px; }
-.island li { display: flex; align-items: flex-start; gap: 10px; }
-.island li svg { width: 16px; height: 16px; color: var(--muted); flex: none; stroke-width: 2; margin-top: 3px; }
+.island:hover .go { transform: translateX(3px); color: var(--tone); }
+.island .stat { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.island .stat b { font: 800 40px/40px var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.island .stat span { font-size: 14px; font-weight: 500; color: var(--muted); }
+.island ul { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 500; line-height: 20px; }
+.island li { display: flex; align-items: flex-start; gap: 8px; }
+.island li svg { width: 16px; height: 16px; color: var(--muted); flex: none; stroke-width: 2; margin-top: 2px; }
 .island li.alert svg { color: var(--tone); }
 .island li.good svg { color: var(--ok); }
-.island li b { font-variant-numeric: tabular-nums; }
+.island li b { font-weight: 700; }
 .island .dim { color: var(--muted); }
-.island .foot { position: relative; font-size: 12.5px; color: var(--muted); }
-.skeleton { height: 14px; border-radius: 7px; background: var(--hover); animation: shimmer 1.4s ease-in-out infinite; }
+.island .foot { font-size: 13px; font-weight: 500; color: var(--muted); }
+.island .foot:empty { display: none; }
+.skeleton { height: 14px; border-radius: var(--r-sm); background: var(--sunken); animation: shimmer 1.4s ease-in-out infinite; }
 @keyframes shimmer { 50% { opacity: .45; } }
 
-.progress { position: relative; display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--muted); }
-.progress .track { flex: 1; height: 8px; border-radius: 99px; background: var(--hover); overflow: hidden; }
-.progress .track i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 50%, transparent), var(--tone)); transition: width 1.2s var(--ease); }
-.progress b { color: var(--text); font-variant-numeric: tabular-nums; }
+.progress { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; color: var(--muted); }
+.progress .track { flex: 1; height: 8px; border-radius: 99px; background: var(--sunken); overflow: hidden; }
+.progress .track i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--tone); transition: width 1s var(--ease); }
+.progress b { color: var(--text); font-weight: 700; }
 
-.badge { position: absolute; top: -8px; right: -6px; z-index: 2; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px;
-  display: grid; place-items: center; font-weight: 700; font-size: 13.5px; font-variant-numeric: tabular-nums;
-  background: var(--tone); color: var(--badge-ink); box-shadow: 0 0 0 3px var(--bg), 0 6px 16px color-mix(in srgb, var(--tone) 45%, transparent);
-  animation: pop .5s var(--ease) both; }
-.badge::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--tone); animation: ping 2.4s var(--ease) 1s infinite; }
+.badge { position: absolute; top: -8px; right: -8px; z-index: 2; min-width: 28px; height: 28px; padding: 0 8px; border-radius: 999px;
+  display: grid; place-items: center; font: 700 14px/1 var(--body); font-variant-numeric: tabular-nums;
+  background: var(--tone); color: var(--tone-ink); box-shadow: 0 0 0 3px var(--ground);
+  animation: pop .35s var(--ease) both; }
 @keyframes pop { from { transform: scale(0); } }
-@keyframes ping { 0% { transform: scale(1); opacity: .7; } 70%, 100% { transform: scale(1.8); opacity: 0; } }
 
-/* Projektek, beállítások, belépés */
-.card { border-radius: 24px; padding: 20px; animation: rise .6s var(--ease) both; }
-.card h2 { margin: 0 0 6px; font-family: var(--display); font-weight: 600; font-size: 18px; }
+/* ---------- Projektek, beállítások, belépés ---------- */
+.card { border-radius: var(--r-lg); padding: 24px; animation: rise .4s var(--ease) both; }
+.card h2 { margin: 0 0 8px; font-family: var(--display); font-weight: 700; font-size: 19px; }
 .muted { color: var(--muted); }
-.proj { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; align-items: start; }
-.pcard { border-radius: 22px; animation: rise .6s var(--ease) both; animation-delay: calc(var(--i) * 60ms); }
-.pcard > summary { list-style: none; cursor: pointer; padding: 16px 18px; display: flex; gap: 14px; align-items: center; }
+div.proj { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 12px; align-items: start; }
+.pcard { border-radius: var(--r-lg); overflow: hidden; animation: rise .4s var(--ease) both; animation-delay: calc(var(--i) * 40ms); }
+.pcard > summary { list-style: none; cursor: pointer; padding: 16px; display: flex; gap: 12px; align-items: center; }
 .pcard > summary::-webkit-details-marker { display: none; }
-.pcard .ico { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: var(--hover); color: var(--text); flex: none; }
+.pcard .ico { width: 40px; height: 40px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--proj-soft); color: var(--proj); flex: none; }
 .pcard .ico svg { width: 20px; height: 20px; }
-.pcard b { font-family: var(--display); font-weight: 600; display: block; }
-.pcard small { color: var(--muted); }
-.pcard .chev { margin-left: auto; color: var(--muted); transition: transform .3s var(--ease); flex: none; }
+.pcard b { font-family: var(--display); font-weight: 700; font-size: 17px; display: block; }
+.pcard small { color: var(--muted); font-size: 13px; }
+.pcard .chev { margin-left: auto; color: var(--muted); transition: transform .2s var(--ease); flex: none; }
 .pcard[open] .chev { transform: rotate(90deg); }
-.pcard ul { list-style: none; margin: 0; padding: 4px 10px 10px; border-top: 1px solid var(--line); }
-.pcard li a { display: flex; justify-content: space-between; gap: 10px; padding: 9px 8px; border-radius: 10px; text-decoration: none; }
-.pcard li a:hover { background: var(--hover); }
-.pcard li small { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.chip { display: inline-block; padding: 0 7px; margin-left: 4px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: var(--hover); color: var(--muted); }
-.search { width: 100%; min-height: 48px; padding: 0 16px 0 44px; border-radius: 16px; border: 1px solid var(--line); background: var(--glass-strong); }
+.pcard ul { list-style: none; margin: 0; padding: 4px 8px 8px; border-top: 1px solid var(--line); }
+.pcard li a { display: flex; justify-content: space-between; gap: 12px; padding: 10px 8px; border-radius: var(--r-md); text-decoration: none; font-weight: 500; }
+.pcard li a:hover { background: var(--sunken); }
+.pcard li small { white-space: nowrap; font-family: var(--mono); }
+.chip { display: inline-block; padding: 0 6px; margin-left: 4px; border-radius: var(--r-sm); font-size: 11.5px; font-weight: 700; background: var(--sunken); color: var(--muted); }
+.search { width: 100%; min-height: 48px; padding: 0 16px 0 44px; border-radius: var(--r-md); border: 1px solid var(--line-control); background: var(--surface); font-size: 16px; }
 .search-wrap { position: relative; }
 .search-wrap svg { position: absolute; left: 14px; top: 14px; width: 20px; height: 20px; color: var(--muted); }
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field span { font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.field input { min-height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass-strong); }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 14px; border: 1px solid var(--line);
-  background: var(--glass-strong); font-weight: 600; cursor: pointer; text-decoration: none; transition: transform .2s var(--ease), border-color .2s; }
-.btn:hover { border-color: color-mix(in srgb, var(--text) 30%, transparent); }
-.btn:active { transform: scale(.97); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 35%, transparent); }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field span { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.field input { min-height: 44px; padding: 0 12px; border-radius: var(--r-md); border: 1px solid var(--line-control); background: var(--surface); font-size: 16px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-md); border: 1px solid var(--line-control);
+  background: var(--surface); font-weight: 600; font-size: 15px; cursor: pointer; text-decoration: none; transition: background .15s; }
+.btn:hover { background: var(--sunken); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.btn.primary:hover { filter: brightness(.92); }
+.btn[disabled] { opacity: .55; cursor: not-allowed; }
 .btn svg { width: 18px; height: 18px; }
-.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.switch { display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 600; }
-.switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.switch { display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 600; min-height: 44px; }
+.switch input { width: 20px; height: 20px; accent-color: var(--brand); }
 .err { color: var(--bad); font-weight: 600; margin: 0; }
-.gate { width: min(420px, 100%); display: flex; flex-direction: column; gap: 14px; }
+.gate { width: min(420px, 100%); display: flex; flex-direction: column; gap: 14px; margin-top: 24px; }
 #toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; display: none;
-  padding: 12px 18px; border-radius: 14px; background: var(--text); color: var(--bg); font-weight: 700; box-shadow: var(--shadow); }
-.demo-bar { position: fixed; z-index: 50; left: 50%; transform: translateX(-50%); bottom: 12px; background: #e9a92b; color: #1b1200; font-weight: 700; font-size: 13px; padding: 6px 14px; border-radius: 999px; }
+  padding: 12px 16px; border-radius: var(--r-md); background: var(--text); color: var(--surface); font-weight: 600; box-shadow: var(--shadow-overlay); }
+.demo-bar { position: fixed; z-index: 50; left: 50%; transform: translateX(-50%); bottom: 12px; background: var(--signal); color: var(--on-signal); font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: var(--r-sm);
+  background-image: repeating-linear-gradient(-45deg, transparent 0 10px, rgba(0, 0, 0, .08) 10px 20px); }
 
-/* Ötletek */
+/* ---------- Ötletek ---------- */
 .idea-new { display: flex; flex-direction: column; gap: 12px; }
-.idea-new textarea, .idea-row textarea { width: 100%; min-height: 84px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-strong); resize: vertical; line-height: 1.45; }
+.idea-new textarea, .idea-row textarea { width: 100%; min-height: 88px; padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--line-control); background: var(--surface); resize: vertical; line-height: 1.45; font-size: 16px; }
 .idea-row textarea { min-height: 64px; }
 .idea-new .row { justify-content: space-between; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; }
-.filters button { min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass-strong); font-weight: 600; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
-.filters button small { color: var(--muted); font-variant-numeric: tabular-nums; }
-.filters button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
-.filters button[aria-pressed="true"] small { color: inherit; opacity: .7; }
-.ideas { display: flex; flex-direction: column; gap: 10px; }
-.idea-row { border-radius: 20px; padding: 14px 16px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; animation: rise .5s var(--ease) both; animation-delay: calc(var(--i) * 40ms); }
-.idea-row .tick { width: 28px; height: 28px; margin-top: 1px; border-radius: 9px; border: 2px solid color-mix(in srgb, var(--muted) 60%, transparent); background: transparent; display: grid; place-items: center; cursor: pointer; color: #fff; padding: 0; }
+.filters button { min-height: 38px; padding: 0 12px; border-radius: var(--r-md); border: 1px solid var(--line-control); background: var(--surface); font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.filters button small { color: var(--muted); font-family: var(--mono); font-size: 13px; }
+.filters button[aria-pressed="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
+.filters button[aria-pressed="true"] small { color: inherit; opacity: .75; }
+.ideas { display: flex; flex-direction: column; gap: 8px; }
+.idea-row { border-radius: var(--r-lg); padding: 16px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; animation: rise .35s var(--ease) both; animation-delay: calc(var(--i) * 30ms); }
+.idea-row .tick { width: 28px; height: 28px; margin-top: 1px; border-radius: var(--r-sm); border: 2px solid var(--line-control); background: transparent; display: grid; place-items: center; cursor: pointer; color: var(--on-tone); padding: 0; }
 .idea-row .tick svg { width: 18px; height: 18px; stroke-width: 3; opacity: 0; }
 .idea-row.kesz .tick { background: var(--ok); border-color: var(--ok); }
 .idea-row.kesz .tick svg { opacity: 1; }
@@ -262,37 +263,39 @@ main {
 .idea-row .txt { white-space: pre-wrap; overflow-wrap: anywhere; font-weight: 600; }
 .idea-row.kesz .txt { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--muted); }
 .idea-row.elvetve .txt { text-decoration: line-through; color: var(--muted); }
-.idea-row .meta { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13px; color: var(--muted); }
-.idea-row .why { grid-column: 2; font-size: 14px; padding: 8px 12px; border-radius: 12px; background: var(--hover); white-space: pre-wrap; overflow-wrap: anywhere; }
+.idea-row .meta { grid-column: 2; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-size: 13px; color: var(--muted); }
+.idea-row .why { grid-column: 2; font-size: 14px; padding: 8px 12px; border-radius: var(--r-md); background: var(--sunken); white-space: pre-wrap; overflow-wrap: anywhere; }
 .idea-row .why b { color: var(--text); }
-.idea-row .acts { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-.idea-row .acts button { min-height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: transparent; font-weight: 600; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-.idea-row .acts button:hover { background: var(--hover); }
-.idea-row .acts button svg { width: 15px; height: 15px; }
+.idea-row .acts { grid-column: 2; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.idea-row .acts button { min-height: 36px; padding: 0 10px; border-radius: var(--r-md); border: 1px solid transparent; background: transparent; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.idea-row .acts button:hover { background: var(--sunken); }
+.idea-row .acts button svg { width: 16px; height: 16px; }
 .idea-row .acts .danger { color: var(--bad); }
 .idea-row .edit { grid-column: 2; display: flex; flex-direction: column; gap: 8px; }
-.pill { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--hover); color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--r-sm); font-size: 12px; font-weight: 700; background: var(--sunken); color: var(--muted); }
 .pill.folyamatban { background: var(--idea-soft); color: var(--idea); }
-.pill.kesz { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
-.pill.elvetve { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
-.idea-row.folyamatban { border-color: color-mix(in srgb, var(--idea) 45%, var(--glass-line)); }
+.pill.kesz { background: var(--ok-soft); color: var(--ok); }
+.pill.elvetve { background: var(--brand-soft); color: var(--bad); }
+.idea-row.folyamatban { border-color: var(--idea); }
 .kbd-hint { font-size: 12.5px; color: var(--muted); }
 @media (max-width: 480px) { .kbd-hint { display: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .topbar, .island, .badge, .badge::after, .greet, .card, .pcard, .skeleton, .idea-row { animation: none; }
-  .drawer, .scrim, .nav a, body.menu-open .nav a, .island, .island .go, .progress .track i { transition: none; }
+  .island, .badge, .greet, .card, .pcard, .skeleton, .idea-row { animation: none; }
+  .drawer, .scrim, .island, .island .go, .progress .track i, .pcard .chev { transition: none; }
 }
-@media (max-width: 480px) { .title { font-size: 17px; } }
+@media (max-width: 370px) { .title span { display: none; } }
 </style>
 </head>
 <body>
-<canvas id="silk" aria-hidden="true"></canvas>
 <div id="demo" class="demo-bar" hidden>DEMÓ – mintaadatok</div>
 
 <header class="topbar glass">
-  <button class="icon-btn" id="menuBtn" type="button" aria-label="Menü megnyitása" aria-expanded="false" aria-controls="drawer"><i data-lucide="menu"></i></button>
-  <h1 class="title"><a href="#/">BREMAT <span>Központ</span></a></h1>
+  <h1 class="title"><a href="#/"><b>BREMAT</b> <span>Központ</span></a></h1>
+  <div class="end">
+    <span class="week" id="topWeek"></span>
+    <button class="icon-btn" id="menuBtn" type="button" aria-label="Menü megnyitása" aria-expanded="false" aria-controls="drawer"><i data-lucide="menu"></i></button>
+  </div>
 </header>
 
 <div class="scrim" id="scrim"></div>
@@ -347,99 +350,9 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.displa
 const applyTheme = () => {
   const dark = store.get('kozpont-tema') === 'sotet' || new URLSearchParams(location.search).get('tema') === 'sotet';
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  $('meta[name="theme-color"]').content = dark ? '#0b0c0e' : '#eceef2';
+  $('meta[name="theme-color"]').content = dark ? '#1a1b1e' : '#ffffff';
 };
 applyTheme();
-
-/* =====================================================================
-   1. A háttér: hajlított „selyemszalagok” – a videókártya rajzolja (WebGL).
-   Egy kis program (shader) minden képpontra kiszámolja: melyik szalagon
-   van, és az hol jár a hajlatában. A szalag felső széle alatt árnyék, az
-   alsó szélén vékony fényes él – ettől néz ki egymásra boruló anyagnak.
-   Teljes felbontás, 60 kép/mp, élsimítással; rejtett lapnál áll.
-   ===================================================================== */
-const silk = (() => {
-  const cv = $('#silk');
-  const gl = cv.getContext('webgl', { antialias: false, premultipliedAlpha: false, alpha: false, powerPreference: 'low-power' });
-  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!gl) { cv.style.display = 'none'; return { redraw() {} }; }   // nincs WebGL: marad a sima háttérszín
-
-  const VS = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
-  const FS = `
-    #extension GL_OES_standard_derivatives : enable
-    precision highp float;
-    uniform vec2 res; uniform float time; uniform float dark;
-
-    // A „magasság”: ebből lesznek a szalagok. Ferdén futó, lassan hullámzó felület.
-    float field(vec2 q) {
-      float t = time * 0.06;
-      vec2 r = vec2(q.x * 0.913 + q.y * 0.407, -q.x * 0.407 + q.y * 0.913);   // kb. 24 fokkal elforgatva
-      float y = r.y;
-      y += 0.22 * sin(r.x * 1.35 + t * 1.3);
-      y += 0.11 * sin(r.x * 2.70 - t * 0.9 + r.y * 1.1);
-      y += 0.05 * sin(r.x * 4.90 + t * 1.7 - r.y * 0.6);
-      return y * 4.2;                         // ennyi szalag fér egy képernyőnyi magasságba
-    }
-    // Egy szalag színe: halvány árnyalat szalagonként, a szélek felé finom fény-árnyék
-    vec3 tint(float i) {
-      float k = mod(i, 5.0);
-      vec3 L = k < 1.0 ? vec3(.965,.972,.985) : k < 2.0 ? vec3(.935,.968,.975) : k < 3.0 ? vec3(.975,.950,.958)
-             : k < 4.0 ? vec3(.948,.958,.980) : vec3(.978,.968,.952);
-      vec3 D = k < 1.0 ? vec3(.105,.112,.125) : k < 2.0 ? vec3(.075,.118,.135) : k < 3.0 ? vec3(.135,.080,.090)
-             : k < 4.0 ? vec3(.085,.100,.135) : vec3(.120,.100,.085);
-      return mix(L, D, dark);
-    }
-    vec3 shade(float b) {
-      float i = floor(b), f = fract(b);               // f: 0 = a szalag alsó (fényes) széle, 1 = a teteje
-      vec3 c = tint(i);
-      float body = 0.90 + 0.10 * sin(f * 3.14159);    // a szalag közepe kicsit domborúbb
-      float shadow = pow(smoothstep(0.55, 1.0, f), 2.2); // a fölötte lévő szalag árnyéka
-      float rim = exp(-f * 28.0);                     // vékony fényes él
-      vec3 col = c * body;
-      col *= 1.0 - shadow * mix(0.15, 0.55, dark);
-      col += rim * mix(0.10, 0.05, dark);
-      return col;
-    }
-    void main() {
-      vec2 q = (gl_FragCoord.xy - 0.5 * res) / res.y;
-      float b = field(q);
-      float w = fwidth(b);                            // egy képpont mennyi „szalagnyi” – ennyivel simítunk
-      vec3 col = 0.25 * (shade(b - 0.75 * w) + shade(b - 0.25 * w) + shade(b + 0.25 * w) + shade(b + 0.75 * w));
-      // nagyon halvány szemcse, hogy a színátmenetek ne csíkozódjanak
-      float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-      col += (n - 0.5) / 255.0;
-      gl_FragColor = vec4(col, 1.0);
-    }`;
-  gl.getExtension('OES_standard_derivatives');
-  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
-  const prog = gl.createProgram();
-  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.warn('Háttér: a shader nem fordult le'); cv.style.display = 'none'; return { redraw() {} }; }
-  gl.useProgram(prog);
-  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);   // egy nagy háromszög, ami lefedi a képet
-  const loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  const uRes = gl.getUniformLocation(prog, 'res'), uTime = gl.getUniformLocation(prog, 'time'), uDark = gl.getUniformLocation(prog, 'dark');
-
-  let raf = 0; const t0 = performance.now();
-  function resize() {
-    const dpr = Math.min(devicePixelRatio || 1, 2);   // éles kijelzőn is éles, de max. 2×
-    cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr);
-    gl.viewport(0, 0, cv.width, cv.height);
-  }
-  function draw(sec) {
-    gl.uniform2f(uRes, cv.width, cv.height);
-    gl.uniform1f(uTime, sec);
-    gl.uniform1f(uDark, document.documentElement.dataset.theme === 'dark' ? 1 : 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-  }
-  function frame(now) { draw((now - t0) / 1000); raf = requestAnimationFrame(frame); }
-  function start() { cancelAnimationFrame(raf); if (calm) draw(20); else raf = requestAnimationFrame(frame); }
-  resize(); start();
-  addEventListener('resize', () => { resize(); if (calm) draw(20); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAnimationFrame(raf); else start(); });
-  return { redraw: () => { if (calm) draw(20); } };
-})();
 
 /* =====================================================================
    2. Adatréteg – mindhárom szerverfüggvény ugyanúgy működik:
@@ -578,6 +491,7 @@ function islandShell(id, cls, icon, title, sub, href, i) {
     <div class="head"><span class="ico"><i data-lucide="${icon}"></i></span>
       <div><h2>${title}</h2><span class="sub">${sub}</span></div>
       <span class="go"><i data-lucide="arrow-right"></i></span></div>
+    <div class="stat" hidden><b></b><span></span></div>
     <div class="progress" hidden><div class="track"><i></i></div><span></span></div>
     <ul><li><div class="skeleton" style="width:80%"></div></li><li><div class="skeleton" style="width:60%"></div></li></ul>
     <span class="foot"></span>
@@ -594,6 +508,8 @@ function fillIsland(el, d) {
     bar.querySelector('span').innerHTML = `<b>${done}</b> kész · <b>${left}</b> hátra`;
     requestAnimationFrame(() => { bar.querySelector('i').style.width = Math.round(done / Math.max(1, done + left) * 100) + '%'; });
   }
+  const stat = el.querySelector('.stat');
+  if (d.stat) { stat.hidden = false; stat.querySelector('b').textContent = d.stat.n; stat.querySelector('span').textContent = d.stat.t; }
   el.querySelector('.foot').textContent = d.foot || '';
   icons();
 }
@@ -748,7 +664,7 @@ async function loadNaplo() {
     return;
   }
   const done = rows.filter((r) => /^Kész:/.test(r.text)).length;
-  const items = [{ icon: 'circle-check-big', html: `Ezen a héten eddig <b>${done}</b> kész feladat`, good: done > 0 }];
+  const items = [];
   if (st) {
     items.push({ icon: 'list-todo', html: `Hátralévő feladatok: <b>${st.open}</b>` });
     (st.doing || []).slice(0, 2).forEach((x) => items.push({ icon: 'timer', html: `Folyamatban: ${esc(x.text)} <span class="dim" data-run="${x.started_at || ''}" data-spent="${x.spent_ms}">· ${fmtDur(x.spent_ms + (x.started_at ? Date.now() - x.started_at : 0))}</span>` }));
@@ -757,7 +673,7 @@ async function loadNaplo() {
   } else {
     items.push({ icon: 'info', html: '<span class="dim">A Teendőim még nem küldött állapotot. (Teendőim → menü → Munkanapló)</span>' });
   }
-  fillIsland(el, { items, progress: st ? { done, left: st.open + (st.doing || []).length } : null, foot: st ? `Teendőim: frissítve ${hhmm(st.updated_at)}` : '' });
+  fillIsland(el, { items, stat: { n: done, t: 'kész feladat ezen a héten' }, progress: st ? { done, left: st.open + (st.doing || []).length } : null, foot: st ? `Teendőim: frissítve ${hhmm(st.updated_at)}` : '' });
   // A futó teendő ideje percenként frissül
   clearInterval(tickTimer);
   tickTimer = setInterval(() => $$('[data-run]').forEach((s) => { if (s.dataset.run) s.textContent = '· ' + fmtDur(Number(s.dataset.spent) + Date.now() - Number(s.dataset.run)); }), 30000);
@@ -779,7 +695,7 @@ async function loadValk() {
   else items.push({ icon: 'circle-alert', html: `A <b>${week}.</b> heti lap még nincs kitöltve`, alert: true });
   items.push(unapproved ? { icon: 'stamp', html: `<b>${unapproved}</b> lap jóváhagyásra vár`, alert: true, n: unapproved } : { icon: 'stamp', html: 'Minden lap jóváhagyva', good: true });
   if (openEsc) items.push({ icon: 'triangle-alert', html: `<b>${openEsc}</b> nyitott továbbjelzés`, alert: true, n: openEsc });
-  fillIsland(el, { items, foot: `${mine.length} beküldött lap összesen` });
+  fillIsland(el, { items, stat: { n: `${week}.`, t: thisWeek ? 'hét · kitöltve' : idleNow ? 'hét · nem üzemelt' : 'hét · még nincs kitöltve' }, foot: `${mine.length} beküldött lap összesen` });
   if (!thisWeek && !idleNow) el.href = '/valk/#/uj';   // ha még nincs kész, egyből a kitöltésre visz
 }
 
@@ -797,7 +713,7 @@ async function loadIdeasIsland() {
   const more = doing.length + open.length - items.length;
   if (more > 0) items.push({ icon: 'more-horizontal', html: `<span class="dim">+${more} további ötlet</span>` });
   if (!rows.length) items.push({ icon: 'pencil-line', html: '<span class="dim">Még nincs ötlet. Koppints ide, és írd le az elsőt.</span>' });
-  fillIsland(el, { items, progress: rows.length ? { done, left: doing.length + open.length } : null, foot: rows.length ? `Megvalósult: ${done} · Nem lett belőle: ${dropped}` : '' });
+  fillIsland(el, { items, stat: rows.length ? { n: open.length + doing.length, t: doing.length ? `nyitott ötlet · ${doing.length} folyamatban` : 'nyitott ötlet' } : null, progress: rows.length ? { done, left: doing.length + open.length } : null, foot: rows.length ? `Megvalósult: ${done} · Nem lett belőle: ${dropped}` : '' });
   const s = el.querySelector('.progress span'); if (s && rows.length) s.innerHTML = `<b>${done}</b> megvalósult · <b>${doing.length + open.length}</b> nyitott`;
 }
 const short = (t, n = 70) => { const s = String(t).split('\n')[0]; return s.length > n ? s.slice(0, n - 1) + '…' : s; };
@@ -813,7 +729,7 @@ async function loadProjIsland() {
   if (p.projects.length > 3) items.push({ icon: 'more-horizontal', html: `<span class="dim">+${p.projects.length - 3} további projekt</span>` });
   const last = all.filter((x) => x.d).sort((a, b) => b.d.localeCompare(a.d))[0];
   if (last) items.push({ icon: 'sparkles', good: true, html: `Legutóbb: ${esc(last.t)} <span class="dim">· ${huShort.format(toDate(last.d))}</span>` });
-  fillIsland(el, { items, foot: `${all.length} oldal ${p.projects.length} projektben` });
+  fillIsland(el, { items, stat: { n: all.length, t: `oldal · ${p.projects.length} projektben` } });
 }
 
 /* =====================================================================
@@ -968,7 +884,7 @@ function renderSettings() {
       <button class="btn" type="button" id="logout"><i data-lucide="log-out"></i>Kilépés ezen az eszközön</button></div>
   </div>`;
   icons();
-  $('#darkBg').addEventListener('change', (e) => { store.set('kozpont-tema', e.target.checked ? 'sotet' : 'vilagos'); applyTheme(); silk.redraw(); });
+  $('#darkBg').addEventListener('change', (e) => { store.set('kozpont-tema', e.target.checked ? 'sotet' : 'vilagos'); applyTheme(); });
   $('#helyiOn').addEventListener('change', (e) => { if (e.target.checked) store.set('kozpont-helyi', '1'); else store.del('kozpont-helyi'); });
   $('#nameForm').addEventListener('submit', (e) => { e.preventDefault(); const v = $('#sName').value.trim(); if (v) store.set('naplo-nev', v); else store.del('naplo-nev'); toast('Elmentve.'); });
   $('#logout').addEventListener('click', () => { store.del('km-kod'); store.del('naplo-kod'); projCache = null; renderGate(); });
@@ -989,6 +905,7 @@ function route() {
   Promise.resolve().then(VIEWS[key] || renderHome).catch((e) => { if (!(e instanceof AccessError)) console.error(e); });
 }
 $('#demo').hidden = !DEMO;
+{ const { year, week } = isoWeek(today()); $('#topWeek').textContent = `${year} · ${week}. hét`; }
 icons();
 addEventListener('hashchange', route);
 route();
