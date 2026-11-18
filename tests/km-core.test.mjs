@@ -40,7 +40,7 @@ test('beküldés: hibás lapok elutasítva', async () => {
   const sub = (check) => handle(req({ action: 'submit', code: CODE, check }), ctx(s));
   await rejects(sub(good({ items: [] })), 400, /Hiányoznak/);
   await rejects(sub(good({ items: items((k) => (k === 'terulet' ? { status: 'action', note: '' } : {})) })), 400, /mit csináltál: Munkaterület/);
-  await rejects(sub(good({ items: items((k) => (k === 'sin' ? { status: 'skip', note: ' ' } : {})) })), 400, /miért maradt el: Sín/);
+  await rejects(sub(good({ items: items((k) => (k === 'sin' ? { status: 'skip', note: ' ' } : {})) })), 400, /miért maradt el: Robot sínje/);
   await rejects(sub(good({ items: items((k) => (k === 's11' ? { status: null } : {})) })), 400, /Nincs kitöltve: Pisztolyhelyzet/);
   await rejects(sub(good({ items: items().filter((x) => x.key !== 'biztonsag') })), 400, /Hiányzik a lapról: Biztonsági/);
   await rejects(sub(good({ items: [...items(), { key: 'nincs-ilyen', status: 'ok' }] })), 400, /Ismeretlen feladat/);
@@ -54,6 +54,7 @@ test('beküldés: hibás lapok elutasítva', async () => {
   await rejects(sub(good({ gas_flow_lpm: 500 })), 400, /0 és 100/);
   await rejects(sub(good({ form_version: undefined })), 409, /Töltsd újra/);
   await rejects(sub(good({ form_version: 2 })), 409, /Töltsd újra/);
+  await rejects(sub(good({ form_version: 3 })), 409, /Töltsd újra/);
   assert.equal((await s.listKeys('check/')).length, 0);
 });
 
