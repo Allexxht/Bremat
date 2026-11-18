@@ -21,6 +21,9 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   index.html-ből) és a szerver (`lib/km-core.mjs`) is ezt tölti be, tiszta adat. Benne:
   `FORM_VERSION`, `LOCAL` (huzalátmérő, gáz irányérték, hűtőfolyadék, üzembe helyezés napja),
   `ROUTES` (A–E útvonal), `KINDS`, `WHO`, és a `TASKS` lista. Egy feladat mezői: `key`, `title`,
+  `todo` (a kártya nagy betűs sora: egy rövid mondat, mit kell csinálni, legfeljebb 80 karakter,
+  sima szöveg – a `tests/feladatok.test.mjs` ellenőrzi), `warn` (ha veszélyes: rövid piros
+  figyelmeztetés, pl. „Előbb minden tápot kapcsolj le!”),
   `route`, `kind` (`look` = szemrevételezés, `do` = beavatkozás), `freq` (`{d}` vagy `{m}` +
   `label`), `who` (`karbantarto` / `szerviz`, üres = kezelő), `src`, `tools`, `steps`, `bad`,
   `more` és `figs` (a lenyitható „Bővebben” rész), `nk` (általános gyakorlat), `pending`
@@ -69,7 +72,25 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   kötelező megjegyzés (mit csinált / miért maradt el) – a szerver is ellenőrzi. Az elmaradt
   nem számít elvégzésnek: a ritkább feladat a következő lapon is ott marad; minden feladatnál
   „Legutóbb elmaradt” jelzés, az Áttekintésen „Elmaradt feladatok” panel.
-- „Mit vigyél magaddal”: a lapon lévő feladatok `tools` mezőiből, egyszer.
+- „Mit vigyél magaddal”: a lapon lévő feladatok `tools` mezőiből, egyszer (lenyitható; a kártyán
+  az eszközök csak a „Bővebben”-ben vannak).
+- **Kitöltés: áttekintő tábla (2026. november 17., Alex kérése és választása).** A régi, fentről
+  lefelé görgetett lista helyett egy tábla: négy oszlop a bejárás sorrendjében (1 elöl, 2 hátul –
+  kikapcsolt robot; 3 hátul a bekapcsolás után, 4 elöl – bekapcsolt robot), felül jelölve, hol
+  kikapcsolt és hol bekapcsolt a robot; a szerviz-emlékeztetők (E), ha esedékesek, ötödik sávként
+  alatta. Oszlopon belül előbb a szemrevételezések (szem ikon), utána a beavatkozások (villáskulcs).
+  Egy feladat = egy sor állapotpöttyel (zöld ✓ rendben, narancs ! beavatkozás, piros ✕ elmaradt,
+  üres = hátravan), oszloponként számláló és sáv. Koppintásra oldalt (telefonon teljes képernyőn)
+  nyílik a feladat kártyája, Előző / Következő gombbal; „Rendben” után magától jön a következő,
+  az utolsó után bezárul. Esc vagy ✕ bezárja. Beküldéskor hiba: a hibás sorok pirosak, és az első
+  hibás feladat kártyája nyílik meg. A „Mit vigyél magaddal” és a „Hogyan töltsd ki?” egy sorban,
+  lenyitható – hogy a tábla minél feljebb legyen.
+- **A kártya (2026. november 17., Alex jóváhagyta):** fent nagy betűvel a feladat neve, alatta a
+  `todo` (egy mondat), ha van, a piros `warn`. Minden más – lépések, „Kell hozzá”, „Ha nincs
+  rendben”, gyakoriság, a régi „Bővebben” szakaszok, képek, forrás – a lenyitható „Bővebben – ha
+  nem tudod, hogyan kell” részben. A „Ha nincs rendben” tipp a „Beavatkozás kellett” megnyomására
+  a megjegyzésmező fölött is megjelenik. A gondolat: a karbantartó a kisbetűs részt nem olvassa
+  el; a nagy rész legyen elég, a részletek akkor kellenek, ha nem tudja, hogyan kell.
 - Kivéve: füstelszívás (nem férnek hozzá, a szűrő a Valk dolga – csak megjegyzés az éves
   szerviznél). A sín feladatai `nk` (nincs rá gyártói leírás, nincs adattábla, kenőpont).
 - **Ami a cellában nincs, az a lapon sem szerepel** (2026. október 1.): hegesztési fényvédő

@@ -419,6 +419,109 @@ tr.link:hover td { background: rgba(16, 20, 28, .04); }
 .card.ok::before { background: var(--ok); } .card.warn::before { background: var(--warn); } .card.bad::before { background: var(--bad); }
 .badge { border-radius: 999px; }
 .badge.neutral { background: rgba(16, 20, 28, .06); }
+/* ================================================================
+   ÁTTEKINTŐ TÁBLA + ÚJ KÁRTYA (2026. november 17., Alex kérése)
+   A kitöltő oldalon a feladatok egy táblán: négy oszlop a bejárás sorrendjében,
+   felül, hogy kikapcsolt vagy bekapcsolt a robot. Egy feladat = egy sor; koppintásra
+   oldalt (telefonon teljes képernyőn) nyílik a kártyája: nagy cím, rövid „mit kell
+   csinálni”, ha kell, piros figyelmeztetés; minden más a lenyitható „Bővebben”-ben.
+   ================================================================ */
+main.wrap.wide { max-width: 1260px; }
+/* A tábla nem úszik be: az animált (transform) szülő a képernyő helyett magához igazítaná az oldalt nyíló kártyát. */
+#app > #items { animation: none; }
+details.bring > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+details.bring > summary::-webkit-details-marker { display: none; }
+details.bring > summary::before { content: "›"; display: inline-block; transition: transform .2s; font-weight: 800; }
+details.bring[open] > summary::before { transform: rotate(90deg); }
+details.bring > summary h3 { margin: 0; }
+details.bring > summary span { color: var(--muted); font-size: 14.5px; }
+details.bring[open] > summary { margin-bottom: 8px; }
+.intro2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; margin-top: 12px; }
+.intro2 > details { margin: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+details.howto > summary { cursor: pointer; list-style: none; }
+details.howto > summary::-webkit-details-marker { display: none; }
+details.howto > summary::before { content: "›"; display: inline-block; margin-right: 8px; transition: transform .2s; }
+details.howto[open] > summary::before { transform: rotate(90deg); }
+details.howto[open] > summary { margin-bottom: 8px; }
+.board-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 8px; }
+.board-groups div { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.board-groups svg, .pw svg { width: 17px; height: 17px; flex: none; }
+.board-groups .ki { background: rgba(16, 20, 28, .06); color: #3b424f; }
+.board-groups .be { background: color-mix(in srgb, #138a4a 12%, #fff); color: #138a4a; }
+.board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.col { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.col-e { margin-top: 12px; }
+.col .ch { padding: 12px 14px 10px; border-bottom: 1px solid var(--line); }
+.col .ch .r1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.col .ch .n { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--text); color: #fff; font-family: var(--font-cond); font-weight: 800; font-size: 15px; flex: none; }
+.col .ch .t { font-family: var(--font-cond); font-weight: 700; font-size: 18px; }
+.col .ch .c { margin-left: auto; font-weight: 800; color: var(--muted); }
+.col .ch .b { margin-top: 8px; height: 5px; border-radius: 99px; background: rgba(16, 20, 28, .08); overflow: hidden; }
+.col .ch .b i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .4s var(--ease); }
+.col .ch .pw { display: none; }
+.pw { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 800; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+.pw.ki { background: rgba(16, 20, 28, .07); color: #3b424f; }
+.pw.be { background: color-mix(in srgb, #138a4a 14%, #fff); color: #138a4a; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; width: 100%; min-height: 50px; padding: 9px 12px; border: 0; border-bottom: 1px solid rgba(16, 20, 28, .06); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: background .2s var(--ease); }
+.row:last-child { border-bottom: 0; }
+.row:hover { background: rgba(16, 20, 28, .035); }
+.row .dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(16, 20, 28, .25); flex: none; display: grid; place-items: center; font-size: 13px; font-weight: 900; color: #fff; }
+.row.st-ok .dot { background: var(--ok); border-color: var(--ok); }
+.row.st-action .dot { background: var(--warn); border-color: var(--warn); color: #241600; }
+.row.st-skip .dot { background: var(--bad); border-color: var(--bad); }
+.row .ri { display: inline-flex; color: var(--muted); flex: none; }
+.row .ri svg { width: 18px; height: 18px; }
+.row .rt { flex: 1 1 0; font-weight: 700; font-size: 15px; line-height: 1.25; }
+.row .rb { margin-left: auto; font-size: 11.5px; font-weight: 800; border-radius: 99px; padding: 1px 7px; white-space: nowrap; flex: none; }
+.row .rb + .rb { margin-left: 4px; }
+.row .rb.due { color: var(--warn-text); border: 1px solid var(--warn); }
+.row .rb.bad { color: var(--bad-text); border: 1px solid var(--bad); }
+.row.sel { background: color-mix(in srgb, var(--hot) 8%, #fff); box-shadow: inset 3px 0 0 var(--hot); }
+.row.has-err { background: color-mix(in srgb, var(--bad) 8%, #fff); box-shadow: inset 3px 0 0 var(--bad); }
+.row.has-err .dot { border-color: var(--bad); }
+/* oldalt nyíló kártya */
+.drawer { position: fixed; z-index: 40; top: 84px; bottom: 92px; right: 16px; width: min(560px, calc(100vw - 32px)); overflow: auto; overscroll-behavior: contain;
+  padding: 14px 14px 0; border-radius: 22px; background: rgba(255, 255, 255, .96); border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(20, 24, 33, .22);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: g-pop .3s var(--ease);
+  scroll-padding-top: 12px; scroll-padding-bottom: 100px; }
+.drawer .dh { display: flex; align-items: flex-start; gap: 10px; margin: 2px 4px 12px; }
+.drawer .dt { display: flex; flex-direction: column; min-width: 0; }
+.drawer .dt b { font-size: 15px; }
+.drawer .dt span { font-size: 13px; color: var(--muted); }
+.drawer .dh .btn { white-space: nowrap; flex: none; }
+.drawer .pos { margin-left: auto; padding-top: 6px; font-weight: 800; font-size: 14px; color: var(--muted); white-space: nowrap; }
+.drawer .dn { position: sticky; bottom: 0; display: flex; gap: 8px; margin-top: 12px; padding: 10px 0 calc(14px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, .97) 30%); }
+.drawer .dn .btn { flex: 1; justify-content: center; min-height: 52px; font-size: 16px; }
+.drawer .dn .btn:disabled { opacity: .4; }
+/* a kártya: nagy, rövid rész fent; minden más a lenyitható „Bővebben”-ben */
+.drawer .item { padding: 14px; }
+.item h3 { margin: 8px 0 6px; font-size: 25px; line-height: 1.15; font-weight: 800; font-family: var(--font-cond); letter-spacing: -.005em; }
+.item h3:focus { outline: none; }
+.item .todo { margin: 0 0 12px; font-size: 19.5px; line-height: 1.38; font-weight: 600; color: var(--text); }
+.item .warn { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--bad) 9%, #fff);
+  border: 1.5px solid color-mix(in srgb, var(--bad) 45%, transparent); color: var(--bad-text); font-size: 17px; font-weight: 800; line-height: 1.3; }
+.item .warn::before { content: "!"; flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--bad); color: #fff; display: grid; place-items: center; font-size: 15px; font-weight: 900; margin-top: 1px; }
+.item .more > summary { font-size: 15px; }
+.item .more-body .src { margin-top: 14px; }
+.item .ifbad-live { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; font-size: 15.5px; line-height: 1.4; background: color-mix(in srgb, var(--warn) 12%, #fff); border: 1.5px solid color-mix(in srgb, var(--warn) 55%, transparent); }
+.item .ifbad-live b { color: var(--warn-text); }
+@media (max-width: 1000px) {
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .board-groups { display: none; }
+  .col .ch .pw { display: inline-flex; }
+}
+@media (max-width: 760px) {
+  .intro2 { grid-template-columns: minmax(0, 1fr); }
+  .board { grid-template-columns: minmax(0, 1fr); }
+  .drawer { inset: 0; width: auto; z-index: 60; border-radius: 0; border: 0; padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 0;
+    background: #f4f5f7; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .drawer .dn { background: linear-gradient(rgba(244, 245, 247, 0), #f4f5f7 30%); }
+  body.drawer-open { overflow: hidden; }
+  .item h3 { font-size: 22px; }
+  .item .todo { font-size: 18px; }
+}
+@media print { .drawer { display: none !important; } }
 </style>
 </head>
 <body>
@@ -551,15 +654,20 @@ const legacyTitles = (r) => LEGACY_TITLES[r.form_version || 1] || [];
    ================================================================ */
 function moreHtml(t) {
   const n = t.figs.length;
-  if (!t.more.length && !n) return '';
   return `<details class="more">
-    <summary><span>Bővebben: hol, hogyan, mire figyelj</span>${n ? `<span class="cnt">${n} kép</span>` : ''}</summary>
+    <summary><span>Bővebben – ha nem tudod, hogyan kell</span>${n ? `<span class="cnt">${n} kép</span>` : ''}</summary>
     <div class="more-body">
+      ${t.pending ? `<p class="pending"><b>Pontosítás alatt:</b> ${esc(t.pending)}</p>` : ''}
+      <section><h4>Lépésről lépésre</h4><ol>${t.steps.map((x) => `<li>${x}</li>`).join('')}</ol></section>
+      ${t.tools.length ? `<section><h4>Kell hozzá</h4><p>${t.tools.map(esc).join(' · ')}</p></section>` : ''}
+      <section><h4>Ha nincs rendben</h4><p>${esc(t.bad)}</p></section>
+      ${t.freqNote ? `<section><h4>Gyakoriság</h4><p>${esc(t.freqNote)}</p></section>` : ''}
       ${t.more.map(([h, b]) => `<section><h4>${esc(h)}</h4>${b}</section>`).join('')}
       ${n ? `<div class="figs">${t.figs.map(([f, cap, src]) => `
         <figure><button type="button" class="fig" data-src="/img/${f}" data-cap="${esc(cap)}" data-ref="${esc(src)}" aria-label="Kép nagyítása: ${esc(cap)}">
           <img src="/img/${f}" loading="lazy" alt="${esc(cap)}"></button>
           <figcaption>${esc(cap)} <span class="ref">${esc(src)}</span></figcaption></figure>`).join('')}</div>` : ''}
+      <p class="src">Forrás: ${esc(t.src)}</p>
     </div>
   </details>`;
 }
@@ -1008,10 +1116,13 @@ function loadDraft() {
 }
 
 let formList = null; // a lapok listája a kitöltés idejére (dátumváltáskor nem töltjük újra)
+let placeDrawer = () => {}; // a kitöltő oldal oldalt nyíló kártyájának elhelyezése (renderForm állítja be)
+addEventListener('resize', () => placeDrawer());
 let formIdle = [];   // a „Nem üzemelt” jelölések ugyanígy
 
 async function renderForm(reuse = false) {
   $('#nav').hidden = false;
+  document.body.classList.remove('drawer-open');
   const app = $('#app');
   if (!reuse || !formList) {
     app.innerHTML = '<p class="muted">Betöltés…</p>';
@@ -1038,13 +1149,22 @@ async function renderForm(reuse = false) {
   const tools = [...new Set(lap.flatMap(({ t }) => t.tools))];
   const periodicOnLap = lap.filter(({ info }) => info);
 
+  // A feladatok sorrendje: a bejárás (1 elöl → 2 hátul → 3 bekapcsolva hátul → 4 elöl), állomáson
+  // belül előbb a szemrevételezések, utána a beavatkozások; a szerviz-emlékeztetők a végén.
+  const byRoute = (rk) => {
+    const xs = lap.filter(({ t }) => t.route === rk);
+    return rk === 'E' ? xs : [...xs.filter(({ t }) => t.kind === 'look'), ...xs.filter(({ t }) => t.kind === 'do')];
+  };
+  const ORDER = Object.keys(ROUTES).flatMap(byRoute);
+  const KEYS = ORDER.map(({ t }) => t.key);
+
   let n = 0;
   const itemHtml = ({ t, info }) => {
     n += 1;
     const prev = hist.lastSeen[t.key];
     const prevSkip = prev && prev.status === 'skip';
     return `
-      <section class="item kind-${t.kind}" id="item-${esc(t.key)}" data-key="${esc(t.key)}" aria-labelledby="t-${esc(t.key)}">
+      <section class="item kind-${t.kind}" id="item-${esc(t.key)}" data-key="${esc(t.key)}" aria-labelledby="t-${esc(t.key)}" hidden>
         <div class="no" aria-hidden="true">${n}</div>
         <div class="body">
           <div class="tags">
@@ -1054,38 +1174,61 @@ async function renderForm(reuse = false) {
             ${info ? (info.overdue ? `<span class="tag t-bad">Lejárt: ${fmtDate(info.due)}</span>` : `<span class="tag t-warn">Esedékes: ${fmtDate(info.due)}</span>`) : ''}
             ${t.nk ? '<span class="tag t-nk">Általános gyakorlat</span>' : ''}
           </div>
-          <h3 id="t-${esc(t.key)}">${esc(t.title)}</h3>
+          <h3 id="t-${esc(t.key)}" tabindex="-1">${esc(t.title)}</h3>
+          <p class="todo">${esc(t.todo)}</p>
+          ${t.warn ? `<p class="warn">${esc(t.warn)}</p>` : ''}
           ${prevSkip ? `<p class="prevskip"><b>Legutóbb elmaradt</b> (${fmtDate(prev.date)}): ${esc(prev.note)}</p>` : ''}
-          ${t.pending ? `<p class="pending"><b>Pontosítás alatt:</b> ${esc(t.pending)}</p>` : ''}
-          <ul>${t.steps.map((s) => `<li>${s}</li>`).join('')}</ul>
-          ${t.tools.length ? `<p class="tools"><b>Kell hozzá:</b> ${t.tools.map(esc).join(' · ')}</p>` : ''}
-          <p class="ifbad"><b>Ha nincs rendben:</b> ${esc(t.bad)}</p>
-          ${t.freqNote ? `<p class="small muted" style="margin:0 0 10px">${esc(t.freqNote)}</p>` : ''}
           ${moreHtml(t)}
           <div class="seg seg3" role="group" aria-label="${esc(t.title)} – eredmény">
             <button type="button" class="s-ok" data-st="ok" aria-pressed="false">Rendben</button>
             <button type="button" class="s-action" data-st="action" aria-pressed="false">Beavatkozás kellett</button>
             <button type="button" class="s-skip" data-st="skip" aria-pressed="false">Nem csináltam meg</button>
           </div>
+          <p class="ifbad-live" hidden><b>Ha nincs rendben:</b> ${esc(t.bad)}</p>
           <label class="field note" hidden><span class="note-lbl"></span><textarea maxlength="1000"></textarea></label>
           ${t.extra === 'gas' ? `<div class="extra"><label class="field"><span>Mért gázáramlás a pisztolynál (l/min) – irányérték: ${esc(LOCAL.GAS_FLOW_TARGET)}</span><input type="number" id="f_gas" inputmode="decimal" min="0" max="100" step="0.1" value="${esc(d.gas_flow_lpm)}"></label></div>` : ''}
           <p class="err" hidden></p>
-          <p class="src">${esc(t.src)}</p>
         </div>
       </section>`;
   };
 
-  const routeHtml = Object.keys(ROUTES).map((rk) => {
-    const inRoute = lap.filter(({ t }) => t.route === rk);
-    if (!inRoute.length) return '';
-    const kinds = rk === 'E' ? [null] : ['look', 'do'];
-    return `<div class="group"><h3>${esc(ROUTES[rk].title)}</h3><p>${esc(ROUTES[rk].intro)}</p></div>
-      ${kinds.map((k) => {
-        const xs = k ? inRoute.filter(({ t }) => t.kind === k) : inRoute;
-        if (!xs.length) return '';
-        return `${k ? `<h4 class="kindhead k-${k}">${KINDS[k].label} <span>– ${KINDS[k].hint}</span></h4>` : ''}${xs.map(itemHtml).join('')}`;
-      }).join('')}`;
-  }).join('');
+  // Áttekintő tábla: a négy állomás egy képernyőn, minden feladat egy sor; koppintásra oldalt nyílik a kártyája.
+  const STA = { A: ['Elöl', 'ki'], B: ['Hátul', 'ki'], C: ['Hátul', 'be'], D: ['Elöl', 'be'] };
+  const STA_TITLE = { A: '1 · Elöl, kikapcsolt robot', B: '2 · Hátul, kikapcsolt robot', C: '3 · Hátul, bekapcsolt robot', D: '4 · Elöl, bekapcsolt robot', E: 'Szerviz – emlékeztető' };
+  const ICON = {
+    look: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+    do: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>',
+    ki: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/><path d="M4 4l16 16"/></svg>',
+    be: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>',
+  };
+  const PW = { ki: `<span class="pw ki">${ICON.ki}Kikapcsolt robot</span>`, be: `<span class="pw be">${ICON.be}Bekapcsolt robot</span>` };
+  const rowHtml = ({ t, info }) => {
+    const prev = hist.lastSeen[t.key];
+    return `<button type="button" class="row" id="row-${esc(t.key)}" data-key="${esc(t.key)}">
+      <span class="dot" aria-hidden="true"></span><span class="ri" aria-hidden="true">${ICON[t.kind]}</span>
+      <span class="rt">${esc(t.title)}<span class="sr"> – ${KINDS[t.kind].label}</span><span class="sr rs"></span></span>
+      ${info ? `<span class="rb ${info.overdue ? 'bad' : 'due'}">${info.overdue ? 'Lejárt' : 'Esedékes'}</span>` : ''}
+      ${prev && prev.status === 'skip' ? '<span class="rb bad">Múltkor elmaradt</span>' : ''}
+    </button>`;
+  };
+  const colHtml = (rk, label, extra = '') => {
+    const xs = byRoute(rk);
+    if (!xs.length) return '';
+    return `<section class="col ${extra}" data-r="${rk}" aria-label="${esc(STA_TITLE[rk])}">
+      <header class="ch"><div class="r1"><span class="n">${label}</span><span class="t">${rk === 'E' ? 'Szerviz – emlékeztető' : STA[rk][0]}</span>${rk === 'E' ? '' : PW[STA[rk][1]]}<span class="c" id="cnt-${rk}"></span></div><div class="b"><i id="bar-${rk}"></i></div></header>
+      <div class="rows">${xs.map(rowHtml).join('')}</div></section>`;
+  };
+  const cardsHtml = ORDER.map(itemHtml).join('');
+  const boardHtml = `
+    <div class="board-groups" aria-hidden="true"><div class="ki">${ICON.ki}Kikapcsolt robot</div><div class="be">${ICON.be}Bekapcsolt robot</div></div>
+    <div class="board">${['A', 'B', 'C', 'D'].map((rk, i) => colHtml(rk, i + 1)).join('')}</div>
+    ${colHtml('E', '5', 'col-e')}
+    <aside class="drawer" id="drawer" hidden aria-labelledby="drawerTitle">
+      <div class="dh"><div class="dt"><b id="drawerTitle"></b><span id="drawerIntro"></span></div><span class="pos" id="drawerPos"></span>
+        <button type="button" class="btn sm" id="drawerClose">✕ Bezár</button></div>
+      <div id="cards">${cardsHtml}</div>
+      <div class="dn"><button type="button" class="btn" id="dPrev">← Előző</button><button type="button" class="btn primary" id="dNext">Következő →</button></div>
+    </aside>`;
 
   app.innerHTML = `
     <h1>Heti karbantartási lap</h1>
@@ -1101,20 +1244,21 @@ async function renderForm(reuse = false) {
       <label class="field" data-f="inspector"><span>Ellenőrzést végző neve</span><input type="text" id="f_inspector" list="names" autocomplete="off" value="${esc(d.inspector)}" maxlength="120"><datalist id="names">${names.map((x) => `<option value="${esc(x)}">`).join('')}</datalist><span class="err" hidden></span></label>
     </div>
 
-    <div class="panel bring">
-      <h3>Mit vigyél magaddal ezen a héten</h3>
+    <div class="intro2">
+    <details class="panel bring">
+      <summary><h3>Mit vigyél magaddal ezen a héten</h3><span>${tools.length} eszköz – koppints a listához</span></summary>
       <ul>${tools.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
       ${periodicOnLap.length ? `<p class="small" style="margin:8px 0 0"><b>Ezen a héten esedékes ritkább feladat:</b> ${periodicOnLap.map(({ t, info }) => `${esc(t.title)}${info.overdue ? ' (lejárt)' : ''}`).join(', ')}.</p>` : ''}
-    </div>
-
-    <h2>Feladatok</h2>
-    <div class="howto">
-      <p><b>Szemrevételezés</b> – csak megnézed vagy kipróbálod. <b>Beavatkozás</b> – tenned is kell valamit. A sorrend az útvonalat követi: elöl, hátul, aztán bekapcsolva.</p>
+    </details>
+    <details class="howto">
+      <summary><b>Hogyan töltsd ki?</b></summary>
+      <p>Koppints egy feladatra: oldalt megnyílik a kártyája. A sorrend a bejárást követi: 1 elöl, 2 hátul (kikapcsolt robot), 3 hátul a bekapcsolás után, 4 elöl. A szem a szemrevételezés (csak megnézed vagy kipróbálod), a villáskulcs a beavatkozás (tenned is kell valamit). „Rendben” után magától jön a következő feladat.</p>
       <p><b class="t-ok">Rendben</b> – elvégezted, és a leírt rutinon (tisztítás, heti áramátadó-csere) felül nem kellett semmi.
          <b class="t-action">Beavatkozás kellett</b> – ezen felül cseréltél, javítottál, utántöltöttél, vagy hibát találtál.
          <b class="t-skip">Nem csináltam meg</b> – írd be, miért; a következő lapon újra ott lesz.</p>
+    </details>
     </div>
-    <div id="items">${routeHtml}</div>
+    <div id="items">${boardHtml}</div>
 
     <h2>Összegzés</h2>
     <div class="panel" style="display:flex;flex-direction:column;gap:14px">
@@ -1145,7 +1289,19 @@ async function renderForm(reuse = false) {
     const note = $('.note', sec); note.hidden = !(it.status === 'action' || it.status === 'skip');
     if (!note.hidden) { $('.note-lbl', note).textContent = NOTE_LBL[it.status]; $('textarea', note).placeholder = NOTE_PH[it.status]; }
     const ta = $('textarea', note); if (ta.value !== it.note) ta.value = it.note || '';
+    $('.ifbad-live', sec).hidden = it.status !== 'action';
+    const row = document.getElementById(`row-${t.key}`);
+    ['ok', 'action', 'skip'].forEach((s) => row.classList.toggle(`st-${s}`, it.status === s));
+    $('.dot', row).textContent = { ok: '✓', action: '!', skip: '✕' }[it.status] || '';
+    $('.rs', row).textContent = it.status ? ` – ${{ ok: 'Rendben', action: 'Beavatkozás kellett', skip: 'Nem csináltam meg' }[it.status]}` : ' – még nincs kitöltve';
   };
+  const paintCols = () => ['A', 'B', 'C', 'D', 'E'].forEach((rk) => {
+    const xs = byRoute(rk), c = document.getElementById(`cnt-${rk}`);
+    if (!c) return;
+    const k = xs.filter(({ t }) => state(t).status).length;
+    c.textContent = `${k}/${xs.length}`;
+    document.getElementById(`bar-${rk}`).style.width = `${(k / xs.length) * 100}%`;
+  });
   const paintEsc = () => {
     $$('#escBox .seg button').forEach((b) => b.setAttribute('aria-pressed', String(String(d.escalate) === b.dataset.esc)));
     $('#escTo').hidden = d.escalate !== true;
@@ -1154,6 +1310,7 @@ async function renderForm(reuse = false) {
     const k = lap.filter(({ t }) => state(t).status).length;
     $('#progTxt').textContent = `${k} / ${lap.length} feladat kitöltve`;
     $('#progBar').style.width = `${(k / lap.length) * 100}%`;
+    paintCols();
   };
   const paintDup = () => {
     const s = sameWeek();
@@ -1163,14 +1320,66 @@ async function renderForm(reuse = false) {
     $('#dupWarn').innerHTML = s.length ? `<div class="banner warn">Erre a hétre (${weekInfo()}) már van kitöltött lap: ${s.map((r) => `<a href="#/lap/${esc(r.id)}">${esc(r.inspector)}, ${fmtDate(r.check_date)}</a>`).join(', ')}. Csak akkor tölts ki újat, ha tényleg kell.</div>`
       : idle ? `<div class="banner warn">Erre a hétre (${weekInfo()}) „Nem üzemelt” jelölés van (${esc(idleText(idle))}). Ha mégis kitöltöd, a lap számít.</div>` : '';
   };
-  const clearErr = (el) => { if (!el) return; el.classList.remove('has-err'); const e = $('.err', el); if (e) { e.hidden = true; e.textContent = ''; } };
-  const setErr = (el, msg) => { el.classList.add('has-err'); const e = $('.err', el); if (e) { e.hidden = false; e.textContent = msg; } };
+  // a feladat hibája a táblán is látszik (a sora piros)
+  const rowOf = (el) => (el && el.classList.contains('item') ? document.getElementById(`row-${el.dataset.key}`) : null);
+  const clearErr = (el) => { if (!el) return; el.classList.remove('has-err'); rowOf(el)?.classList.remove('has-err'); const e = $('.err', el); if (e) { e.hidden = true; e.textContent = ''; } };
+  const setErr = (el, msg) => { el.classList.add('has-err'); rowOf(el)?.classList.add('has-err'); const e = $('.err', el); if (e) { e.hidden = false; e.textContent = msg; } };
+
+  // --- oldalt nyíló kártya (telefonon teljes képernyő)
+  let cur = null;
+  const wideScreen = () => matchMedia('(min-width: 761px)').matches;
+  // asztalon/tableten a fejléc és a Beküldés-sáv közé illeszkedik; telefonon teljes képernyő (CSS)
+  placeDrawer = () => {
+    const dr = document.getElementById('drawer'), top = $('.top'), bar = $('.submitbar');
+    if (!dr || !top || !bar) return;
+    if (wideScreen()) {
+      dr.style.top = `${Math.max(12, top.getBoundingClientRect().bottom + 10)}px`;
+      dr.style.bottom = `${Math.max(12, innerHeight - bar.getBoundingClientRect().top + 10)}px`;
+    } else { dr.style.top = ''; dr.style.bottom = ''; }
+  };
+  const openTask = (key) => {
+    const t = TASK_BY_KEY[key]; if (!t) return;
+    if (cur) { secOf(cur).hidden = true; document.getElementById(`row-${cur}`)?.classList.remove('sel'); }
+    cur = key;
+    const sec = secOf(key); sec.hidden = false;
+    document.getElementById(`row-${key}`)?.classList.add('sel');
+    $('#drawerTitle').textContent = STA_TITLE[t.route];
+    $('#drawerIntro').textContent = ROUTES[t.route].intro;
+    const i = KEYS.indexOf(key);
+    $('#drawerPos').textContent = `${i + 1} / ${KEYS.length}`;
+    $('#dPrev').disabled = i === 0;
+    $('#dNext').textContent = i === KEYS.length - 1 ? 'Kész – bezárom' : 'Következő →';
+    const dr = $('#drawer');
+    placeDrawer();
+    dr.hidden = false; dr.scrollTop = 0;
+    document.body.classList.add('drawer-open');
+    $('h3', sec).focus({ preventScroll: true });
+  };
+  const closeDrawer = () => {
+    if (!cur) return;
+    const k = cur; cur = null;
+    secOf(k).hidden = true;
+    const row = document.getElementById(`row-${k}`);
+    row?.classList.remove('sel');
+    $('#drawer').hidden = true; document.body.classList.remove('drawer-open');
+    row?.scrollIntoView({ block: 'nearest' }); row?.focus({ preventScroll: true });
+  };
+  const step = (dir) => {
+    const i = KEYS.indexOf(cur) + dir;
+    if (i < 0) return;
+    if (i >= KEYS.length) { closeDrawer(); return; }
+    openTask(KEYS[i]);
+  };
 
   lap.forEach(({ t }) => paintItem(t));
   paintEsc(); paintProgress(); paintDup();
 
   // --- események
   $('#items').addEventListener('click', (e) => {
+    const r = e.target.closest('button.row'); if (r) { openTask(r.dataset.key); return; }
+    if (e.target.closest('#drawerClose')) { closeDrawer(); return; }
+    if (e.target.closest('#dPrev')) { step(-1); return; }
+    if (e.target.closest('#dNext')) { step(1); return; }
     const f = e.target.closest('button.fig');
     if (f) { openImage(f.dataset.src, f.dataset.cap, f.dataset.ref); return; }
     const b = e.target.closest('.seg button'); if (!b) return;
@@ -1179,7 +1388,9 @@ async function renderForm(reuse = false) {
     it.status = b.dataset.st; if (b.dataset.st === 'ok') it.note = '';
     paintItem(t); paintProgress(); clearErr(sec); saveDraft();
     if (b.dataset.st !== 'ok') $('textarea', sec).focus();
+    else setTimeout(() => { if (cur === t.key) step(1); }, 350);   // „Rendben” után magától jön a következő
   });
+  $('#items').addEventListener('keydown', (e) => { if (e.key === 'Escape' && cur) { e.preventDefault(); closeDrawer(); } });
   $('#items').addEventListener('input', (e) => {
     const sec = e.target.closest('.item'); if (!sec) return;
     if (e.target.tagName === 'TEXTAREA') { state(TASK_BY_KEY[sec.dataset.key]).note = e.target.value; clearErr(sec); }
@@ -1223,7 +1434,9 @@ async function renderForm(reuse = false) {
   $('#submitBtn').addEventListener('click', () => {
     const errs = validate();
     if (errs.length) {
-      errs[0].scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      const first = errs[0];
+      if (first.classList.contains('item')) { document.getElementById(`row-${first.dataset.key}`)?.scrollIntoView({ block: 'center' }); openTask(first.dataset.key); }
+      else first.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
       toast(`${errs.length} helyen hiányzik valami – pirossal jelölve.`, true);
       return;
     }
@@ -1457,6 +1670,8 @@ function route() {
   if (!DEMO && !getCode()) return renderGate();
   const h = location.hash || '#/';
   window.scrollTo(0, 0);
+  document.body.classList.remove('drawer-open');
+  $('#app').classList.toggle('wide', h === '#/uj');
   const m = h.match(/^#\/lap\/([0-9a-zA-Z-]+)$/);
   const run = m ? () => renderDetail(m[1]) : h === '#/uj' ? () => renderForm(false) : renderOverview;
   Promise.resolve().then(run).catch((e) => {
