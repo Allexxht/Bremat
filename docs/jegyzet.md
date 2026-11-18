@@ -423,3 +423,59 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   fenti szabály szerint; a megváltozott napokat a Teendőim újraküldi a naplóba (21 nap).
 - Szerver: `TIME_KINDS` + `idle`. Napló oldal: az `idle` se munka, se szünet; a fejlécben „megállt: X”,
   a sávon narancs csíkos, a listában „megállt az időmérés (nem voltál a gépnél)”.
+
+## Robot napló (2026. november 18., Alex kérése – 1. fázis)
+- Cél: a Valk / Panasonic TM-2000 WGH4 (G4) hegesztőrobot működési naplója és statisztikája a
+  főnöknek. **Nincs hálózat a robothoz, nincs hardverpénz**: adat csak kézi bevitel, a pendant
+  képernyőjének fotója és (később) USB-export. Oldal: `/robot/` (`public/robot/index.html`),
+  függvény: `/api/robot` (`netlify/functions/robot.mjs`), logika: `lib/robot-core.mjs`, közös
+  katalógus és számítás: `public/robot-stat.js` (a böngésző és a szerver is ezt tölti, mint a
+  `tasks.js`-t). Tesztek: `tests/robot-core.test.mjs`, `tests/robot-stat.test.mjs`. Saját Blobs
+  tároló: `robot`. Kinézet: a napló üveg stílusa **kék** kiemeléssel. Központ: „Robot napló”
+  sziget (`summary` művelet; jelvény, ha 7 napnál régebbi a számláló-mentés).
+- **Szerepek a kódból** (Netlify → Environment variables): `ROBOT_ADMIN_CODE` (ha nincs:
+  `KM_ACCESS_CODE`) = admin, mindent; `ROBOT_OPERATOR_CODE` = operátor: naplóz, számlálót ment,
+  a **saját, aznap rögzített** bejegyzését javíthatja/törölheti (amíg az admin hozzá nem nyúlt),
+  az utolsó 7 napot látja; `ROBOT_VIEW_CODE` = főnök: Statisztika + Számlálók (csak olvas).
+  Mind legalább 12 karakter. A kliens `robot-kod` localStorage kulcsot használ, ha nincs, a
+  `km-kod`-ot (így Alex a Központ kódjával egyből admin). A „Ki?” név a `robot-nev` kulcsban.
+- **Kulcsok:** `cfg/gep` (gépadatok, operátornevek), `p/<uuid>` (termék: név, robotprogram, kézi
+  idő/db perc, megjegyzés, aktív – nem törlődik, csak archiválható), `e/<YYYY-MM>` (**egy hónap
+  bejegyzései egy blobban**, írás etaggel, ütközésnél újrapróbál – így egy év statisztikája 12
+  olvasás), `h/<id>/<változat>` (javítás előtti változat), `d/<id>` (törölt bejegyzés / mérés
+  másolata), `c/<YYYY-MM-DD>/<uuid>` (számláló-mentés), `f/<uuid>` (a pendant fotója,
+  ~1280 px JPEG, base64).
+- **Bejegyzés:** dátum, ki, termék (név és program pillanatképe), jó db, selejt db, **javított db
+  (a jók közül való, ≤ jó)**, kezdés–befejezés (vagy csak perc; éjfélen átnyúlhat, max. 16 óra),
+  állásidő-sorok `{reason, min}` (átállás, hiba, anyaghiány, karbantartás, betanítás/teszt,
+  egyéb – a kezdés–befejezésen belül, összesen nem több annál), megjegyzés. Termék nélkül csak
+  állásidő rögzíthető. Az űrlap piszkozata a `robot-piszkozat` kulcsban (a „Most” gombbal
+  indított kezdés újratöltés után is megmarad).
+- **Számlálók:** a pendant Operating time (Accumulate) 7 sora másodpercben (egy tizedes):
+  Power ON, Running, Arc ON, Holding, Error hold, Servo OFF, Idle. Nullpont: a „Count start”
+  (**2026-03-18 11:54:13**, a beállításokban módosítható) – ott minden 0. Két mentés különbsége
+  az időszak értéke; hónapokra a napok arányában osztva („közelítő”). Csökkenő érték csak a
+  „Nullázták” jelöléssel menthető. **Első mérés** (2026-11-18, a fotóról): Power ON 351h 38min
+  53.6s, Running 2h 32min 51.3s, Arc ON 1h 15min 55.8s, Holding 9min 34.5s, Error hold 43.5s,
+  Servo OFF 4min 25.4s, Idle 20min 59.8s (`FIRST_READING`; a Számlálók fülön egy gombbal
+  betölthető, amíg nincs mentés). Arc/Power ≈ 0,36%, Running/Power ≈ 0,72% – a Power ON nagy
+  része betanítás/álló gép.
+- **OCR:** Tesseract.js 5.1.1 a böngészőben (`cdn.jsdelivr.net`, a nyelvi adat a
+  `tessdata.projectnaptha.com`-ról, első alkalommal ~5 MB). Ingyenes, szerver nélkül. A
+  `parseOperatingTime()` javítja a tipikus tévesztéseket (O→0, l→1, „are ON” = Arc ON); a valódi
+  fotó kimenete a tesztben van. Az AI vision (Netlify AI Gateway) pontosabb lenne, de kreditet
+  fogyaszt – csak kérésre.
+- **Számítás** (Alex jóváhagyásával): robot cellaidő = kezdés–befejezés az állásidővel együtt
+  (a robot mellett is ott áll valaki – óvatos becslés); megspórolt idő = jó db × kézi idő/db −
+  cellaidő; megtakarítás = megspórolt óra × órabér − robot-óra × üzemköltség (a kézi hegesztés
+  anyagköltségét nem vonja le). Becsült alapértékek, amíg a Beállításokban nincs megadva
+  (a felületen „becsült” jel): robot ára 45 M Ft, órabér 4 000 Ft/óra, üzemköltség 1 200 Ft/robot-óra,
+  1 € = 400 Ft. Megtérülés: összes megtakarítás / robot ára, a várható dátum csak ≥ 14 nap
+  napló után. Termék „Figyelendő”, ha selejt > 5% vagy állásidő > 20% (nk, 10 db alatt „Kevés adat”).
+- **Demó:** `/robot/?demo` (admin), `?demo=operator`, `?demo=viewer` – mintaadatok a
+  `robot-demo-v1` localStorage kulcsban.
+- **Később (2. fázistól, most csak a modell):** `err/<YYYY-MM>` – USB hibalista importja: sorok
+  `{ts, code, text, program, point, import_id}`, ismétlés kiszűrése a sor hash-éből. Példa sor:
+  `2026/11/12 12:38:11 W1020 Weld Error: Wire stick Pt:TESZT_PALYA_V3 P023`. `run/…` –
+  programonkénti futásnapló (ha a vezérlő tud ilyet exportálni). `opc/…` – OPC UA automatikus
+  adat (licencelve, de most nincs hálózat).
