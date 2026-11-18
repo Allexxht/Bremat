@@ -15,12 +15,12 @@
 <!--
   =====================================================================
   BREMAT Központ – a bremat-stuff kezdőlapja.
-  Felül középen a cím, bal oldalt lenyitható menü, a cím alatt két
-  „sziget”: Munkanapló és Valk heti lap, értesítés-jelvénnyel.
+  Felül középen a cím, bal oldalt lenyitható menü, a cím alatt a
+  „szigetek”: Munkanapló, Valk heti lap, Robot napló, Ötletek, Projektek, értesítés-jelvénnyel.
   Háttér: animált, hajlított „selyemszalagok” (canvas). Alapból világos,
   a Beállításokban sötétre váltható.
   A Központ nem tárol semmit: a meglévő szerverfüggvényeket kérdezi
-  (/api/naplo, /api/km, /api/kozpont).
+  (/api/naplo, /api/km, /api/robot, /api/kozpont).
   =====================================================================
 -->
 <style>
@@ -42,6 +42,7 @@
   --valk: #c8102e;   --valk-soft: rgba(200, 16, 46, .1);
   --idea: #b86e00;   --idea-soft: rgba(214, 140, 0, .13);
   --proj: #6a4bc4;   --proj-soft: rgba(106, 75, 196, .12);
+  --robot: #2563c9;  --robot-soft: rgba(37, 99, 201, .12);
   --ok: #1e9a4e; --warn: #c27c00; --bad: #c8102e;
   --badge-ink: #ffffff;
   --display: 'Sora', 'Segoe UI', system-ui, sans-serif;
@@ -63,6 +64,7 @@
   --valk: #ff5468;  --valk-soft: rgba(255, 84, 104, .14);
   --idea: #f2b84b;  --idea-soft: rgba(242, 184, 75, .14);
   --proj: #a990ff;  --proj-soft: rgba(169, 144, 255, .15);
+  --robot: #7fa8f0;  --robot-soft: rgba(127, 168, 240, .15);
   --ok: #4ad37f; --warn: #f2b84b; --bad: #ff5468;
   color-scheme: dark;
 }
@@ -166,6 +168,7 @@ main {
 .island.valk { --tone: var(--valk); --tone-soft: var(--valk-soft); }
 .island.idea { --tone: var(--idea); --tone-soft: var(--idea-soft); }
 .island.proj { --tone: var(--proj); --tone-soft: var(--proj-soft); }
+.island.robot { --tone: var(--robot); --tone-soft: var(--robot-soft); }
 .island::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
   background: radial-gradient(120% 70% at 0% 0%, var(--tone-soft), transparent 60%); transition: opacity .35s var(--ease); }
 .island:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--tone) 45%, var(--glass-line)); }
@@ -468,6 +471,7 @@ const live = {
   ideaAdd: (text) => post('/api/kozpont', 'idea_add', { text }, kmCode()),
   ideaUpdate: (id, patch) => post('/api/kozpont', 'idea_update', { id, ...patch }, kmCode()),
   ideaDelete: (id) => post('/api/kozpont', 'idea_delete', { id }, kmCode()),
+  robot: () => post('/api/robot', 'summary', {}, store.get('robot-kod') || kmCode()),
 };
 
 /* ---------- Dátum (budapesti idő) ---------- */
@@ -511,6 +515,7 @@ function demoApi() {
       cur.updated_at = ts; return d(cur);
     },
     ideaDelete: (id) => { ideas = ideas.filter((x) => x.id !== id); return d(true); },
+    robot: () => d({ today: { good: 24, entries: 2, minutes: 150 }, month: { good: 236, scrap: 4, minutes: 1490, entries: 18 }, last_reading: addDays(today(), -3) }),
     ping: () => d(true),
     projects: () => d({ private_index: '#', projects: [
       { key: 'tokmany', name: 'Tokmány vagy lemez', about: 'Mintaprojekt a demóhoz.', items: [{ t: 'Lemez vagy tokmány', u: '#', d: '2026-11-04' }, { t: 'Vastag lemez 3D', u: '#', d: '2026-10-29', k: ['3D'] }] },
@@ -569,7 +574,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(fa
 $$('.nav a').forEach((a) => a.addEventListener('click', () => setTimeout(() => setMenu(false), 120)));
 
 /* =====================================================================
-   5. Kezdőlap: a két sziget
+   5. Kezdőlap: a szigetek
    Jelvény = a figyelmet kérő tételek összege (alert: true, n: darab).
    ===================================================================== */
 function islandShell(id, cls, icon, title, sub, href, i) {
@@ -609,9 +614,10 @@ function renderHome() {
     <div class="islands">
       ${islandShell('isNaplo', 'naplo', 'notebook-pen', 'Munkanapló', 'Teendők és bejegyzések', '/naplo/', 0)}
       ${islandShell('isValk', 'valk', 'clipboard-check', 'Valk heti lap', 'Robot karbantartás', '/valk/', 1)}
-      ${islandShell('isIdeas', 'idea', 'lightbulb', 'Ötletek', 'Amit meg akarok csinálni', '#/otletek', 2)}
-      ${islandShell('isProj', 'proj', 'folder-kanban', 'Projektek', 'Tervek, rajzok, 3D oldalak', '#/projektek', 3)}
-      ${helyiOn() ? islandShell('isFiles', 'valk', 'folder-lock', 'Valk fájlok', 'Cellák, jigek, adapterek, termékek – csak ezen a gépen', HELYI_URL, 4) : ''}
+      ${islandShell('isRobot', 'robot', 'bot', 'Robot napló', 'Gyártás, számlálók, statisztika', '/robot/' + (DEMO ? '?demo' : ''), 2)}
+      ${islandShell('isIdeas', 'idea', 'lightbulb', 'Ötletek', 'Amit meg akarok csinálni', '#/otletek', 3)}
+      ${islandShell('isProj', 'proj', 'folder-kanban', 'Projektek', 'Tervek, rajzok, 3D oldalak', '#/projektek', 4)}
+      ${helyiOn() ? islandShell('isFiles', 'valk', 'folder-lock', 'Valk fájlok', 'Cellák, jigek, adapterek, termékek – csak ezen a gépen', HELYI_URL, 5) : ''}
     </div></div>`;
   if (helyiOn()) fillIsland($('#isFiles'), { items: [
     { icon: 'shield-check', good: true, html: 'A fájlok a gépen maradnak, a netre nem kerülnek fel.' },
@@ -621,6 +627,7 @@ function renderHome() {
   intro($('#hero'));
   loadNaplo().catch(() => {});
   loadValk().catch(() => {});
+  loadRobotIsland().catch(() => {});
   loadIdeasIsland().catch(() => {});
   loadProjIsland().catch(() => {});
 }
@@ -781,6 +788,29 @@ async function loadValk() {
   if (openEsc) items.push({ icon: 'triangle-alert', html: `<b>${openEsc}</b> nyitott továbbjelzés`, alert: true, n: openEsc });
   fillIsland(el, { items, foot: `${mine.length} beküldött lap összesen` });
   if (!thisWeek && !idleNow) el.href = '/valk/#/uj';   // ha még nincs kész, egyből a kitöltésre visz
+}
+
+// --- Robot napló sziget: mai és havi darab, utolsó számláló-mentés ---
+// Jelvény: ha 7 napnál régebbi (vagy nincs) számláló-mentés.
+async function loadRobotIsland() {
+  const el = $('#isRobot');
+  let r;
+  try { r = await api.robot(); }
+  catch (e) {
+    fillIsland(el, { items: [{ icon: e instanceof AccessError ? 'lock' : 'wifi-off', html: e instanceof AccessError ? 'Külön kóddal védett – koppints a belépéshez.' : esc(e.message) }] });
+    return;
+  }
+  const fmt = (n) => new Intl.NumberFormat('hu-HU').format(n);
+  const hrs = (m) => new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 1 }).format(m / 60);
+  const items = [
+    { icon: 'package-check', html: r.today.entries ? `Ma: <b>${fmt(r.today.good)}</b> db · ${hrs(r.today.minutes)} óra` : '<span class="dim">Ma még nincs bejegyzés</span>', good: r.today.good > 0 },
+    { icon: 'calendar-days', html: `Ebben a hónapban: <b>${fmt(r.month.good)}</b> db${r.month.scrap ? ` · selejt ${fmt(r.month.scrap)}` : ''}` },
+  ];
+  const old = !r.last_reading || r.last_reading < addDays(today(), -7);
+  items.push(old
+    ? { icon: 'gauge', alert: true, html: r.last_reading ? `Számlálók utoljára: ${huShort.format(toDate(r.last_reading))} – ideje egy fotónak` : 'Még nincs számláló-mentés' }
+    : { icon: 'gauge', good: true, html: `Számlálók mentve: ${huShort.format(toDate(r.last_reading))}` });
+  fillIsland(el, { items, foot: `${r.month.entries} bejegyzés ebben a hónapban` });
 }
 
 // --- Ötletek sziget: ami folyamatban van, a legújabb nyitottak, és hány valósult meg ---

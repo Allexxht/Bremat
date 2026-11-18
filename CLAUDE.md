@@ -2,7 +2,7 @@
 
 A teljes háttér a `docs/jegyzet.md`-ben van, szakaszonként. Csak azt a szakaszt olvasd el,
 amelyik részhez nyúlsz (Fájlok, Feladatok, Adatmodell, Munkanapló, Központ, Nyitó animáció,
-Teendőim, Napi idősáv, Kinézet, Munkamódszer, Helyi Központ, Önfrissítés).
+Teendőim, Napi idősáv, Kinézet, Munkamódszer, Helyi Központ, Önfrissítés, Robot napló).
 
 ## Mi ez
 - A BREMAT belső eszközei egy Netlify oldalon (`https://bremat-stuff.netlify.app`, saját
@@ -10,10 +10,12 @@ Teendőim, Napi idősáv, Kinézet, Munkamódszer, Helyi Központ, Önfrissíté
   - `/` – **Központ** (`public/index.html`, `/api/kozpont`): kezdőlap, menü, Munkanapló és Valk sziget.
   - `/valk/` – heti karbantartási lap a Valk Welding / Panasonic TAWERS TM-2000WGH4 robothoz.
   - `/naplo/` – Alex munkanaplója (Teendőim állapot, napi idősáv). Szándékosan külön a Valk laptól.
+  - `/robot/` – a hegesztőrobot működési naplója és statisztikája (`/api/robot`, Blobs `robot`, szerepek:
+    admin / operátor / főnök kóddal). Részletek: `docs/jegyzet.md` → Robot napló.
 - **Semmi köze az AndonWork-höz** (`Allexxht/astro-platform-starter`): nem osztunk meg vele
   kódot, táblát, Supabase-t, Netlify oldalt, és nem hivatkozunk rá.
 - **Nincs Supabase, nincs új külső szolgáltatás kérés nélkül.** Az adatok a Netlify Blobs-ban:
-  `km-checks` (heti lap), `naplo` (napló).
+  `km-checks` (heti lap), `naplo` (napló), `robot` (robot napló).
 - A Teendőim (PowerShell asztali program) forrása: `teendoim/` (2026. november 11. óta a repóban).
 - **Önfrissítés**: a Teendőim a `public/frissites/`-ből frissíti magát és a helyi Központot.
   `teendoim/` vagy `helyi/` módosítása után: `node scripts/frissites.mjs` (az `npm test` jelzi,
