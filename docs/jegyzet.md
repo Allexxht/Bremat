@@ -423,3 +423,20 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   fenti szabály szerint; a megváltozott napokat a Teendőim újraküldi a naplóba (21 nap).
 - Szerver: `TIME_KINDS` + `idle`. Napló oldal: az `idle` se munka, se szünet; a fejlécben „megállt: X”,
   a sávon narancs csíkos, a listában „megállt az időmérés (nem voltál a gépnél)”.
+
+## Programteszt (2026. november 20., Alex kérése)
+- Robot program-teszt követő a Központban: `#/teszt` (lista), `#/teszt/<id>` (termék), `#/teszt/stat`
+  (összkép, táblázat, nyomtatás, CSV). Kezdőlapon „Programteszt” sziget (jelvény = 14 napja álló,
+  nem szünetelő, nem kész termék).
+- Közös logika: `public/programteszt.js` (`newProduct`, `applyOp`, `stats`, `findByHash`) – a szerver
+  (`lib/kozpont-core.mjs`) és a demó adapter is ezt használja, így a napló (`log`) magától íródik.
+- Tárolás: `kozpont` Blobs, `pt/<uuid>` (egy termék = egy blob), törléskor másolat `pd/<uuid>`.
+  Műveletek: `pt_list`, `pt_create`, `pt_op` (`id`, `rev`, `op`; rossz `rev` → 409), `pt_delete`.
+- Termék: `sku`, `name`, `note`, `status` (varakozik → programozas → teszt → finomitas → fonok_ok →
+  automatizalt), dátumok (`received_at`, `prog_start`, `test_start`, `boss_ok_at/by`, `done_at`),
+  `paused`/`pauses`, `parts[]` (`versions[]` V1, V2…, `active` – mindig az új verzió lesz aktív,
+  visszaállítható), `rounds[]` (n. kör, eredmény, perc, jegyzet, a pillanatnyi aktív verziók),
+  `issues[]` (hiba + megoldás), `times[]` (perc, fajta), `notes[]`, `log[]`.
+- **A DTPS fájl nem kerül fel a netre** (Valk fájlok eddig is csak helyben): a böngésző csak a nevét,
+  méretét és SHA-256 ujjlenyomatát küldi. „Fájl ellenőrzése”: bármelyik fájlról megmondja, melyik
+  verzió, és hogy AKTÍV vagy RÉGI. Ha Alex később mégis online fájlt akar, az külön döntés.
