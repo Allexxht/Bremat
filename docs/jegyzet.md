@@ -424,19 +424,19 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Szerver: `TIME_KINDS` + `idle`. Napló oldal: az `idle` se munka, se szünet; a fejlécben „megállt: X”,
   a sávon narancs csíkos, a listában „megállt az időmérés (nem voltál a gépnél)”.
 
-## Programteszt (2026. november 20., Alex kérése)
-- Robot program-teszt követő a Központban: `#/teszt` (lista), `#/teszt/<id>` (termék), `#/teszt/stat`
-  (összkép, táblázat, nyomtatás, CSV). Kezdőlapon „Programteszt” sziget (jelvény = 14 napja álló,
-  nem szünetelő, nem kész termék).
-- Közös logika: `public/programteszt.js` (`newProduct`, `applyOp`, `stats`, `findByHash`) – a szerver
-  (`lib/kozpont-core.mjs`) és a demó adapter is ezt használja, így a napló (`log`) magától íródik.
+## Programteszt (2026. november 20., 2. változat: november 24., Alex kérése)
+- Az 1. változat (verziók V1/V2, teszt körök, hibák, statisztika) Alexnek túl bonyolult volt („nem
+  tetszik”). **2. változat – egyszerű:** termék → részek (oldallemezek, tompavarrat…). Részenként:
+  **állapot** (Programozás / Tesztelés alatt / Finomítás kell / Kész, színnel), **óra** (Indít / Állj;
+  egyszerre csak egy megy – indításkor a többi, más termékeké is, megáll; „Kész”-re váltáskor is
+  megáll; egy menet legfeljebb 24 óra; „Idő javítása”: ± perc), **jegyzetek** dátummal.
+- Oldalak: `#/teszt` (lista: cikkszám, részenként színes pötty, kész/összes, idő, futó óra),
+  `#/teszt/<id>` (a részek kártyái). Kezdőlapon „Programteszt” sziget (futó óra, nyitott termékek).
+- Közös logika: `public/programteszt.js` (`newProduct`, `applyOp`, `stopRunning`, `summary`,
+  `partMs`) – a szerver (`lib/kozpont-core.mjs`) és a demó adapter is ezt használja.
 - Tárolás: `kozpont` Blobs, `pt/<uuid>` (egy termék = egy blob), törléskor másolat `pd/<uuid>`.
   Műveletek: `pt_list`, `pt_create`, `pt_op` (`id`, `rev`, `op`; rossz `rev` → 409), `pt_delete`.
-- Termék: `sku`, `name`, `note`, `status` (varakozik → programozas → teszt → finomitas → fonok_ok →
-  automatizalt), dátumok (`received_at`, `prog_start`, `test_start`, `boss_ok_at/by`, `done_at`),
-  `paused`/`pauses`, `parts[]` (`versions[]` V1, V2…, `active` – mindig az új verzió lesz aktív,
-  visszaállítható), `rounds[]` (n. kör, eredmény, perc, jegyzet, a pillanatnyi aktív verziók),
-  `issues[]` (hiba + megoldás), `times[]` (perc, fajta), `notes[]`, `log[]`.
-- **A DTPS fájl nem kerül fel a netre** (Valk fájlok eddig is csak helyben): a böngésző csak a nevét,
-  méretét és SHA-256 ujjlenyomatát küldi. „Fájl ellenőrzése”: bármelyik fájlról megmondja, melyik
-  verzió, és hogy AKTÍV vagy RÉGI. Ha Alex később mégis online fájlt akar, az külön döntés.
+  Rész: `name`, `status`, `spent_ms`, `running_since`, `sessions[]` (from, to, ms – későbbi
+  statisztikához), `notes[]`.
+- Fájl (DTPS program) most nincs benne. Ha kell: online csak Alex kifejezett kérésére (Valk fájlok
+  eddig csak helyben).
