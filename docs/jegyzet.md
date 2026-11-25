@@ -423,3 +423,18 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   fenti szabály szerint; a megváltozott napokat a Teendőim újraküldi a naplóba (21 nap).
 - Szerver: `TIME_KINDS` + `idle`. Napló oldal: az `idle` se munka, se szünet; a fejlécben „megállt: X”,
   a sávon narancs csíkos, a listában „megállt az időmérés (nem voltál a gépnél)”.
+
+## Szakaszok egy teendőn belül (2026. november 25., Alex kérése)
+- Cél: egy teendőn (pl. „Robot hegesztés”) belül szakaszok saját idővel (Előkészület 5 p, Hegesztés 1 ó …),
+  és a lezárt szakasz bekerül a Munkanaplóba.
+- Adat a `teendok.json`-ban: `stages[]` (`id`, `name`, `spent`, `done`, `doneAt`), `stage` (a futó szakasz id-ja),
+  `stageFrom` (ettől gyűjt). A szakasz ideje = `spent` + (most − max(`startedAt`, `stageFrom`)), ha a teendő fut és
+  ez a kiválasztott. Megállításkor (`StopRun`) és váltáskor `StageAccrue` könyvel. A teendő összes ideje külön marad.
+- Felület (`StageBar`, `StageChip`): a lenyitott sorban („Szakaszok:”) és a narancs kártyán. Kattintás = ezen dolgozom
+  (ha nem fut a teendő, elindul), pipa = lezárás, pipa újra = visszavétel, jobb klikk = szakasz ideje / törlés.
+  „+ Szakasz…” új nevet kér. A neveket feladatnévenként megjegyzi (`%APPDATA%\Teendoim\szakaszok.json`), a következő
+  azonos nevű teendőnél halvány „+ név” gombként jönnek (egy kattintás = létrehoz és indít).
+- Napló: lezáráskor `create` a meglévő sorral (`naplo.json`, offline is), szöveg „Teendő · Szakasz – kész (1 ó 2 p)”,
+  `hours` = a szakasz ideje (0,01 óra pontosság). A sor kulcsa `teendőid|szakaszid` – visszavételkor törlődik.
+  A teendő „Kész:” bejegyzése „Szakaszok: …” bontást kap (óra mező nélkül, hogy ne számolódjon kétszer).
+- Idősáv és Központ: a futó szakasz alatt a szegmens / `doing[].text` neve „Teendő · Szakasz”. Szerver nem változott.
