@@ -491,6 +491,18 @@ $xaml = @'
             </Border>
           </Grid>
 
+          <!-- A nap csíkja: mennyi telt el a műszakból (7–15 óra), és mi ment eddig (idősáv) -->
+          <StackPanel Margin="0,10,0,0">
+            <Border x:Name="DayTrack" Height="8" CornerRadius="4" Background="{{line}}" ClipToBounds="True">
+              <Canvas x:Name="DayBar" ClipToBounds="True"/>
+            </Border>
+            <Grid Margin="0,3,0,0">
+              <TextBlock x:Name="DayFrom" Foreground="{{muted}}" FontSize="11" HorizontalAlignment="Left"/>
+              <TextBlock x:Name="DayInfo" Foreground="{{muted}}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="DayTo" Foreground="{{muted}}" FontSize="11" HorizontalAlignment="Right"/>
+            </Grid>
+          </StackPanel>
+
           <!-- „Most” kártya: a futó teendő és az órája -->
           <Border x:Name="Away" CornerRadius="14" Margin="0,14,0,0" Padding="14,12,12,12" Background="{{accentSoft}}"
                   BorderBrush="{{accent}}" BorderThickness="1" Visibility="Collapsed">
@@ -601,7 +613,9 @@ try { $win = [Windows.Markup.XamlReader]::Parse($xaml) } catch { Fail "A felüle
 $U = @{}
 foreach ($n in 'Tab', 'TabStop', 'TabRing', 'TabDot', 'Badge', 'BadgeText', 'TabTimer', 'TabTimerText', 'Chevron', 'Panel', 'Head', 'DateText',
                'PinBtn', 'PinIcon', 'MenuBtn', 'Focus', 'FocusDot', 'FocusLabel', 'RunList', 'Away', 'AwayTitle', 'AwaySub', 'AwayGo', 'AwayCount', 'AwayKeep', 'Count', 'TodayText', 'Body', 'FocusBody', 'Track', 'Fill', 'Cheer', 'InputBox', 'Input', 'Ph', 'AddBtn', 'Scroll', 'List',
-               'Empty', 'DoneHead', 'DoneArrow', 'DoneHeadText', 'DoneList', 'Undo', 'UndoText', 'UndoBtn', 'Fx', 'ActsHead', 'Acts') { $U[$n] = $win.FindName($n) }
+               'Empty', 'DoneHead', 'DoneArrow', 'DoneHeadText', 'DoneList', 'Undo', 'UndoText', 'UndoBtn', 'Fx', 'ActsHead', 'Acts', 'DayTrack', 'DayBar', 'DayFrom', 'DayInfo', 'DayTo') { $U[$n] = $win.FindName($n) }
+$script:renderedDay = ''
+$U.DayTrack.add_SizeChanged({ DayPaint })
 
 # ---------- Animáció ----------
 $OP = [Windows.UIElement]::OpacityProperty
@@ -1314,6 +1328,51 @@ function ActDelete($id) {
   RemoveItem $id; Commit
 }
 
+# ---------- A nap csíkja ----------
+# Alapból 7:00–15:00 (műszak), ha korábban kezdtél / tovább maradtál, kitágul. Halvány = eltelt idő,
+# színes = mért szakaszok (teendő narancs, tevékenység kék, szünet szürke, megállt sárga), vonal = most.
+$script:dayPaintAt = [int64]0
+function DayPaint {
+  $cv = $U.DayBar; if (-not $cv) { return }
+  $w = [double]$U.DayTrack.ActualWidth; if ($w -le 0) { return }
+  $script:dayPaintAt = NowMs
+  $cv.Children.Clear()
+  $now = NowMs; $mid = Midnight
+  $t0 = $mid + 7 * 3600000; $t1 = $mid + 15 * 3600000
+  $segs = @($script:seg[(TodayKey)] | Where-Object { $_ })
+  foreach ($x in $segs) {
+    if ([int64]$x.start -lt $t0) { $t0 = [int64]$x.start }
+    $e = $(if ($null -ne $x.end) { [int64]$x.end } else { $now }); if ($e -gt $t1) { $t1 = $e }
+  }
+  if ($now -gt $t1) { $t1 = $now }
+  $t0 = $mid + [Math]::Floor(($t0 - $mid) / 3600000) * 3600000
+  $t1 = $mid + [Math]::Ceiling(($t1 - $mid) / 3600000) * 3600000
+  $span = [double]($t1 - $t0)
+  $nx = [Math]::Max(0.0, [Math]::Min($w, $w * ($now - $t0) / $span))
+  $el = New-Object Windows.Shapes.Rectangle; $el.Width = $nx; $el.Height = 8; $el.Fill = Brush $C.accentSoft
+  [void]$cv.Children.Add($el)
+  foreach ($x in $segs) {
+    $e = $(if ($null -ne $x.end) { [int64]$x.end } else { $now })
+    $x0 = $w * ([int64]$x.start - $t0) / $span; $x1 = $w * ($e - $t0) / $span
+    $rc = New-Object Windows.Shapes.Rectangle; $rc.Height = 8; $rc.Width = [Math]::Max(1.0, $x1 - $x0)
+    switch ([string]$x.kind) {
+      'activity' { $rc.Fill = Brush '#3B82F6' }
+      'break'    { $rc.Fill = Brush $C.muted; $rc.Opacity = 0.45 }
+      'idle'     { $rc.Fill = Brush $C.star; $rc.Opacity = 0.55 }
+      default    { $rc.Fill = Brush $C.accent }
+    }
+    [Windows.Controls.Canvas]::SetLeft($rc, $x0); [void]$cv.Children.Add($rc)
+  }
+  $mk = New-Object Windows.Shapes.Rectangle; $mk.Width = 2; $mk.Height = 8; $mk.Fill = Brush $C.fg
+  [Windows.Controls.Canvas]::SetLeft($mk, [Math]::Max(0.0, $nx - 1)); [void]$cv.Children.Add($mk)
+  $U.DayFrom.Text = '{0}:00' -f [int](($t0 - $mid) / 3600000)
+  $U.DayTo.Text = '{0}:00' -f [int](($t1 - $mid) / 3600000)
+  $end = $mid + 15 * 3600000; $beg = $mid + 7 * 3600000
+  $U.DayInfo.Text = $(if ($now -lt $beg) { 'a műszak 7:00-kor kezdődik' }
+                      elseif ($now -lt $end) { 'eltelt ' + [int](100 * ($now - $beg) / ($end - $beg)) + '%  ·  még ' + (FmtDur ($end - $now)) }
+                      else { 'műszak vége' })
+}
+
 function Render {
   $U.List.Children.Clear(); $U.DoneList.Children.Clear(); $script:live = @(); $script:stLive = @()
   $active = @($script:items | Where-Object { $_.state -eq 'open' -and -not (IsAct $_) } | Sort-Object @{ Expression = { $_.order } }, @{ Expression = { $_.created } })
@@ -1345,6 +1404,8 @@ function Render {
   if ($all -and $U.Cheer.Visibility -ne 'Visible') { $U.Cheer.Visibility = 'Visible'; Pop $U.Cheer.RenderTransform 0.5 500 }
   if (-not $all) { $U.Cheer.Visibility = 'Collapsed' }
   RenderRun
+  DayPaint
+  $script:renderedDay = TodayKey
 }
 function Commit {
   SaveData; Render
@@ -1371,6 +1432,7 @@ function Tick {
   foreach ($p in $script:live) { $r = FindItem $p[0]; if ($r -and $r.state -eq 'doing') { $p[1].Text = FmtLive (Elapsed $r) } }
   foreach ($p in $script:stLive) { $r = FindItem $p[0]; if ($r -and $r.state -eq 'doing' -and $r.stage -eq $p[1]) { $sg = StageOf $r $p[1]; if ($sg) { $p[2].Text = FmtLive (StageMs $r $sg) } } }
   if ($runs.Count) { $U.TabTimerText.Text = TabText $runs }
+  if ($script:open -and $now - $script:dayPaintAt -gt 30000) { DayPaint }
   if ($runs.Count -or $gap -gt 60000) { $U.TodayText.Text = 'ma ' + (FmtDur (TodayMs)) }
   if ($script:dirty -and -not $script:drag) { SaveData; $script:dirty = $false }
   if ($script:idleOk -and [int]$script:set.idleMin -gt 0) {
@@ -1689,14 +1751,13 @@ function Expand($quiet = $false) {
   $U.Panel.RenderTransformOrigin = [Windows.Point]::new([double][int]$script:alignRight, [double][int]$script:openUp)
   $U.DateText.Text = (Get-Date).ToString('MMMM d., dddd', $hu)
   SetAnchors
-  $script:stagger = 0; Render; $script:stagger = -1
+  # Szaggatás ellen (2026-11-25): a lista már kész (minden változáskor újrarajzolódik), lenyitáskor nem
+  # építjük újra (csak új napon). Nincs elmosás-effekt és soronkénti beúszás: rövid, egyszerű nyílás.
+  if ($script:renderedDay -ne (TodayKey)) { Render }
   $U.Panel.Visibility = 'Visible'
   $sc = $U.Panel.RenderTransform
-  Anim $sc $SX 0.94 1 460; Anim $sc $SY 0.82 1 480; Anim $U.Panel $OP 0 1 280
-  $bl = New-Object Windows.Media.Effects.BlurEffect; $bl.Radius = 14; $U.Body.Effect = $bl
-  Anim $bl ([Windows.Media.Effects.BlurEffect]::RadiusProperty) 14 0 420
-  Later 460 $null { $U.Body.Effect = $null }
-  Pop $U.Focus.RenderTransform 0.94 600
+  Anim $sc $SX 0.97 1 200; Anim $sc $SY 0.96 1 220; Anim $U.Panel $OP 0 1 160
+  Later 40 $null { DayPaint }
   Anim $U.Chevron.RenderTransform $ANG $null 180 520 $backOut
   if (-not $quiet) {
     [void]$win.Activate()

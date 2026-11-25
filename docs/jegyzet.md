@@ -442,3 +442,6 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Szaggatás: futó óránál nincs több végtelen animáció (csillogó sáv, pulzáló pont, gyűrű) és ragyogás-effekt a narancs
   kártyán. Az átlátszó ablakot (`AllowsTransparency` + ablakárnyék) a Windows minden képkockánál egészben újra
   összerakja, ezek folyamatosan 20–30 kép/mp-vel pörgették. Most futás közben csak a másodpercenkénti óraszám változik.
+- 2026-11-25, 3. kör: **a nap csíkja** a fejléc alatt (`DayPaint`): 7:00–15:00 (kitágul, ha korábban/tovább),
+  halvány = eltelt, színes = a mai idősáv szakaszai, vonal = most, középen „eltelt X% · még Y”. 30 mp-enként frissül, ha nyitva.
+  **Lenyitás**: nem épít újra mindent (csak új napon), nincs elmosás-effekt és soronkénti beúszás – rövid nyílás.
