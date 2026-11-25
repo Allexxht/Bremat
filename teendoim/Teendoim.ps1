@@ -99,6 +99,13 @@ function Norm($d) {
     notes     = $(if ($d.notes) { [string]$d.notes } else { '' })
     # '' = teendő; 'act' = állandó tevékenység (pl. Általános), 'brk' = szünet – ezek sosem lesznek „kész”
     kind      = $(if ([string]$d.kind -in 'act', 'brk') { [string]$d.kind } else { '' })
+    # Szakaszok egy teendőn belül (pl. Előkészület, Hegesztés): mindegyik saját időt gyűjt
+    stages    = @(foreach ($sx in @($d.stages)) { if ($sx -and $sx.name) {
+                  [pscustomobject]@{ id = $(if ($sx.id) { [string]$sx.id } else { NewId }); name = [string]$sx.name
+                                     spent = $(if ($sx.spent) { [int64]$sx.spent } else { [int64]0 }); done = [bool]$sx.done
+                                     doneAt = $(if ($sx.doneAt) { [int64]$sx.doneAt } else { $null }) } } })
+    stage     = $(if ($d.stage) { [string]$d.stage } else { '' })          # a most futó szakasz id-ja
+    stageFrom = $(if ($d.stageFrom) { [int64]$d.stageFrom } else { $null }) # ettől gyűjt a futó szakasz
   }
 }
 
@@ -125,7 +132,7 @@ function OrderEdge($max) {
 }
 function SaveDataNow {
   try {
-    $json = ConvertTo-Json -InputObject @($script:items) -Depth 3
+    $json = ConvertTo-Json -InputObject @($script:items) -Depth 5
     [IO.File]::WriteAllText("$dataFile.tmp", $json, $utf8)
     Move-Item "$dataFile.tmp" $dataFile -Force
   } catch { Fail "Nem sikerült menteni: $_" }
@@ -205,7 +212,7 @@ function SegAdd($item, $name, $kind, $start, $end) {
   SegTouch $d; SegSave
 }
 function SegKind($it) { if ($it.kind -eq 'brk') { 'break' } elseif ($it.kind -eq 'act') { 'activity' } else { 'todo' } }
-function SegOpen($it, $at) { SegAdd $it.id $it.text (SegKind $it) $at $null }
+function SegOpen($it, $at) { SegAdd $it.id (SegName $it) (SegKind $it) $at $null }
 function SegClose($it, $at) {
   $hit = $false
   foreach ($d in @($script:seg.Keys)) {
@@ -285,10 +292,34 @@ function TodayMs {
   foreach ($r in @(RunningAll)) { if ($r.startedAt -and $r.kind -ne 'brk') { $base += [Math]::Max(0, (NowMs) - [Math]::Max([int64]$r.startedAt, (Midnight))) } }
   $base
 }
+# ---------- Szakaszok egy teendőn belül ----------
+# A teendő órája fut; ha van kiválasztott szakasz ($it.stage), az is gyűjt, $it.stageFrom-tól.
+function StageOf($it, $sid) { if ($sid) { foreach ($sx in @($it.stages)) { if ($sx.id -eq $sid) { return $sx } } } }
+function StageMs($it, $sg) {
+  $ms = [int64]$sg.spent
+  if ($it.state -eq 'doing' -and $it.startedAt -and $it.stage -eq $sg.id) {
+    $from = [Math]::Max([int64]$it.startedAt, [int64]$it.stageFrom)
+    $ms += [Math]::Max([int64]0, (NowMs) - $from)
+  }
+  $ms
+}
+# A futó szakasz eddigi idejét elkönyveli (megállításkor, váltáskor)
+function StageAccrue($it, $until) {
+  $sg = StageOf $it $it.stage
+  if ($sg -and $it.state -eq 'doing' -and $it.startedAt) {
+    $from = [Math]::Max([int64]$it.startedAt, [int64]$it.stageFrom)
+    $sg.spent = [int64]$sg.spent + [Math]::Max([int64]0, [int64]$until - $from)
+  }
+  $it.stageFrom = [int64]$until
+}
+# Az idősávban (és a Központban) a név: „Teendő · Szakasz”
+function SegName($it) { $sg = StageOf $it $it.stage; if ($sg) { "$($it.text) · $($sg.name)" } else { [string]$it.text } }
+
 # A futó óra leállítása: az eltelt idő hozzáadódik a teendőhöz és a mai összeshez
 function StopRun($it, $until = $null) {
   if ($it.state -eq 'doing' -and $it.startedAt) {
     $now = $(if ($null -ne $until) { [Math]::Max([int64]$until, [int64]$it.startedAt) } else { NowMs })
+    StageAccrue $it $now
     $it.spent = [int64]$it.spent + ($now - [int64]$it.startedAt)
     if ($script:set.today -ne (TodayKey)) { $script:set.today = TodayKey; $script:set.todayMs = 0 }
     # a szünet nem számít bele a mai munkaidőbe
@@ -699,7 +730,7 @@ function TimeChip($text, $running) {
   @($b, $t)
 }
 
-$script:fresh = @(); $script:spin = $null; $script:live = @(); $script:stagger = -1
+$script:fresh = @(); $script:spin = $null; $script:live = @(); $script:stLive = @(); $script:stagger = -1
 
 function Fade($brush, $hex, $ms) {
   $a = New-Object Windows.Media.Animation.ColorAnimation
@@ -707,6 +738,192 @@ function Fade($brush, $hex, $ms) {
   $a.Duration = New-Object Windows.Duration ([TimeSpan]::FromMilliseconds($ms)); $a.EasingFunction = $easeOut
   $brush.BeginAnimation([Windows.Media.SolidColorBrush]::ColorProperty, $a)
 }
+# ---------- Szakaszok: műveletek ----------
+# Feladatonként megjegyzett szakasznevek (szakaszok.json): a következő azonos nevű teendőnél
+# halvány „+ név” gombként jönnek elő, egy kattintás = létrehoz és indít.
+$tplFile = Join-Path $dir 'szakaszok.json'
+$script:tpl = @{}
+if (Test-Path $tplFile) {
+  try { $tj = ConvertFrom-Json ([IO.File]::ReadAllText($tplFile, $utf8)); foreach ($tp in $tj.PSObject.Properties) { $script:tpl[$tp.Name] = @($tp.Value | ForEach-Object { [string]$_ }) } } catch {}
+}
+function TplKey($it) { ([string]$it.text).Trim().ToLower() }
+function TplAdd($it, $name) {
+  $k = TplKey $it; $l = @($script:tpl[$k] | Where-Object { $_ })
+  if ($l -notcontains $name) {
+    $script:tpl[$k] = @($l + $name)
+    try { [IO.File]::WriteAllText($tplFile, (ConvertTo-Json -InputObject $script:tpl -Depth 3), $utf8) } catch {}
+  }
+}
+function TplLeft($it) {
+  $have = @($it.stages | ForEach-Object { ([string]$_.name).ToLower() })
+  @($script:tpl[(TplKey $it)] | Where-Object { $_ -and ($have -notcontains $_.ToLower()) })
+}
+# A futó szakasz leválasztása (a teendő órája megy tovább, szakasz nélkül)
+function StageDetach($it) {
+  if (-not $it.stage) { return }
+  if ($it.state -eq 'doing' -and $it.startedAt) {
+    $now = NowMs
+    StageAccrue $it $now; SegClose $it $now; $it.stage = ''; SegOpen $it $now
+  } else { $it.stage = '' }
+}
+# Kattintás egy szakaszra: ezen dolgozom most. Ha a teendő nem fut, elindul.
+function StageGo($id, $sid) {
+  $it = FindItem $id; if (-not $it -or $it.state -eq 'done' -or (IsAct $it)) { return }
+  $sg = StageOf $it $sid; if (-not $sg -or $sg.done) { return }
+  if ($it.stage -eq $sid -and $it.state -eq 'doing') { return }
+  $now = NowMs
+  if ($it.state -eq 'doing' -and $it.startedAt) {
+    StageAccrue $it $now; SegClose $it $now
+    $it.stage = $sid; $it.stageFrom = $now; SegOpen $it $now
+  } else {
+    $it.stage = $sid; $it.stageFrom = $now; StartRun $it $now
+    $script:fresh += $id
+  }
+  Commit
+}
+function StageNew($id, $name) {
+  $it = FindItem $id; if (-not $it -or $it.state -eq 'done' -or (IsAct $it)) { return }
+  $name = ([string]$name -replace '\s+', ' ').Trim(); if (-not $name) { return }
+  if ($name.Length -gt 60) { $name = $name.Substring(0, 60) }
+  $sg = $null
+  foreach ($sx in @($it.stages)) { if ($sx.name -eq $name -and -not $sx.done) { $sg = $sx } }
+  if (-not $sg) {
+    $sg = [pscustomobject]@{ id = (NewId); name = $name; spent = [int64]0; done = $false; doneAt = $null }
+    $it.stages = @(@($it.stages) + $sg)
+  }
+  TplAdd $it $name
+  StageGo $id $sg.id
+}
+function StageAsk($id) {
+  $a = AskText 'Új szakasz neve (pl. Előkészület, Hegesztés, Takarítás):'
+  if ($a) { StageNew $id $a }
+}
+# Pipa a szakaszon: lezárva, bejegyzés megy a Munkanaplóba
+function StageDone($id, $sid) {
+  $it = FindItem $id; if (-not $it) { return }
+  $sg = StageOf $it $sid; if (-not $sg -or $sg.done) { return }
+  if ($it.stage -eq $sid) { StageDetach $it }
+  $sg.done = $true; $sg.doneAt = NowMs
+  NaploStage $it $sg
+  Commit
+  ShowNote ('Szakasz kész: ' + $sg.name + '  ·  ' + (FmtDur ([int64]$sg.spent)))
+}
+function StageReopen($id, $sid) {
+  $it = FindItem $id; if (-not $it -or $it.state -eq 'done') { return }
+  $sg = StageOf $it $sid; if (-not $sg -or -not $sg.done) { return }
+  $sg.done = $false; $sg.doneAt = $null
+  NaploUndoKey "$id|$sid"
+  Commit
+}
+function StageDel($id, $sid) {
+  $it = FindItem $id; if (-not $it) { return }
+  $sg = StageOf $it $sid; if (-not $sg) { return }
+  if ($it.stage -eq $sid) { StageDetach $it }
+  if ($sg.done) { NaploUndoKey "$id|$sid" }
+  $it.stages = @($it.stages | Where-Object { $_.id -ne $sid })
+  Commit
+}
+# A szakasz idejének kézi módosítása (a teendő összes idejét nem változtatja)
+function StageTime($id, $sid) {
+  $it = FindItem $id; if (-not $it) { return }
+  $sg = StageOf $it $sid; if (-not $sg -or $sg.done) { return }
+  $nl = [Environment]::NewLine
+  $cur = [int64](StageMs $it $sg)
+  $a = AskText ('Szakasz ideje: ' + $it.text + ' · ' + $sg.name + $nl + 'Eddig: ' + (FmtDur $cur) + $nl + $nl +
+                '+10  = hozzáad 10 percet' + $nl + '-5  = levon 5 percet' + $nl + '1:30  (előjel nélkül) = legyen összesen ennyi')
+  if (-not $a) { return }
+  $a = $a.ToLower().Replace(' ', '').Replace('−', '-').Replace('–', '-')
+  $m = [regex]::Match($a, '^([+-])?(\d{1,4})(?::(\d{1,2}))?(p|perc|ó|o|óra|ora)?$')
+  if (-not $m.Success) { Ask 'Ezt nem értem. Példák: +10, -5, 1:30'; return }
+  $min = [int64]$m.Groups[2].Value
+  if ($m.Groups[3].Success) { $min = $min * 60 + [int64]$m.Groups[3].Value }
+  elseif ($m.Groups[4].Value -match '^(ó|o)') { $min = $min * 60 }
+  $ms = $min * 60000
+  $target = $(if ($m.Groups[1].Value -eq '+') { $cur + $ms } elseif ($m.Groups[1].Value -eq '-') { $cur - $ms } else { $ms })
+  $target = [int64][Math]::Max([int64]0, $target)
+  $sp = [int64]$sg.spent + ($target - $cur)
+  if ($sp -lt 0) {
+    # fut a szakasz, és a levonás több, mint az eddig elkönyvelt: a kezdete tolódik
+    $from = [Math]::Max([int64]$it.startedAt, [int64]$it.stageFrom)
+    $it.stageFrom = [int64]$from - $sp; $sp = 0
+  }
+  $sg.spent = [int64]$sp
+  Commit
+  ShowNote ($it.text + ' · ' + $sg.name + ': ' + (FmtDur (StageMs $it $sg)))
+}
+
+# ---------- Szakaszok: gombsor (a lenyitott sorban és a narancs kártyán) ----------
+function StageChip($it, $sg, $card) {
+  $active = $it.stage -eq $sg.id
+  $run = $active -and $it.state -eq 'doing'
+  $b = New-Object Windows.Controls.Border
+  $b.Style = $win.Resources[$(if ($card) { 'Pill' } else { 'Chip' })]; $b.Margin = '0,0,6,6'; $b.Padding = '9,4'
+  $b.Tag = @($it.id, $sg.id)
+  $fg = $(if ($card) { $C.accentFg } elseif ($sg.done) { $C.muted } else { $C.fg })
+  if ($active) {
+    $b.Background = Brush $(if ($card) { '#FFFFFF' } else { $C.accent })
+    $fg = $(if ($card) { $C.accent } else { $C.accentFg })
+  }
+  $sp = New-Object Windows.Controls.StackPanel; $sp.Orientation = 'Horizontal'
+  if ($active) { $ic = Icon $ICON.play (Brush $fg) $null 1.6 11; $ic.Margin = '0,0,5,0'; [void]$sp.Children.Add($ic) }
+  $nm = Txt $sg.name 12.5 $fg 'SemiBold'
+  if ($sg.done) { $nm.TextDecorations = [Windows.TextDecorations]::Strikethrough; $nm.Opacity = 0.85 }
+  [void]$sp.Children.Add($nm)
+  $ms = StageMs $it $sg
+  $tm = Txt '' 12 $fg $(if ($run) { 'Bold' } else { 'Normal' }); $tm.Margin = '7,0,0,0'
+  if ($run) {
+    $tm.Text = FmtLive $ms; $tm.FontFamily = New-Object Windows.Media.FontFamily $C.mono
+    $script:stLive += , @($it.id, $sg.id, $tm)
+  } elseif ($ms -gt 0 -or $sg.done) { $tm.Text = FmtDur $ms }
+  [void]$sp.Children.Add($tm)
+  # Pipa: lezárás (bejegyzés a naplóba) / visszavétel
+  $ck = New-Object Windows.Controls.Border
+  $ck.Width = 18; $ck.Height = 18; $ck.CornerRadius = 9; $ck.Margin = '7,0,0,0'; $ck.Cursor = [Windows.Input.Cursors]::Hand
+  $ck.Background = $(if ($sg.done) { Brush $C.ok } else { [Windows.Media.Brushes]::Transparent })
+  if (-not $sg.done) { $ck.BorderBrush = Brush $fg; $ck.BorderThickness = 1.4 }
+  $ck.Child = Icon $ICON.check $null (Brush $(if ($sg.done) { $C.okFg } else { $fg })) 2.2 12
+  $ck.ToolTip = $(if ($sg.done) { 'Visszavétel (a napló bejegyzés törlődik)' } else { 'Szakasz kész – bekerül a Munkanaplóba' })
+  $ck.Tag = @($it.id, $sg.id, [bool]$sg.done)
+  $ck.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; if ($s.Tag[2]) { StageReopen $s.Tag[0] $s.Tag[1] } else { Burst $s; StageDone $s.Tag[0] $s.Tag[1] } })
+  [void]$sp.Children.Add($ck)
+  $b.Child = $sp
+  if (-not $sg.done) {
+    $b.ToolTip = 'Kattintás: ezen dolgozom most. Jobb klikk: idő, törlés'
+    $b.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; StageGo $s.Tag[0] $s.Tag[1] })
+  }
+  $cm = New-Object Windows.Controls.ContextMenu
+  if (-not $sg.done) {
+    $m1 = New-Object Windows.Controls.MenuItem; $m1.Header = 'Szakasz ideje…'; $m1.Tag = @($it.id, $sg.id); $m1.add_Click({ param($s, $e) StageTime $s.Tag[0] $s.Tag[1] })
+    [void]$cm.Items.Add($m1)
+  }
+  $m2 = New-Object Windows.Controls.MenuItem; $m2.Header = 'Szakasz törlése'; $m2.Tag = @($it.id, $sg.id); $m2.add_Click({ param($s, $e) StageDel $s.Tag[0] $s.Tag[1] })
+  [void]$cm.Items.Add($m2)
+  $cm.add_Opened({ $script:modal = $true }); $cm.add_Closed({ $script:modal = $false })
+  $b.ContextMenu = $cm
+  $b
+}
+function StageBar($it, $card) {
+  $w = New-Object Windows.Controls.WrapPanel; $w.Margin = '0,8,0,0'
+  if (-not $card) { $lb = Txt 'Szakaszok:' 12 $C.muted 'SemiBold'; $lb.Margin = '4,4,6,4'; [void]$w.Children.Add($lb) }
+  foreach ($sg in @($it.stages)) { [void]$w.Children.Add((StageChip $it $sg $card)) }
+  # A korábban használt nevek ennél a feladatnál: egy kattintás = létrehoz és indít
+  foreach ($n in @(TplLeft $it)) {
+    $g = New-Object Windows.Controls.Border
+    $g.Style = $win.Resources[$(if ($card) { 'Pill' } else { 'Chip' })]; $g.Margin = '0,0,6,6'; $g.Padding = '9,4'; $g.Opacity = 0.7
+    $g.Child = Txt ('+ ' + $n) 12.5 $(if ($card) { $C.accentFg } else { $C.muted }) 'SemiBold'
+    $g.Tag = @($it.id, $n); $g.ToolTip = 'Új szakasz és indítás'
+    $g.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; StageNew $s.Tag[0] $s.Tag[1] })
+    [void]$w.Children.Add($g)
+  }
+  $ad = New-Object Windows.Controls.Border
+  $ad.Style = $win.Resources[$(if ($card) { 'Pill' } else { 'Chip' })]; $ad.Margin = '0,0,6,6'; $ad.Padding = '9,4'; $ad.Tag = $it.id
+  $ad.Child = Txt '+ Szakasz…' 12.5 $(if ($card) { $C.accentFg } else { $C.fg }) 'SemiBold'
+  $ad.ToolTip = 'Új szakasz ezen belül (pl. Előkészület, Hegesztés)'
+  $ad.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; StageAsk $s.Tag })
+  [void]$w.Children.Add($ad)
+  $w
+}
+
 function Row($it) {
   $done = $it.state -eq 'done'
   $row = New-Object Windows.Controls.Border
@@ -814,6 +1031,7 @@ function Row($it) {
   $days = [int][Math]::Floor(((NowMs) - $it.created) / 86400000)
   $info += 'felvéve ' + ([DateTimeOffset]::FromUnixTimeMilliseconds([int64]$it.created).LocalDateTime.ToString('MMM d., HH:mm', $hu)) + $(if ($days -ge 1) { "  ($days napja)" } else { '' })
   if ([int64]$it.spent -gt 0) { $info += 'eddig ' + (FmtDur ([int64]$it.spent)) }
+  if ($done -and @($it.stages).Count) { $info += 'szakaszok: ' + (@(foreach ($sg in @($it.stages)) { "$($sg.name) $(FmtDur ([int64]$sg.spent))" }) -join ', ') }
   if ($done -and $it.doneAt) { $info += 'kész ' + ([DateTimeOffset]::FromUnixTimeMilliseconds([int64]$it.doneAt).LocalDateTime.ToString('MMM d., HH:mm', $hu)) }
   $acts = New-Object Windows.Controls.Grid; $acts.Margin = '0,8,0,0'
   foreach ($w in [Windows.GridLength]::new(1, 'Star'), [Windows.GridLength]::Auto, [Windows.GridLength]::Auto) { [void]$acts.ColumnDefinitions.Add((Col $w)) }
@@ -835,6 +1053,7 @@ function Row($it) {
   $dc.Child = $ds
   $dc.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; OnDelete $s.Tag })
   [Windows.Controls.Grid]::SetColumn($dc, 2); [void]$acts.Children.Add($dc)
+  if (-not $done) { [void]$det.Children.Add((StageBar $it $false)) }
   if (-not $done) {
     # Idő módosítása: ha elfelejtetted elindítani / megállítani az órát
     $trw = New-Object Windows.Controls.WrapPanel; $trw.Margin = '0,8,0,0'
@@ -946,6 +1165,7 @@ function RunItem($it, $first) {
     [void]$sp.Children.Add($nt)
   }
   [void]$sp.Children.Add($time)
+  if (-not (IsAct $it)) { [void]$sp.Children.Add((StageBar $it $true)) }
   [void]$g.Children.Add($sp)
   $bt = New-Object Windows.Controls.StackPanel; $bt.Orientation = 'Horizontal'; $bt.VerticalAlignment = 'Center'; $bt.Margin = '10,0,0,0'
   [Windows.Controls.Grid]::SetColumn($bt, 1)
@@ -1089,7 +1309,7 @@ function ActDelete($id) {
 }
 
 function Render {
-  $U.List.Children.Clear(); $U.DoneList.Children.Clear(); $script:live = @()
+  $U.List.Children.Clear(); $U.DoneList.Children.Clear(); $script:live = @(); $script:stLive = @()
   $active = @($script:items | Where-Object { $_.state -eq 'open' -and -not (IsAct $_) } | Sort-Object @{ Expression = { $_.order } }, @{ Expression = { $_.created } })
   $doneI  = @($script:items | Where-Object { $_.state -eq 'done' } | Sort-Object @{ Expression = { $_.doneAt } } -Descending)
   foreach ($it in $active) { [void]$U.List.Children.Add((Row $it)) }
@@ -1138,11 +1358,12 @@ function Tick {
   $runs = @(RunningAll)
   if ($gap -gt 120000 -and $runs.Count) {
     # alvás / hibernálás: az alvás ideje nem számít, a szakasz ott megszakad
-    foreach ($r in $runs) { if ($r.startedAt) { $r.startedAt = [int64]$r.startedAt + ($gap - 1000); SegClose $r $prev; SegOpen $r $now } }
+    foreach ($r in $runs) { if ($r.startedAt) { $r.startedAt = [int64]$r.startedAt + ($gap - 1000); if ($r.stageFrom) { $r.stageFrom = [int64]$r.stageFrom + ($gap - 1000) }; SegClose $r $prev; SegOpen $r $now } }
     SaveData
   }
   foreach ($p in $script:actLive) { $r = FindItem $p[0]; if ($r -and $r.state -eq 'doing') { $ms = SegToday $r.id; if ($ms -ge 60000) { $p[1].Text = FmtDur $ms } } }
   foreach ($p in $script:live) { $r = FindItem $p[0]; if ($r -and $r.state -eq 'doing') { $p[1].Text = FmtLive (Elapsed $r) } }
+  foreach ($p in $script:stLive) { $r = FindItem $p[0]; if ($r -and $r.state -eq 'doing' -and $r.stage -eq $p[1]) { $sg = StageOf $r $p[1]; if ($sg) { $p[2].Text = FmtLive (StageMs $r $sg) } } }
   if ($runs.Count) { $U.TabTimerText.Text = TabText $runs }
   if ($runs.Count -or $gap -gt 60000) { $U.TodayText.Text = 'ma ' + (FmtDur (TodayMs)) }
   if ($script:dirty -and -not $script:drag) { SaveData; $script:dirty = $false }
@@ -1220,7 +1441,7 @@ function AddItem {
 }
 function Finish($id) {
   $x = FindItem $id
-  if ($x -and $x.state -ne 'done') { StopRun $x; $x.state = 'done'; $x.doneAt = NowMs; NaploAdd $x; $script:fresh += $x.id; Commit }
+  if ($x -and $x.state -ne 'done') { StopRun $x; $x.state = 'done'; $x.doneAt = NowMs; $x.stage = ''; $x.stageFrom = $null; NaploAdd $x; $script:fresh += $x.id; Commit }
 }
 function OnCheck($btn) {
   $t = $btn.Tag; $it = FindItem $t.id
@@ -1550,7 +1771,7 @@ $script:nMap = @{}                                          # teendő id -> napl
 if (Test-Path $naploFile) {
   try {
     $nj = ConvertFrom-Json ([IO.File]::ReadAllText($naploFile, $utf8))
-    foreach ($q in @($nj.queue)) { if ($q -and $q.op) { [void]$script:nQueue.Add([pscustomobject]@{ op = [string]$q.op; item = [string]$q.item; date = [string]$q.date; text = [string]$q.text }) } }
+    foreach ($q in @($nj.queue)) { if ($q -and $q.op) { [void]$script:nQueue.Add([pscustomobject]@{ op = [string]$q.op; item = [string]$q.item; date = [string]$q.date; text = [string]$q.text; hours = $(if ($q.hours) { [double]$q.hours } else { $null }) }) } }
     if ($nj.map) { foreach ($p in $nj.map.PSObject.Properties) { $script:nMap[$p.Name] = [string]$p.Value } }
   } catch {}
 }
@@ -1587,14 +1808,27 @@ function NaploAdd($it, $force = $false) {
   $date = $(if ($force -and $it.doneAt) { [DateTimeOffset]::FromUnixTimeMilliseconds([int64]$it.doneAt).LocalDateTime.ToString('yyyy-MM-dd') } else { TodayKey })
   $t = "Kész: $($it.text)"
   if ([int64]$it.spent -ge 60000) { $t += " (összesen $(FmtDur ([int64]$it.spent)))" }
+  $parts = @(foreach ($sg in @($it.stages)) { "$($sg.name) $(FmtDur ([int64]$sg.spent))" })
+  if ($parts.Count) { $t += "`nSzakaszok: " + ($parts -join ', ') }
   if ($it.notes -and $it.notes.Trim()) { $t += "`n" + $it.notes.Trim() }
   if ($t.Length -gt 3900) { $t = $t.Substring(0, 3900) + '…' }
-  [void]$script:nQueue.Add([pscustomobject]@{ op = 'create'; item = [string]$it.id; date = $date; text = $t })
+  [void]$script:nQueue.Add([pscustomobject]@{ op = 'create'; item = [string]$it.id; date = $date; text = $t; hours = $null })
   $script:nNext = 0
   NaploSave
 }
-function NaploUndo($it) {
-  $id = [string]$it.id
+# Egy szakasz lezárása: külön bejegyzés a mai napra, az óra mezőben a szakasz ideje.
+# A kulcsa „teendő|szakasz”, így a visszavonás (pipa le a szakaszról) törli.
+function NaploStage($it, $sg) {
+  if (-not $script:set.naplo) { return }
+  $ms = [int64]$sg.spent
+  $t = "$($it.text) · $($sg.name) – kész ($(FmtDur $ms))"
+  $h = [Math]::Round($ms / 3600000, 2)
+  [void]$script:nQueue.Add([pscustomobject]@{ op = 'create'; item = "$($it.id)|$($sg.id)"; date = (TodayKey); text = $t; hours = $(if ($h -gt 0 -and $h -le 24) { [double]$h } else { $null }) })
+  $script:nNext = 0
+  NaploSave
+}
+function NaploUndo($it) { NaploUndoKey ([string]$it.id) }
+function NaploUndoKey($id) {
   # Ha még el sem ment, elég kivenni a sorból
   for ($i = $script:nQueue.Count - 1; $i -ge 0; $i--) {
     $q = $script:nQueue[$i]
@@ -1602,7 +1836,7 @@ function NaploUndo($it) {
   }
   $inFlight = $script:nReq -and $script:nReq.op.op -eq 'create' -and $script:nReq.op.item -eq $id
   if ($script:nMap.ContainsKey($id) -or $inFlight) {
-    [void]$script:nQueue.Add([pscustomobject]@{ op = 'delete'; item = $id; date = ''; text = '' })
+    [void]$script:nQueue.Add([pscustomobject]@{ op = 'delete'; item = $id; date = ''; text = ''; hours = $null })
     $script:nNext = 0
     NaploSave
   }
@@ -1615,7 +1849,7 @@ function StatusObj {
   $doing = @()
   foreach ($r in @(RunningAll | Sort-Object @{ Expression = { $_.startedAt } })) {
     if ($r.kind -eq 'brk') { continue }
-    $doing += @{ text = [string]$r.text; spent_ms = [int64]$r.spent; started_at = $(if ($r.startedAt) { [int64]$r.startedAt } else { $null }) }
+    $doing += @{ text = [string](SegName $r); spent_ms = [int64]$r.spent; started_at = $(if ($r.startedAt) { [int64]$r.startedAt } else { $null }) }
   }
   @{ open = @($t | Where-Object { $_.state -ne 'done' }).Count; starred = @($t | Where-Object { $_.star -and $_.state -ne 'done' }).Count; doing = $doing }
 }
@@ -1662,7 +1896,9 @@ function NaploPump {
   }
   $op = $script:nQueue[0]
   if ($op.op -eq 'create') {
-    $body = @{ action = 'create'; code = $code; name = $name; entry = @{ date = $op.date; text = $op.text } }
+    $entry = @{ date = $op.date; text = $op.text }
+    if ($op.hours) { $entry.hours = [double]$op.hours }
+    $body = @{ action = 'create'; code = $code; name = $name; entry = $entry }
   } else {
     if (-not $script:nMap.ContainsKey($op.item)) { $script:nQueue.RemoveAt(0); NaploSave; return }
     $body = @{ action = 'delete'; code = $code; name = $name; id = $script:nMap[$op.item] }
@@ -1815,7 +2051,7 @@ function ImportClip {
   if ($n) { Commit; Ask "$n teendő átvéve." } else { Ask "A vágólapon nem találtam teendőlistát.`n`nA böngészős listából így másolod ki: nyisd meg a régi oldalt, nyomd meg az F12-t, a Console fülön írd be:`n`ncopy(localStorage.teendok)`n`nnyomj Entert, aztán itt válaszd újra az Importálást." }
 }
 function ResetTime {
-  foreach ($x in $script:items) { if ($x.state -ne 'done' -and -not (IsAct $x)) { $x.spent = [int64]0; if ($x.startedAt) { $x.startedAt = NowMs } } }
+  foreach ($x in $script:items) { if ($x.state -ne 'done' -and -not (IsAct $x)) { $x.spent = [int64]0; if ($x.startedAt) { $x.startedAt = NowMs; $x.stageFrom = NowMs }; foreach ($sg in @($x.stages)) { if (-not $sg.done) { $sg.spent = [int64]0 } } } }
   Commit
 }
 
