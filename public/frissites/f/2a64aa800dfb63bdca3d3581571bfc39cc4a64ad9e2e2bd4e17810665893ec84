@@ -852,41 +852,44 @@ function StageTime($id, $sid) {
   ShowNote ($it.text + ' · ' + $sg.name + ': ' + (FmtDur (StageMs $it $sg)))
 }
 
-# ---------- Szakaszok: gombsor (a lenyitott sorban és a narancs kártyán) ----------
+# ---------- Szakaszok: lista (a lenyitott sorban és a narancs kártyán) ----------
+# Egymás alatt, soronként: ▶ név ............ idő  ✓   (Alex kérése, 2026-11-25)
 function StageChip($it, $sg, $card) {
   $active = $it.stage -eq $sg.id
   $run = $active -and $it.state -eq 'doing'
   $b = New-Object Windows.Controls.Border
-  $b.Style = $win.Resources[$(if ($card) { 'Pill' } else { 'Chip' })]; $b.Margin = '0,0,6,6'; $b.Padding = '9,4'
+  $b.Style = $win.Resources[$(if ($card) { 'Pill' } else { 'Chip' })]; $b.Margin = '0,0,0,4'; $b.Padding = '10,5,6,5'
+  $b.HorizontalAlignment = 'Stretch'
   $b.Tag = @($it.id, $sg.id)
   $fg = $(if ($card) { $C.accentFg } elseif ($sg.done) { $C.muted } else { $C.fg })
   if ($active) {
     $b.Background = Brush $(if ($card) { '#FFFFFF' } else { $C.accent })
     $fg = $(if ($card) { $C.accent } else { $C.accentFg })
   }
-  $sp = New-Object Windows.Controls.StackPanel; $sp.Orientation = 'Horizontal'
-  if ($active) { $ic = Icon $ICON.play (Brush $fg) $null 1.6 11; $ic.Margin = '0,0,5,0'; [void]$sp.Children.Add($ic) }
-  $nm = Txt $sg.name 12.5 $fg 'SemiBold'
+  $gr = New-Object Windows.Controls.Grid
+  foreach ($w in [Windows.GridLength]::new(16), [Windows.GridLength]::new(1, 'Star'), [Windows.GridLength]::Auto, [Windows.GridLength]::Auto) { [void]$gr.ColumnDefinitions.Add((Col $w)) }
+  if ($active) { $ic = Icon $ICON.play (Brush $fg) $null 1.6 11; $ic.VerticalAlignment = 'Center'; [void]$gr.Children.Add($ic) }
+  elseif ($sg.done) { $ic = Icon $ICON.check $null (Brush $C.ok) 2.2 12; $ic.VerticalAlignment = 'Center'; [void]$gr.Children.Add($ic) }
+  $nm = Txt $sg.name 13 $fg 'SemiBold'; $nm.Margin = '4,0,8,0'; $nm.TextTrimming = 'CharacterEllipsis'; $nm.VerticalAlignment = 'Center'
   if ($sg.done) { $nm.TextDecorations = [Windows.TextDecorations]::Strikethrough; $nm.Opacity = 0.85 }
-  [void]$sp.Children.Add($nm)
+  [Windows.Controls.Grid]::SetColumn($nm, 1); [void]$gr.Children.Add($nm)
   $ms = StageMs $it $sg
-  $tm = Txt '' 12 $fg $(if ($run) { 'Bold' } else { 'Normal' }); $tm.Margin = '7,0,0,0'
-  if ($run) {
-    $tm.Text = FmtLive $ms; $tm.FontFamily = New-Object Windows.Media.FontFamily $C.mono
-    $script:stLive += , @($it.id, $sg.id, $tm)
-  } elseif ($ms -gt 0 -or $sg.done) { $tm.Text = FmtDur $ms }
-  [void]$sp.Children.Add($tm)
+  $tm = Txt '' 12.5 $fg $(if ($run) { 'Bold' } else { 'SemiBold' }); $tm.VerticalAlignment = 'Center'; $tm.Margin = '0,0,8,0'
+  $tm.FontFamily = New-Object Windows.Media.FontFamily $C.mono
+  if ($run) { $tm.Text = FmtLive $ms; $script:stLive += , @($it.id, $sg.id, $tm) }
+  elseif ($ms -gt 0 -or $sg.done) { $tm.Text = FmtDur $ms }
+  [Windows.Controls.Grid]::SetColumn($tm, 2); [void]$gr.Children.Add($tm)
   # Pipa: lezárás (bejegyzés a naplóba) / visszavétel
   $ck = New-Object Windows.Controls.Border
-  $ck.Width = 18; $ck.Height = 18; $ck.CornerRadius = 9; $ck.Margin = '7,0,0,0'; $ck.Cursor = [Windows.Input.Cursors]::Hand
+  $ck.Width = 20; $ck.Height = 20; $ck.CornerRadius = 10; $ck.Cursor = [Windows.Input.Cursors]::Hand; $ck.VerticalAlignment = 'Center'
   $ck.Background = $(if ($sg.done) { Brush $C.ok } else { [Windows.Media.Brushes]::Transparent })
   if (-not $sg.done) { $ck.BorderBrush = Brush $fg; $ck.BorderThickness = 1.4 }
   $ck.Child = Icon $ICON.check $null (Brush $(if ($sg.done) { $C.okFg } else { $fg })) 2.2 12
   $ck.ToolTip = $(if ($sg.done) { 'Visszavétel (a napló bejegyzés törlődik)' } else { 'Szakasz kész – bekerül a Munkanaplóba' })
   $ck.Tag = @($it.id, $sg.id, [bool]$sg.done)
-  $ck.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; if ($s.Tag[2]) { StageReopen $s.Tag[0] $s.Tag[1] } else { Burst $s; StageDone $s.Tag[0] $s.Tag[1] } })
-  [void]$sp.Children.Add($ck)
-  $b.Child = $sp
+  $ck.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; if ($s.Tag[2]) { StageReopen $s.Tag[0] $s.Tag[1] } else { StageDone $s.Tag[0] $s.Tag[1] } })
+  [Windows.Controls.Grid]::SetColumn($ck, 3); [void]$gr.Children.Add($ck)
+  $b.Child = $gr
   if (-not $sg.done) {
     $b.ToolTip = 'Kattintás: ezen dolgozom most. Jobb klikk: idő, törlés'
     $b.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; StageGo $s.Tag[0] $s.Tag[1] })
@@ -903,25 +906,32 @@ function StageChip($it, $sg, $card) {
   $b
 }
 function StageBar($it, $card) {
-  $w = New-Object Windows.Controls.WrapPanel; $w.Margin = '0,8,0,0'
-  if (-not $card) { $lb = Txt 'Szakaszok:' 12 $C.muted 'SemiBold'; $lb.Margin = '4,4,6,4'; [void]$w.Children.Add($lb) }
-  foreach ($sg in @($it.stages)) { [void]$w.Children.Add((StageChip $it $sg $card)) }
-  # A korábban használt nevek ennél a feladatnál: egy kattintás = létrehoz és indít
+  $box = New-Object Windows.Controls.StackPanel; $box.Margin = '0,10,0,0'
+  $hd = New-Object Windows.Controls.Grid
+  foreach ($w in [Windows.GridLength]::new(1, 'Star'), [Windows.GridLength]::Auto) { [void]$hd.ColumnDefinitions.Add((Col $w)) }
+  $lb = Txt ('SZAKASZOK' + $(if (@($it.stages).Count) { '  ·  ' + @($it.stages).Count } else { '' })) 11 $(if ($card) { $C.accentFg } else { $C.muted }) 'Bold'
+  $lb.Margin = '4,0,0,5'; $lb.Opacity = 0.85
+  [void]$hd.Children.Add($lb)
+  [void]$box.Children.Add($hd)
+  foreach ($sg in @($it.stages)) { [void]$box.Children.Add((StageChip $it $sg $card)) }
+  # A korábban használt nevek ennél a feladatnál + új szakasz: egy sorban, a lista alatt
+  $w2 = New-Object Windows.Controls.WrapPanel; $w2.Margin = '0,2,0,0'
   foreach ($n in @(TplLeft $it)) {
     $g = New-Object Windows.Controls.Border
     $g.Style = $win.Resources[$(if ($card) { 'Pill' } else { 'Chip' })]; $g.Margin = '0,0,6,6'; $g.Padding = '9,4'; $g.Opacity = 0.7
     $g.Child = Txt ('+ ' + $n) 12.5 $(if ($card) { $C.accentFg } else { $C.muted }) 'SemiBold'
     $g.Tag = @($it.id, $n); $g.ToolTip = 'Új szakasz és indítás'
     $g.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; StageNew $s.Tag[0] $s.Tag[1] })
-    [void]$w.Children.Add($g)
+    [void]$w2.Children.Add($g)
   }
   $ad = New-Object Windows.Controls.Border
   $ad.Style = $win.Resources[$(if ($card) { 'Pill' } else { 'Chip' })]; $ad.Margin = '0,0,6,6'; $ad.Padding = '9,4'; $ad.Tag = $it.id
   $ad.Child = Txt '+ Szakasz…' 12.5 $(if ($card) { $C.accentFg } else { $C.fg }) 'SemiBold'
   $ad.ToolTip = 'Új szakasz ezen belül (pl. Előkészület, Hegesztés)'
   $ad.add_MouseLeftButtonUp({ param($s, $e) $e.Handled = $true; StageAsk $s.Tag })
-  [void]$w.Children.Add($ad)
-  $w
+  [void]$w2.Children.Add($ad)
+  [void]$box.Children.Add($w2)
+  $box
 }
 
 function Row($it) {
@@ -1211,12 +1221,12 @@ function RenderRun {
     $U.TabDot.Fill = Brush $C.accent
     if (-not $script:focusOn) {
       $script:focusOn = $true
-      $U.Focus.Visibility = 'Visible'; $U.Focus.Background = $script:shine; $U.Focus.Effect = $script:glow
+      # Szaggatás ellen (2026-11-25): futó óránál nincs végtelen animáció és ragyogás-effekt.
+      # Az átlátszó ablakot (AllowsTransparency + ablakárnyék) a Windows minden képkockánál
+      # egészben újra összerakja; a csillogó sáv, a pulzáló pont és a gyűrű ezt folyamatosan
+      # pörgette. Most csak a másodpercenkénti óraszám változik.
+      $U.Focus.Visibility = 'Visible'; $U.Focus.Background = $script:shine; $U.Focus.Effect = $null
       Anim $U.Focus.LayoutTransform $SY 0 1 460; Anim $U.Focus $OP 0 1 420
-      Forever $script:shineT $TX -1 1 4200 $false $easeIO 30
-      Pulse $U.FocusDot
-      Forever $U.TabRing.RenderTransform $SX 1 2.6 2200 $false $easeOut 20; Forever $U.TabRing.RenderTransform $SY 1 2.6 2200 $false $easeOut 20
-      Forever $U.TabRing $OP 0.9 0 2200 $false $easeOut 20
     }
   } else {
     if ($script:away.Count) {
@@ -1228,11 +1238,7 @@ function RenderRun {
     if ($script:focusOn) {
       $script:focusOn = $false
       Anim $U.Focus.LayoutTransform $SY $null 0 360 $easeIO; Anim $U.Focus $OP $null 0 300 $easeIn
-      Later 380 $null { if (-not $script:focusOn) {
-        $U.Focus.Visibility = 'Collapsed'
-        $script:shineT.BeginAnimation($TX, $null) } }
-      $U.TabRing.RenderTransform.BeginAnimation($SX, $null); $U.TabRing.RenderTransform.BeginAnimation($SY, $null)
-      $U.TabRing.BeginAnimation($OP, $null); $U.TabRing.Opacity = 0
+      Later 380 $null { if (-not $script:focusOn) { $U.Focus.Visibility = 'Collapsed' } }
     }
   }
 }

@@ -438,3 +438,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   `hours` = a szakasz ideje (0,01 óra pontosság). A sor kulcsa `teendőid|szakaszid` – visszavételkor törlődik.
   A teendő „Kész:” bejegyzése „Szakaszok: …” bontást kap (óra mező nélkül, hogy ne számolódjon kétszer).
 - Idősáv és Központ: a futó szakasz alatt a szegmens / `doing[].text` neve „Teendő · Szakasz”. Szerver nem változott.
+- 2026-11-25, 2. kör: a szakaszok **egymás alatt**, soronként (▶ név … idő ✓), alattuk a „+ név” / „+ Szakasz…” gombok.
+- Szaggatás: futó óránál nincs több végtelen animáció (csillogó sáv, pulzáló pont, gyűrű) és ragyogás-effekt a narancs
+  kártyán. Az átlátszó ablakot (`AllowsTransparency` + ablakárnyék) a Windows minden képkockánál egészben újra
+  összerakja, ezek folyamatosan 20–30 kép/mp-vel pörgették. Most futás közben csak a másodpercenkénti óraszám változik.
