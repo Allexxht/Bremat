@@ -9,6 +9,7 @@ Teendőim, Napi idősáv, Kinézet, Munkamódszer, Helyi Központ, Önfrissíté
   Netlify fiók, Free keret: 300 kredit/hó, egy éles deploy 15 kredit):
   - `/` – **Központ** (`public/index.html`, `/api/kozpont`): kezdőlap, menü, Munkanapló és Valk sziget.
   - `/valk/` – heti karbantartási lap a Valk Welding / Panasonic TAWERS TM-2000WGH4 robothoz.
+  - `/arceye/` – ARC-EYE edző (szenzorbeállítás-gyakorló, önálló oldal, adat csak a böngészőben).
   - `/naplo/` – Alex munkanaplója (Teendőim állapot, napi idősáv). Szándékosan külön a Valk laptól.
 - **Semmi köze az AndonWork-höz** (`Allexxht/astro-platform-starter`): nem osztunk meg vele
   kódot, táblát, Supabase-t, Netlify oldalt, és nem hivatkozunk rá.

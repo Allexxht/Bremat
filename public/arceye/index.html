@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ARC-EYE edző</title>
+<!-- BREMAT Központ: ARC-EYE edző (önálló oldal, /arceye/). Az előrehaladás a böngészőben marad (localStorage aeT_*), a Központ kezdőlapja is ebből olvas. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE everyday learning that plays like a game, technical underneath
+   IDEA the ARC-EYE control screen itself: dark graph panel, red bar, three status lamps
+   PICTURE a live XYZ graph (scan) or Path Graph (top view) that reacts to every slider
+   COLOUR graphite ground, signal red, lamp green and amber, graph inks (red, white, purple, yellow)
+   TYPE Saira display + Inter text
+   LAYOUT laptop: graph left, controls right; phone: title, graph, lamps, controls */
+:root{color-scheme:dark;--bg:#15171a;--pan:#202328;--pan2:#2a2e34;--line:#383d45;--ink:#eef0f3;--mut:#a9b0ba;--red:#e2412f;--grn:#37d27a;--amb:#f3b21f}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:Saira,Inter,sans-serif;line-height:1.08;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(30px,4.5vw,44px);text-wrap:balance}
+h2{font-size:clamp(24px,3vw,32px)}
+h3{font-size:20px;margin-bottom:10px}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,4vw);padding-right:max(16px,4vw)}
+header{background:var(--pan);border-bottom:3px solid var(--red)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;padding-block:14px 10px}
+.brand{font:700 26px Saira,sans-serif}
+.brand b{color:var(--red)}
+.home{display:inline-flex;align-items:center;min-height:44px;margin-right:14px;padding:0 12px;border-radius:10px;background:var(--pan2);color:var(--mut);font:600 14px Inter,sans-serif;text-decoration:none;vertical-align:middle}
+.home:hover{color:var(--ink)}
+.xp{display:flex;align-items:center;gap:12px;flex:0 1 340px}
+.lv{font:700 17px Saira,sans-serif;white-space:nowrap}
+.xpt{font-size:13px;color:var(--mut);white-space:nowrap}
+.bar{height:8px;border-radius:4px;background:var(--pan2);flex:1;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--red);transition:width .4s}
+nav{display:flex;gap:6px;padding-bottom:12px;overflow-x:auto}
+nav a{flex:none;padding:0 16px;border-radius:8px;color:var(--mut);text-decoration:none;font-weight:600;min-height:44px;display:flex;align-items:center}
+nav a.on{background:var(--red);color:#fff}
+main{padding-block:22px 56px}
+.hide{display:none!important}
+.intro{color:var(--mut);max-width:66ch;margin:8px 0 20px}
+.chh{font:600 15px Inter,sans-serif;color:var(--mut);margin:26px 0 10px}
+.chh:first-of-type{margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px}
+.mc{all:unset;box-sizing:border-box;cursor:pointer;background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 14px;align-items:center;min-height:82px}
+.mc:hover{border-color:var(--red)}
+.mc[disabled]{opacity:.42;cursor:not-allowed}
+.mc .n{font:700 30px Saira,sans-serif;color:var(--red);grid-row:1/3;min-width:1.3em;text-align:center}
+.mc .tt{font-weight:600}
+.mc .dd{font-size:14px;color:var(--mut);grid-column:2/4}
+.mc .st{font-size:13px;color:var(--mut)}
+.mc .st.ok{color:var(--grn);font-weight:600}
+.why{margin-top:28px;background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:4px 16px}
+.why summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.why li{margin-bottom:6px}
+.why a{color:#ffb4a8}
+.note{font-size:13px;color:var(--mut);margin-top:16px;max-width:70ch}
+.btn{appearance:none;border:1px solid var(--line);background:var(--pan2);color:var(--ink);font:600 15px Inter,sans-serif;border-radius:10px;padding:10px 16px;min-height:44px;cursor:pointer;text-align:left}
+.btn:hover{border-color:#5a616c}
+.btn.pri{background:var(--red);border-color:var(--red);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.btn:focus-visible,.mc:focus-visible,.lamp:focus-visible,nav a:focus-visible,.ln:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid var(--amb);outline-offset:2px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.mv{display:grid;gap:18px;margin-top:14px}
+@media(min-width:880px){.mv{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);align-items:start}}
+.story{color:var(--mut);margin:8px 0 4px}
+.goal{margin:0 0 12px}
+.fig{position:relative;height:clamp(260px,38vw,390px);background:#0c0e11;border:1px solid var(--line);border-bottom:0;border-radius:12px 12px 0 0;overflow:hidden}
+.fig canvas{position:absolute;inset:0;width:100%;height:100%}
+.rb{background:var(--red);border-radius:0 0 12px 12px;min-height:32px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 12px;font-size:13px;font-weight:600;color:#fff}
+.leg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--mut);margin:10px 0 12px}
+.leg span{white-space:nowrap}
+.leg i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.lamps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.lamp{all:unset;box-sizing:border-box;background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:56px;display:flex;align-items:center;gap:9px;font-size:14px;line-height:1.2;font-weight:600}
+button.lamp{cursor:pointer}
+button.lamp:hover{border-color:#5a616c}
+.lamp small{display:block;color:var(--mut);font-size:13px;font-weight:400;margin-top:2px}
+.dot{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:0 0 0 3px rgba(0,0,0,.35),0 0 12px currentColor}
+.dlg{background:#d7dce2;color:#14171b;border-radius:8px;padding:12px 16px;margin-top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+.dlg p{margin:0;flex:1 1 240px;font-weight:600}
+.dlg b{flex-basis:100%;font-size:14px}
+.dlg .btn{background:#fff;color:#14171b;border-color:#9aa3ad;padding:6px 18px}
+.crit{margin-top:10px;display:grid;gap:6px}
+.cr{display:flex;gap:10px;align-items:flex-start;background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:600;font-size:15px}
+.cr small{display:block;color:var(--mut);font-weight:400;font-size:13px}
+.cr .ci{font-weight:700;width:1.2em;flex:none}
+.cr.y .ci{color:var(--grn)}
+.cr.n .ci{color:var(--red)}
+.pane{background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:16px}
+.row{margin-bottom:14px}
+.row .h{display:flex;justify-content:space-between;gap:10px;font-size:15px;font-weight:600}
+.row output{font-variant-numeric:tabular-nums;white-space:nowrap}
+.row .m{font-size:13px;color:var(--mut)}
+input[type=range]{width:100%;height:36px;accent-color:var(--red);margin:0;cursor:pointer}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.seg .btn{flex:1 1 120px;text-align:center}
+.fixed{font-size:13px;color:var(--mut);margin:-4px 0 12px}
+.tips p{margin:10px 0 0;color:var(--mut)}
+.tips b{color:var(--amb)}
+#res{margin-top:14px}
+.win{border-color:var(--grn)}
+.win h3{color:var(--grn)}
+.qq2{font-weight:600;margin:6px 0}
+.opt{display:block;width:100%;margin-top:8px}
+.opt.good,.opt.good:disabled{background:#1b4d33;border-color:var(--grn);opacity:1}
+.opt.bad,.opt.bad:disabled{background:#4d201c;border-color:var(--red);opacity:1}
+.opt:disabled{opacity:.55}
+.fb{color:var(--mut);margin:12px 0 0}
+.fb b{color:var(--ink)}
+.qcard{max-width:720px}
+.qtop{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--mut);margin-bottom:8px}
+.tag{color:var(--amb);font-weight:600}
+.qq{font:500 clamp(21px,3vw,27px)/1.2 Saira,sans-serif;margin:18px 0 6px;text-wrap:balance}
+.boxes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:6px 0 16px}
+.bx{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:10px 8px;text-align:center}
+.bxn{font:700 26px Saira,sans-serif}
+.bxb{height:56px;background:var(--pan2);border-radius:6px;display:flex;align-items:flex-end;overflow:hidden;margin:6px 0}
+.bxb i{display:block;width:100%;background:var(--red)}
+.bx:last-child .bxb i{background:var(--grn)}
+.bxl{font-size:13px;color:var(--mut)}
+.pz{display:grid;gap:16px;margin-top:14px}
+@media(min-width:880px){.pz{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}}
+.ln{all:unset;box-sizing:border-box;display:flex;gap:10px;align-items:baseline;width:100%;font:14px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--pan2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;min-height:44px;overflow-wrap:anywhere}
+.ln:hover{border-color:#5a616c}
+.ln .i{color:var(--mut);min-width:1.6em;text-align:right;font-variant-numeric:tabular-nums}
+.ln .c{color:var(--mut);font:13px Inter,sans-serif}
+.ln.ok{border-color:var(--grn)}
+.ln.no{border-color:var(--red);background:#3a1d1b}
+.empty{color:var(--mut);font-size:14px;margin:4px 0}
+.hkbar{display:grid;gap:10px;margin-bottom:16px}
+@media(min-width:760px){.hkbar{grid-template-columns:minmax(0,1fr) minmax(0,340px);align-items:center}}
+.hkbar input{width:100%;font:16px Inter,sans-serif;color:var(--ink);background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-height:44px}
+.hk{background:var(--pan);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.hk summary{cursor:pointer;padding:12px 16px;min-height:48px;display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;font-weight:600}
+.hk summary small{color:var(--mut);font-weight:400;font-size:13px}
+.hk[open] summary{border-bottom:1px solid var(--line)}
+.hkb{padding:4px 16px 14px}
+.hkb .m{color:var(--mut);margin:10px 0}
+.steps{padding-left:22px;margin:8px 0 0}
+.steps li{margin-bottom:10px}
+.steps .w{display:block;color:var(--mut);font-size:14px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:10px 0 0;font-size:15px}
+.kv dt{color:var(--mut);font-size:14px}
+.kv dd{margin:0}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--grn);color:#06210f;font-weight:700;padding:10px 20px;border-radius:999px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+@media(max-width:600px){nav a{padding:0 12px;font-size:15px}.lamp{flex-direction:column;align-items:flex-start;gap:6px}.boxes{gap:4px}.bxn{font-size:20px}.kv{grid-template-columns:minmax(0,1fr)}.kv dd{margin-bottom:6px}}
+.aectl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:12px}
+.aectl label{font-weight:600}
+.aectl select{font:600 15px Inter,sans-serif;color:var(--ink);background:var(--pan2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:44px;flex:0 1 320px}
+.ae{border:1px solid #3a3f45;border-radius:10px;overflow:hidden;background:#1d2023;color:#fff}
+.aetop{display:flex;gap:2px;background:linear-gradient(#41464c,#2b2f33);padding:6px;overflow-x:auto;border-bottom:1px solid #5b6168}
+.aem{all:unset;box-sizing:border-box;flex:1 0 auto;min-width:122px;display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;min-height:52px}
+.aem svg{width:26px;height:26px;flex:none;fill:none;stroke:#d5dbe1;stroke-width:1.5;stroke-linejoin:round}
+.aem b{display:block;font:600 17px/1.05 Inter,sans-serif;color:#f4f6f8}
+.aem small{display:block;font-size:13px;color:#a3abb4}
+.aem:hover{background:rgba(255,255,255,.08)}
+.aem.on{background:rgba(255,255,255,.15);box-shadow:inset 0 -3px 0 #e2412f}
+.aem.cog{flex:0 0 64px;min-width:64px;justify-content:center}
+.aebody{display:grid;grid-template-columns:minmax(0,1fr) 270px;height:clamp(540px,74vh,700px)}
+.aebody.open{grid-template-columns:minmax(0,1fr) clamp(330px,42%,460px)}
+.aeleft{display:flex;flex-direction:column;background:#0b0c0e;min-width:0;min-height:0}
+.aegt{display:flex;gap:2px;padding:6px 6px 0;background:#1b1d20;overflow-x:auto;flex:none}
+.gt{all:unset;cursor:pointer;flex:none;padding:5px 12px;border:1px solid #6b7279;border-bottom:0;border-radius:8px 8px 0 0;font-size:14px;color:#a9b1ba;min-height:30px;display:flex;align-items:center}
+.gt.on{color:#fff;background:#0b0c0e;border-color:#d0d6dc}
+.aecv{position:relative;flex:1;min-height:0;border-top:1px solid #d0d6dc}
+.aecv canvas{position:absolute;inset:0;width:100%;height:100%}
+.aelamps{display:flex;gap:6px;padding:6px;background:#1b1d20;flex:none}
+.al{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:#2a2e33;border:1px solid #444a51;font-size:14px;font-weight:600;min-height:44px;flex:1 1 0;line-height:1.15}
+.al small{display:block;font-size:12px;font-weight:400;color:#a9b1ba}
+.al:hover{border-color:#6b7279}
+.aeinfo{background:linear-gradient(#aebbca,#8d9db1);padding:10px 14px;overflow-y:auto;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+.aeinfo h4{font:700 21px/1.1 Saira,sans-serif;margin:10px 0 4px}
+.iv{display:flex;justify-content:space-between;gap:10px;font-size:15px;font-weight:600;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.3)}
+.iv span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+.inote{font-size:13px;margin:14px 0 0;opacity:.9}
+.aepanel{display:flex;flex-direction:column;background:#93a3b6;min-height:0;border-left:1px solid #5b6168}
+.aeph{display:flex;align-items:flex-end;justify-content:space-between;gap:6px 10px;background:linear-gradient(#4d545b,#3a3f45);padding:8px 10px 0;flex-wrap:wrap;flex:none}
+.aept{display:flex;align-items:center;gap:8px;padding-bottom:8px}
+.aept svg{width:30px;height:30px;fill:none;stroke:#e6eaee;stroke-width:1.5}
+.aept b{display:block;font:600 22px/1 Inter,sans-serif}
+.aept small{display:block;font-size:14px;color:#c3cad2}
+.aehr{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.aeic{display:flex;gap:2px}
+.aei{all:unset;cursor:pointer;width:30px;height:28px;display:flex;align-items:center;justify-content:center;color:#e6eaee;font-size:16px;border-radius:4px}
+.aei:hover{background:rgba(255,255,255,.12)}
+.aetabs{display:flex;gap:3px}
+.atab{all:unset;cursor:pointer;padding:7px 16px;border:1px solid #c9d2dc;border-bottom:0;border-radius:6px 6px 0 0;color:#dfe5eb;font-size:16px;min-height:34px;display:flex;align-items:center}
+.atab.on{background:#93a3b6;color:#fff;font-weight:600}
+.asub{display:flex;gap:3px;padding:8px 8px 0;background:#8293a7;flex-wrap:wrap;flex:none;border-bottom:1px solid #6f8095}
+.asb{all:unset;cursor:pointer;padding:6px 12px;border:1px solid #b9c4d0;border-bottom:0;border-radius:6px 6px 0 0;color:#eef2f5;font-size:14px;min-height:32px;display:flex;align-items:center}
+.asb.on{background:#93a3b6;font-weight:600}
+.aepb{flex:1;overflow-y:auto;padding:2px 12px 16px;min-height:0}
+.ar{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.3)}
+.arl{display:grid;grid-template-columns:132px minmax(0,1fr);gap:6px 10px;align-items:center}
+.an{font:700 15px/1.2 Inter,sans-serif;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55)}
+.ac{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap;min-width:0}
+.aepanel select,.aepanel input[type=number],.aepanel input[type=text]{background:#2c3136;color:#fff;border:1px solid #15191d;border-radius:2px;font:600 15px Inter,sans-serif;padding:5px 8px;min-height:34px}
+.aepanel select{flex:1 1 150px;max-width:100%}
+.aepanel select.sm{flex:0 0 auto}
+.aepanel input[type=text]{flex:1 1 150px;min-width:0}
+.aepanel input[type=number]{width:74px;text-align:right}
+.aepanel .vb{background:#2c3136;color:#fff;border:1px solid #15191d;border-radius:2px;padding:5px 8px;min-width:58px;text-align:right;font:600 15px Inter,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
+.aepanel input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;height:30px;flex:1 1 110px;margin:0;cursor:pointer}
+.aepanel input[type=range]::-webkit-slider-runnable-track{height:3px;background:#30363c}
+.aepanel input[type=range]::-moz-range-track{height:3px;background:#30363c}
+.aepanel input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:22px;margin-top:-10px;background:linear-gradient(#f6f7f8,#c3cad2);border:1px solid #30363c;border-radius:2px}
+.aepanel input[type=range]::-moz-range-thumb{width:12px;height:22px;background:linear-gradient(#f6f7f8,#c3cad2);border:1px solid #30363c;border-radius:2px}
+.aepanel input[type=checkbox]{-webkit-appearance:none;appearance:none;width:20px;height:20px;background:#2c3136;border:1px solid #15191d;margin:0;cursor:pointer;flex:none}
+.aepanel input[type=checkbox]:checked{background:#2c3136 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2l8 8M10 2l-8 8' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center/12px no-repeat}
+.aepanel input[type=radio]{width:18px;height:18px;margin:0;accent-color:#2c3136}
+.aepanel .pairg{display:flex;flex-wrap:wrap;gap:6px 12px}
+.aepanel .pc{display:flex;align-items:center;gap:5px;font-size:13px;color:#fff;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.aepanel .pc em{font-style:italic;font-size:14px}
+.aepanel .rc{display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:600;color:#fff;min-height:34px;margin-right:12px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.posg{display:grid;grid-template-columns:repeat(2,22px);gap:8px 30px}
+.aepanel .lst{display:flex;flex-direction:column;gap:2px;flex:1 1 200px;background:#2c3136;border:1px solid #15191d;padding:3px}
+.aepanel .li{all:unset;cursor:pointer;padding:6px 8px;font-size:15px;color:#fff;min-height:30px}
+.aepanel .li.on{background:#3d6fd6}
+.aepanel .sbtn{appearance:none;font:600 15px Inter,sans-serif;color:#111;background:linear-gradient(#f4f5f6,#d3d7db);border:1px solid #30363c;border-bottom:3px solid #37c26a;border-radius:4px;padding:7px 12px;min-height:40px;cursor:pointer}
+.aepanel .icg{display:flex;flex-wrap:wrap;gap:4px}
+.aepanel .ic{all:unset;box-sizing:border-box;cursor:pointer;width:64px;height:50px;background:#2c3136;border:2px solid #15191d;border-radius:3px;padding:3px}
+.aepanel .ic svg{width:100%;height:100%;fill:#8a939c;stroke:#e6eaee;stroke-width:1.3}
+.aepanel .ic svg line{stroke:#ff7a3d;stroke-width:3}
+.aepanel .ic.on{border-color:#ff7a3d;box-shadow:0 0 0 1px #ff7a3d}
+.icn{font-size:13px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.aepanel .arw{display:grid;grid-template-columns:repeat(3,48px);gap:5px}
+.aepanel .arw .sbtn{padding:4px;border-bottom-width:1px;font-size:18px}
+.ad{font-size:13px;line-height:1.4;color:#101a25;margin:6px 0 0}
+.ad.big{font-size:15px;padding-top:12px}
+.ah{margin-top:6px;background:#c8d1dc;border-radius:6px;color:#101a25}
+.ah summary{cursor:pointer;padding:6px 10px;font-weight:700;font-size:14px;min-height:34px;display:flex;align-items:center}
+.ah p{margin:0;padding:5px 10px 7px 28px;font-size:14px;position:relative}
+.ah p::before{position:absolute;left:10px;font-weight:700}
+.ah .up::before{content:'↑';color:#1a7a43}
+.ah .dn::before{content:'↓';color:#b82e1b}
+.ah .use::before{content:'→';color:#234f9f}
+.ah .tip::before{content:'i';color:#5c4d00}
+.aered{background:#d6392b;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 12px;min-height:56px}
+.logo{display:flex;align-items:center;gap:2px;font:700 36px/1 Saira,sans-serif;color:#fff;letter-spacing:.01em}
+.logo i{display:inline-block;width:3px;height:30px;background:#fff;margin:0 5px;opacity:.85}
+.logo svg{width:30px;height:30px;margin-left:10px;fill:rgba(255,255,255,.25);stroke:#fff;stroke-width:1.4}
+.sysb{all:unset;cursor:pointer;font:600 14px Inter,sans-serif;color:#fff;padding:6px 10px;border:1px solid rgba(255,255,255,.6);border-radius:6px;min-height:34px;display:flex;align-items:center}
+.aedlg{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:min(92%,440px);background:#c9d0d7;color:#111;border:1px solid #5d646b;box-shadow:0 10px 28px rgba(0,0,0,.6);z-index:3}
+.aedh{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(#e8ebee,#c2c9d0);padding:6px 10px;font-weight:700;font-size:15px}
+.aedh button{all:unset;cursor:pointer;font-size:20px;padding:0 6px}
+.aedlg p{margin:0;padding:14px 16px;font-weight:600;font-size:15px}
+.aedf{display:flex;justify-content:flex-end;padding:0 14px 12px}
+.aeokb{font:600 15px Inter,sans-serif;background:#fff;border:1px solid #5d646b;border-radius:3px;padding:6px 26px;cursor:pointer;min-height:36px}
+.aem:focus-visible,.gt:focus-visible,.al:focus-visible,.atab:focus-visible,.asb:focus-visible,.aei:focus-visible,.sysb:focus-visible,.aepanel .ic:focus-visible,.aepanel .li:focus-visible{outline:3px solid #f3b21f;outline-offset:2px}
+@media(max-width:760px){.aebody,.aebody.open{grid-template-columns:minmax(0,1fr);height:auto}.aeleft{position:sticky;top:0;z-index:4}.aecv{flex:none;height:230px}.aepanel,.aeinfo{border-left:0}.aem{min-width:112px}.al{padding:6px 8px;font-size:13px}.logo{font-size:28px}.logo i{height:24px}}
+@media(max-width:420px){.arl{grid-template-columns:minmax(0,1fr)}}
+.sheet{background:#f4f1e8;color:#1b1d20;border-radius:10px;padding:14px 16px;margin-bottom:14px;max-width:820px;border-left:6px solid var(--red)}
+.shh{font:700 20px/1.1 Saira,sans-serif;margin-bottom:8px}
+.sheet dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 16px;margin:0}
+.sheet dt{font-weight:600;color:#55595e;font-size:15px}
+.sheet dd{margin:0;font-size:15px}
+.shn{margin:10px 0 0;font-size:14px;color:#7a2a1f;font-weight:600}
+.hint{background:var(--pan);border:1px solid var(--amb);border-radius:10px;padding:10px 14px;margin:0 0 12px}
+.rgh{font:600 15px Inter,sans-serif;color:var(--mut);margin:14px 0 6px}
+#tres{margin-top:14px}
+.crm{font-size:13px;color:var(--mut);margin:12px 0 2px}
+.what{font-size:17px;margin:8px 0 14px;max-width:62ch}
+.cap{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:var(--pan);border:1px solid var(--line);font-weight:600}
+.cap.y{border-color:var(--grn);color:#a8f0c6}
+.cap.n{border-color:var(--red);color:#ffb4a8}
+.cap.a{border-color:var(--amb);color:#ffe08a}
+.m2{color:var(--mut);margin:0 0 12px}
+.cq{padding:10px 0;border-top:1px solid var(--line)}
+.cq:first-of-type{border-top:0}
+.cq .seg .btn{flex:1 1 130px;text-align:center}
+.cq .btn.pri:disabled{opacity:1}
+@media(max-width:600px){.sheet dl{grid-template-columns:minmax(0,1fr)}.sheet dd{margin-bottom:6px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<div class="top"><div class="brand"><a class="home" href="/" aria-label="Vissza a Központba">‹ Központ</a>ARC<b>|</b>EYE edző</div>
+<div class="xp"><div><div class="lv" id="lvl">Tanonc</div><div class="xpt" id="xpn">0 XP</div></div><div class="bar"><i id="xpb"></i></div></div></div>
+<nav><a href="#kuldetesek" data-t="kuldetesek">Küldetések</a><a href="#iskola" data-t="iskola">Beállítás-iskola</a><a href="#eles" data-t="eles">Éles feladat</a><a href="#kepernyo" data-t="kepernyo">Képernyő</a><a href="#hibakereso" data-t="hibakereso">Hibakereső</a><a href="#kerdesek" data-t="kerdesek">Gyorskérdések</a><a href="#program" data-t="program">Programrakó</a></nav>
+</div></header>
+<main class="wrap">
+<section id="v-kuldetesek">
+<div id="mlist">
+<h1>Javítsd meg a szenzort</h1>
+<p class="intro">Minden küldetésben egy rosszul beállított job vár. Húzd a csúszkákat, és nézd élőben, mi történik. Ha elakadsz, nyomd meg a seam status lámpát: megmondja, mi a következő hiba. A seam és a path beállításokat a Beállítás-iskolában tanulod meg, utána jöhet az Éles feladat.</p>
+<div id="mgrid"></div>
+<details class="why"><summary>Miért így tanulunk?</summary>
+<ul>
+<li><b>Visszakérdezés:</b> ha magadtól kell felidézni a választ, az sokkal többet ér, mint újraolvasni. Ezért van minden küldetés végén egy kérdés, és ezért vannak a Gyorskérdések.</li>
+<li><b>Időközönkénti ismétlés:</b> a Gyorskérdések a jól tudott kérdést egyre ritkábban hozzák, az elrontottat hamar újra.</li>
+<li><b>Keverés:</b> a Vegyes hibák küldetés és a Gyorskérdések összekeverik a témákat, mert a gépnél sem sorban jönnek a hibák.</li>
+<li><b>Gyakorlás azonnali visszajelzéssel:</b> a szimulátor rögtön mutatja, mit csinált a csúszka. Biztonságos helyen hibázol, nem a robotnál.</li>
+<li><b>Sorba rakós programfeladat:</b> a kódsorok sorba rakása gyorsabb és élvezetesebb, mint nulláról írni, és ugyanúgy tanít.</li>
+</ul>
+<p class="note">Források: <a href="https://students.wlu.ca/academics/support-and-advising/accessible-learning/assets/resources/six-most-effective-ls.pdf">Dunlosky és mtsai. (2013) összefoglalója</a>, <a href="https://www.retrievalpractice.org/strategies/power-tools">retrievalpractice.org</a>, <a href="https://link.springer.com/doi/10.1007/s10459-013-9462-8">visszajelzés szimulációs képzésben (metaanalízis)</a>, <a href="https://www2.eecs.berkeley.edu/Pubs/TechRpts/2020/EECS-2020-88.html">Parsons-feladatok (UC Berkeley)</a>.</p>
+</details>
+<p class="note">A szimulátor egy leegyszerűsített tanulómodell a Valk kézikönyv és a saját mérések alapján. A valódi ARC-EYE számai ettől eltérhetnek, a gépen mindig a valódi grafikont figyeld.</p>
+</div>
+<div id="mview" class="hide"></div>
+</section>
+<section id="v-iskola" class="hide"></section>
+<section id="v-eles" class="hide"></section>
+<section id="v-kepernyo" class="hide"></section>
+<section id="v-hibakereso" class="hide"></section>
+<section id="v-kerdesek" class="hide"></section>
+<section id="v-program" class="hide"></section>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+{
+const $=s=>document.querySelector(s);
+const st={get(k,d){try{const v=localStorage.getItem('aeT_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('aeT_'+k,JSON.stringify(v))}catch(e){}}};
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let P=st.get('p',{xp:0,done:{},pz:{}});
+let C=st.get('c',{});
+const LV=[[0,'Tanonc'],[100,'Betanított'],[250,'Beállító'],[450,'Varratvadász'],[700,'ARC-EYE mester'],[1000,'Integrátor-jelölt']];
+let tt;
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),1600)}
+function save(){st.set('p',P)}
+function hud(){let i=0;while(i+1<LV.length&&P.xp>=LV[i+1][0])i++;const a=LV[i][0],b=LV[i+1]?LV[i+1][0]:a+300;$('#lvl').textContent=LV[i][1];$('#xpn').textContent=P.xp+' XP'+(LV[i+1]?' · következő szint: '+b:'');$('#xpb').style.width=Math.min(100,(P.xp-a)/(b-a)*100)+'%'}
+function addXP(n){P.xp+=n;save();hud();toast('+'+n+' XP')}
+
+/* ---------- beállítások ---------- */
+const GOOD={laser:170,gain:0,median:3,spatter:160,voidf:4,bevelL:0,bevelR:0,model:'I',marginL:0,marginR:0,rangeL:0,rangeR:0,padding:0,tangent:10,gapMax:0,method:'Linear',prB:100,prA:100,maxInc:1,maxBlind:65,overshoot:10};
+const PART={r:.8,gap:1.5,bevel:0,shiny:false,t:3,clamp:false,tack:false};
+const CT={laser:['Laser power',0,255,1,''],gain:['Signal gain',0,100,1,''],median:['Median filter',0,20,1,''],spatter:['Spatter filter',0,255,1,''],voidf:['Void filter',0,100,1,''],bevelL:['Plate bevel angle (bal)',0,45,1,'°'],bevelR:['Plate bevel angle (jobb)',0,45,1,'°'],
+marginL:['Margin (bal)',0,12,.5,' mm'],marginR:['Margin (jobb)',0,12,.5,' mm'],rangeL:['Range (bal)',0,12,.5,' mm'],rangeR:['Range (jobb)',0,12,.5,' mm'],padding:['Padding',0,8,.1,' mm'],
+tangent:['Tangent angle ±',0,45,1,'°'],gapMax:['Gap max',0,5,.1,' mm'],maxInc:['Max increment',.1,3,.1,' mm'],maxBlind:['Max blind',5,120,5,' mm'],overshoot:['Ramp overshoot',-30,30,5,' mm'],prB:['Path ratio (mögötte)',0,150,10,' mm'],prA:['Path ratio (előtte)',0,150,10,' mm']};
+const MG='seam configuration → Advanced → ',PG='path configuration → General';
+const MENU={laser:'sensor configuration → General',gain:'sensor configuration → General',median:'sensor configuration → Advanced',spatter:'sensor configuration → Advanced',voidf:'sensor configuration → Advanced',bevelL:'seam configuration → General',bevelR:'seam configuration → General',model:'seam configuration → General',marginL:MG+'Modeling guard',marginR:MG+'Modeling guard',rangeL:MG+'Modeling guard',rangeR:MG+'Modeling guard',padding:MG+'Modeling guard',tangent:MG+'Angular guard',gapMax:MG+'Geometry guard',method:PG,prB:PG,prA:PG,maxInc:PG,maxBlind:PG,overshoot:PG};
+const OFF0=['rangeL','rangeR','tangent','gapMax'];
+
+/* ---------- szkennelés modell ---------- */
+const R=12,N=360;
+function gapPts(g){if(!g)return 0;let c=0;for(let i=0;i<N;i++)if(Math.abs(R*Math.cos(2*Math.PI*i/N))<g/2)c++;return Math.round(c/2)}
+function evalS(s,p){
+const S=s.laser/255*p.r*(1+s.gain/50),hi=p.shiny?.7:.9,k=p.tack?0:gapPts(p.gap),actual=p.bevel>0?'V':'I',hard=[],soft=[];
+const dark=s.laser<5||S<.45,sat=!dark&&S>hi;
+if(s.laser<5)hard.push('A lézer ki van kapcsolva – a szenzor nem lát semmit.');
+else if(dark)hard.push('Kevés a jel: a fehér vonal a küszöb körül van, sok pont kiesik.');
+if(sat)hard.push('Túlvezérelt kép: tükröződés és hamis pontok mindenhol.');
+const spikes=p.shiny&&s.median<2&&!dark&&!sat;
+if(spikes)soft.push('Hamis pontok a csiszolt sávon – a mérés szór.');
+if(!p.gap&&!p.bevel)hard.push('SHAPE GUARD: Global locations could not be found');
+if(s.marginL>10||s.marginR>10)hard.push('A Margin magát a varratot is eltakarja.');
+if(p.clamp&&s.marginL<3.5)hard.push('SHAPE GUARD: a split-pontot a befogónál keresi, nem a varratnál.');
+const flag=k>0&&s.spatter<120;
+if(flag)hard.push('A Spatter filter fröccsnek nézi a hézag széleit (lila jelek).');
+const vfill=k>0&&!p.bevel&&s.voidf>=k,mfill=k>0&&!p.bevel&&s.median>=k;
+if(vfill)hard.push('A Void filter befoltozta a hézagot – a profil sík.');
+if(mfill)hard.push('A Median filter kisimította a keskeny hézagot.');
+const face=p.bevel?p.gap/2+p.t*Math.tan(p.bevel*Math.PI/180):12;
+if(p.tack&&s.padding<1.8)hard.push('A fűzés pontjai elhúzzák a modellt – rossz helyen a varratvonal.');
+if(s.padding>face-.5)hard.push('Túl nagy Padding: alig marad adat a felületekhez.');
+if((s.rangeL>0&&s.rangeL<1.5)||(s.rangeR>0&&s.rangeR<1.5))hard.push('Túl kicsi a Range: kevés adat marad a felület modellezéséhez.');
+if((k||p.bevel)&&s.model!==actual)hard.push('SHAPE GUARD: a profil nem illik a választott seam modellhez.');
+else if(actual==='V'&&(Math.abs(s.bevelL-p.bevel)>8||Math.abs(s.bevelR-p.bevel)>8))soft.push('A megadott élszög nem egyezik a darabbal – bizonytalan illesztés.');
+else if(actual==='I'&&(s.bevelL>5||s.bevelR>5))soft.push('Egyenes élnél a Plate bevel angle legyen 0 / 0.');
+if(p.clamp&&s.marginL>=3.5&&!(s.rangeL>0&&s.padding+s.rangeL<=8.5))soft.push('A bal felület torz: a befogó pontjai is benne vannak a modellben (Range).');
+return{S,k,hard,soft,dark,sat,spikes,flag,vfill,mfill,seam:hard.length?'red':soft.length?'amb':'grn'};
+}
+
+/* ---------- pálya modell ---------- */
+function rng(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647}
+function gauss(r){let u=0;while(!u)u=r();const v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function polyfit(pts,deg,at){const n=pts.length;deg=Math.min(deg,n-1);let lo=Infinity,hi=-Infinity;for(const p of pts){lo=Math.min(lo,p.s);hi=Math.max(hi,p.s)}const m=(lo+hi)/2,h=Math.max(1,(hi-lo)/2),D=deg+1,A=Array.from({length:D},()=>new Array(D+1).fill(0));for(const p of pts){const x=(p.s-m)/h,pw=[1];for(let q=1;q<D;q++)pw[q]=pw[q-1]*x;for(let i=0;i<D;i++){for(let j=0;j<D;j++)A[i][j]+=pw[i]*pw[j];A[i][D]+=pw[i]*p.y}}for(let i=0;i<D;i++)A[i][i]+=1e-9;for(let c=0;c<D;c++){let pv=c;for(let r=c+1;r<D;r++)if(Math.abs(A[r][c])>Math.abs(A[pv][c]))pv=r;[A[c],A[pv]]=[A[pv],A[c]];for(let r=0;r<D;r++){if(r===c)continue;const f=A[r][c]/A[c][c];for(let q=c;q<=D;q++)A[r][q]-=f*A[c][q]}}const co=A.map((row,i)=>row[D]/row[i]),x=(at-m)/h;let y=0,pw=1;for(const c of co){y+=c*pw;pw*=x}return y}
+const DEG={Linear:1,Circular:2,Polynomial:9};
+const PSC={
+cross:{seed:11,L:300,yT:s=>.003*s,noise:.15,tn:3,cross:[140,166]},
+gap:{seed:12,L:300,yT:s=>.003*s,noise:.15,tn:2,gap:s=>1+(s>170?(s-170)*.025:0)},
+inc:{seed:13,L:300,yT:s=>3+.004*s,noise:.1,tn:2,jump:.08,jA:2},
+curve:{seed:14,L:300,yT:s=>{const Rc=800,c=150;return(Rc-Math.sqrt(Rc*Rc-(s-c)**2))-(Rc-Math.sqrt(Rc*Rc-c*c))},noise:.12,tn:2},
+noise:{seed:15,L:300,yT:s=>.003*s,noise:.45,tn:2,jump:.04,jA:1.5},
+blind:{seed:16,L:300,yT:s=>.004*s,noise:.15,tn:2,tack:[100,126],end:230}};
+function simPath(sc,s){const r=rng(sc.seed),ds=2,lead=40,scans=[];
+for(let sp=0;sp<=sc.L+lead;sp+=ds){const yt=sc.yT(sp);let y=yt+gauss(r)*sc.noise,ok=true,why='',tang=gauss(r)*sc.tn,cross=false;
+if(sc.jump&&r()<sc.jump)y+=(r()<.5?-1:1)*(sc.jA||1)*(1+r()*.5);
+if(sc.cross&&sp>=sc.cross[0]&&sp<sc.cross[1]){y=yt+(sp-sc.cross[0])*.3;tang=45+gauss(r)*2;cross=true}
+const gap=sc.gap?sc.gap(sp)+gauss(r)*.08:null;
+if(sc.allBad){ok=false;why='seam'}
+else if(sc.end!=null&&sp>sc.end){ok=false;why='end'}
+else if(sc.tack&&sp>=sc.tack[0]&&sp<sc.tack[1]){ok=false;why='tack'}
+else if(s.tangent>0&&Math.abs(tang)>s.tangent){ok=false;why='tangent'}
+else if(gap!=null&&s.gapMax>0&&gap>s.gapMax){ok=false;why='gap'}
+scans.push({s:sp,y,ok,why,gap,cross})}
+let ty=0,stopAt=null,stop=null;const tool=[];
+for(let ts=0;ts<=sc.L;ts+=ds){const n=Math.min(scans.length,Math.floor((ts+lead)/ds)+1);let q=n-1,run=null;while(q>=0&&!scans[q].ok){run=scans[q].s;q--}
+if(run!=null&&stopAt==null&&(ts+lead)-run+ds>s.maxBlind)stopAt=Math.max(ts,run+s.overshoot);
+if(stopAt!=null&&ts>=stopAt){stop=ts;break}
+const win=[];for(let i=0;i<n;i++){const v=scans[i];if(v.ok&&v.s>=ts-s.prB&&v.s<=ts+s.prA)win.push(v)}
+let target=ty;if(win.length>=1)target=polyfit(win,DEG[s.method],ts);
+const d=Math.max(-s.maxInc,Math.min(s.maxInc,target-ty));ty+=d;tool.push({s:ts,y:ty,err:ty-sc.yT(ts)})}
+const endS=sc.end!=null?sc.end:sc.L;let maxErr=0,catchS=null;for(const t of tool){if(catchS==null&&Math.abs(t.err)<.5)catchS=t.s;if(t.s>=20&&t.s<=endS)maxErr=Math.max(maxErr,Math.abs(t.err))}
+const normal=scans.filter(v=>!v.cross&&v.why!=='end'&&v.why!=='tack'&&v.s<=sc.L),rej=normal.filter(v=>!v.ok).length/normal.length;
+return{scans,tool,stop,maxErr,catchS,rej}}
+const f2=x=>x.toFixed(2).replace('.',',');
+
+/* ---------- küldetések ---------- */
+const CH=[[1,'1. fejezet · Kép és szűrők (sensor configuration)'],[2,'2. fejezet · Varrat: guardok (seam configuration → Advanced)'],[3,'3. fejezet · Pálya (path configuration)']];
+const ALLS=['laser','gain','median','spatter','voidf','model','bevelL','bevelR'];
+const MS=[
+{id:1,ch:1,t:'Világíts be!',d:'A kép beállítása',story:'Új job, a lézer szinte ki van kapcsolva. A szenzor vak.',goal:'Hozd be a jelet, hogy a seam status zöld legyen.',ctl:['laser','gain'],set:{laser:20},hint:['Nézd a fehér vonalat (jelerősség): most a sárga szaggatott küszöb alatt van.','Először a Laser powert emeld lassan, a gaint hagyd 0-n.'],q:['Miért a Laser powerrel kezdtél, nem a gainnel?',['Mert a gain a zajt is felerősíti, a lézer nem','Mert a gain csak alumíniumon működik','Mert a lézert könnyebb visszaállítani'],0,'A gain olyan, mint az ISO: a jelet és a zajt is erősíti. Először több fényt adunk, csak utána erősítünk.']},
+{id:2,ch:1,t:'Sötét reve',d:'Kevés szórt fény',story:'Reves, sötét acéllemez. A lézer fényének nagy részét elnyeli.',goal:'Szerezz elég jelet a sötét felületen.',ctl:['laser','gain'],set:{laser:120},part:{r:.4},hint:['Sötét felületen a maximális lézer is kevés lehet.','Ha a Laser power 255-ön van, emeld a Signal gaint kis lépésekben.'],q:['Mikor nyúlsz a Signal gainhez?',['Rögtön az elején','Ha a Laser power már magasan van, és még mindig kevés a jel','Soha'],1,'Sorrend: lézer fel, és ha már nincs hova, akkor óvatosan gain.']},
+{id:3,ch:1,t:'Csiszolt sáv',d:'Tükröződés',story:'A varrat mellett frissen csiszolt, fényes sáv van, és valaki feltekerte a gaint is.',goal:'Szüntesd meg a túlvezérlést és a hamis pontokat.',ctl:['laser','gain','median'],set:{laser:230,gain:40,median:0},part:{shiny:true},hint:['A fényes felület túl sok fényt ver vissza: vedd vissza a gaint, aztán a lézert.','A maradék tüskéket egy kicsi Median filter (2–5) kiszedi. A túl nagy Median a hézagot is eltünteti!'],q:['Mi történik, ha a Median filtert 10 fölé húzod egy keskeny tompavarratnál?',['Még jobb lesz a kép','A keskeny hézag is eltűnhet','Erősebb lesz a lézer'],1,'A Median a szomszédok középső értékét veszi: a keskeny hézag sosem kerül középre, ezért eltűnik.']},
+{id:4,ch:1,t:'Eltűnő hézag',d:'Void filter',story:'A hézag ott van, de a piros vonal sík. Valami befoltozza.',goal:'Tedd láthatóvá a hézagot.',ctl:['voidf'],set:{voidf:80},hint:['A hézagból nem jön vissza fény, ezért ott lyuk van az adatban.','A Void filter kitölti a lyukat, ha az kisebb az értékénél. Vedd le a hézag szélessége alá.'],q:['Mit csinál a Void filter?',['Kitölti a hiányzó pontokat a környezetükből','Kiszűri a fröccsöt','Erősíti a jelet'],0,'Ha az értéke nagyobb, mint a hézag, a valódi hézagot is „kijavítja”.']},
+{id:5,ch:1,t:'Lila vonalak',d:'Spatter filter',story:'Lila jelek pont a hézag szélein. A szoftver fröccsnek nézi a varratot.',goal:'Ne dobja ki a hézag széleit.',ctl:['spatter'],set:{spatter:60},hint:['A lila jel a fröccs-detektálás jele.','Kisebb érték = érzékenyebb. Emeld, amíg eltűnnek a lila jelek a hézagról.'],q:['A Spatter filter értékét emelve a szűrő…',['érzékenyebb lesz','kevésbé érzékeny lesz','kikapcsol'],1,'Nagyobb érték = kevésbé érzékeny. A hézag széle hirtelen ugrás, ezért a túl érzékeny szűrő fröccsnek veszi.']},
+{id:6,ch:1,t:'Túl nagy Median',d:'Median filter',story:'Valaki a zaj ellen nagyra húzta a Mediant. Most nincs zaj, de varrat sincs.',goal:'Hozd vissza a hézagot.',ctl:['median'],set:{median:14},hint:['A Median kiszedi a keskeny kiugrásokat, és a keskeny hézagot is.','Keskeny tompavarratnál maradj kicsi értéken (2–5).'],q:['Melyik varratnál a legveszélyesebb a nagy Median?',['Széles V-varrat','Keskeny tompavarrat','Mindegyiknél ugyanannyira'],1,'Minél keskenyebb a varrat, annál könnyebben kisimítja a Median.']},
+{id:7,ch:1,t:'Rossz modell',d:'Seam model',story:'A darab 30°-os V-élelőkészítéssel jött, de a job I-varratra van állítva, 20°-os élszöggel.',goal:'Állítsd a modellt a valós darabhoz.',ctl:['model','bevelL','bevelR'],set:{model:'I',bevelL:20,bevelR:20},part:{bevel:30,gap:1},hint:['A szoftver azt az alakot keresi, amit megadtál, akkor is, ha az nincs ott.','V-modell kell, és lemezenként a valós élszög (30° / 30°).'],q:['Mit keres a Seam Analysis, ha rossz modellt adsz meg?',['Magától rájön a jó alakra','Mindenáron a megadott alakot, és nem találja, vagy rosszat talál','Semmit, kikapcsol'],1,'A szoftver betartja a szabályt: azt keresi, amit mondasz neki. Ezért kell a modellnek pontosan egyeznie a darabbal.']},
+{id:8,ch:1,t:'A mai eset',d:'A robotnál látott hiba újra',story:'3 mm-es acél, egyenes élek, szorosan összeillesztve. Ugyanaz, mint a robotnál.',goal:'Próbáld zöldre hozni, aztán döntsd el, mi a valódi megoldás.',ctl:ALLS,set:{bevelL:20,bevelR:20},part:{gap:0},decide:true,hint:['Nézd a piros (Z) vonalat: van benne bármilyen alak?','Ha a profil teljesen sík, nincs mit megtalálni. Ez nem beállítás kérdése.'],
+dq:['A profil teljesen sík. Mi a megoldás?',['Laser power maximumra','Void filter 0-ra','Hézag vagy élletörés kell, mert a lézer nem lát alakot','V modell beállítása'],2,'A hézag nélküli, egyenes élű tompavarrat a lézernek egy sík lemez. Ezt beállítással nem lehet megoldani: a darabon kell változtatni, vagy más módszert választani (pl. seam-find vagy touch sensing a kezdő- és végpontra).'],
+p2:{part:{gap:1.5,shiny:true},set:{laser:200,gain:20,median:10,spatter:80,voidf:80,bevelL:20,bevelR:20,model:'I'},story:'Újrafűzve 1,5 mm hézaggal. A darabon viszont csiszolt sáv van, és a job beállításai a korábbi próbálkozásból maradtak.',goal:'Javítsd ki mindet, amíg zöld nem lesz.',hint:['Menj sorban a lánc mentén: előbb a kép (gain), aztán a szűrők, végül a seam model.','Nyomd meg a seam status lámpát: mindig a következő hibát mutatja.']}},
+{id:9,ch:1,t:'Vegyes hibák',d:'Ismételhető kihívás',story:'Véletlen hibák keverve, mint a valóságban.',goal:'Keresd meg és javítsd mindet.',ctl:ALLS,random:true,hint:['Mindig a lánc elejéről indulj: kép, szűrők, modell.','A seam status lámpa megmondja a következő hibát.']},
+{id:10,ch:2,t:'Befogó a képben',d:'Margin és Range',story:'Egy nagy befogó a varrat bal oldalán belelóg a lézerkörbe. A szoftver a befogónál keresi a varratot.',goal:'Zárd ki a befogót a varratkeresésből, és a felület modellezéséből is.',ctl:['marginL','marginR','rangeL','rangeR'],part:{clamp:true},hint:['A szürke sáv a Margin által kizárt terület. A Margin csak a split-pont (a varrat közepe) keresésénél hat.','A Margin után a modellezéshez még a Range kell: a bal oldalon csak a varrathoz közeli adatot használja (pl. 4–6 mm).'],q:['Mi a különbség a Margin és a Range között?',['Semmi, ugyanazt csinálják','A Margin csak a split-pont keresésénél hagy ki adatot, a Range a felület modellezésénél','A Range a lézer erejét állítja'],1,'Ez a kézikönyv példája is: nagy bal oldali Margin, hogy a split-pont ne a befogónál legyen, és Range, hogy a befogó ne torzítsa a felületet.']},
+{id:11,ch:2,t:'Fűzés a gyökben',d:'Padding',story:'6 mm-es, V-élelőkészített lemez. A gyökben fűzővarrat van, és a szoftver a fűzés tetejét is a felülethez számolja.',goal:'Hagyd ki a fűzést a modellezésből, de ne dobj ki túl sokat.',ctl:['padding'],set:{model:'V',bevelL:30,bevelR:30},part:{bevel:30,gap:1,t:6,tack:true},hint:['A Padding a varrat közepe körül hagy ki adatot (narancs jelölők a grafikonon).','Legyen valamivel nagyobb, mint a fűzés fele (itt kb. 1,6 mm), de ne annyi, hogy az élletörés felületéből semmi se maradjon.'],q:['Mekkorára állítod a Paddinget fűzésnél?',['Valamivel nagyobbra, mint a fűzés mérete','A lehető legnagyobbra','0-ra'],0,'A kézikönyv szerint kicsit nagyobbra, mint a fűzés szárhossza. A túl nagy Padding a valódi felületeket is kidobja.']},
+{id:12,ch:2,view:'path',sc:'cross',t:'Kereszteződés',d:'Tangent angle',story:'A varrat közepén egy másik varrat keresztezi. A szenzor ott a keresztben futó horonyt is varratnak nézi.',goal:'Ne kövesse el a robot a kereszteződésnél, de a jó méréseket se dobja el.',ctl:['tangent'],set:{tangent:0},fixed:'Max blind 65 mm, Linear, Path ratio 100/100',hint:['Path Graph: a lila pontok az eldobott mérések, a sárga vonal a pisztoly útja.','Angular guard → Tangent angle, kb. ±10°. A kereszteződésnél a varrat iránya hirtelen elfordul, ezt a guard kiszűri.'],
+crit:r=>[['Nem követi el a kereszteződést',r.maxErr<=.8,'max eltérés '+f2(r.maxErr)+' mm (cél ≤ 0,80)'],['Nem áll meg',r.stop==null,r.stop==null?'végigment':'megállt '+r.stop+' mm-nél'],['A jó méréseket nem dobja el',r.rej<.25,Math.round(r.rej*100)+'% jó mérés eldobva (cél < 25%)']],
+q:['Miért ne állítsd a Tangent angle-t ±1°-ra?',['Mert akkor a jó mérések nagy részét is eldobja','Mert akkor a lézer kikapcsol','Mert ±1° a maximum'],0,'A mérésben mindig van egy kis szögzaj. A túl szűk guard a jó méréseket is eldobja, és ha sok egymás után kiesik, a robot megáll (Max blind).']},
+{id:13,ch:2,view:'path',sc:'gap',t:'Nyíló hézag',d:'Gap max',story:'A varrat második felében a lemezek széthúzódnak, a hézag 1 mm-ről 4 mm-re nő. 2,5 mm felett már átég.',goal:'A robot álljon meg, mielőtt a hézag 2,5 mm fölé nő, de feleslegesen korán se.',ctl:['gapMax'],set:{gapMax:0},fixed:'Max blind 65 mm, Ramp overshoot 10 mm',hint:['Geometry guard → Gap max: ami e fölött van, az rossz szakasz.','A robot nem azonnal áll meg: a rossz szakasznak előbb hosszabbnak kell lennie a Max blind-nál. Ezért a határt 2,5 mm alá kell tenned.'],
+crit:r=>{const g=PSC.gap.gap,gs=r.stop!=null?g(r.stop):g(300);return[['Megáll, mielőtt a hézag 2,5 mm fölé nő',r.stop!=null&&gs<=2.5,r.stop!=null?'megállt '+r.stop+' mm-nél, ott a hézag '+f2(gs)+' mm':'végighegesztett, a végén '+f2(gs)+' mm-es hézagon'],['Nem áll meg feleslegesen korán',r.stop==null||gs>=1.6,r.stop!=null?'megálláskor '+f2(gs)+' mm (cél ≥ 1,60)':'—']]},
+q:['Miért kellett a Gap max-ot 2,5 mm alá állítani?',['Mert a robot csak a Max blind után áll meg, közben a hézag tovább nő','Mert a szenzor rosszul méri a hézagot','Mert a Gap max cm-ben van'],0,'A rossz szakasznak előbb hosszabbnak kell lennie a Max blind-nál. Addig a hézag tovább nő, ezért kell tartalék.']},
+{id:14,ch:3,view:'path',sc:'inc',t:'Rángatás',d:'Max increment',story:'Fröccsös felület: néha egy-egy mérés 2–3 mm-rel mellé ugrik, és a robot minden kiugrást azonnal lekövet. A darab ráadásul 3 mm-rel el van tolva.',goal:'Ne ugráljon, de az eltolást gyorsan érje utol.',ctl:['maxInc'],set:{prB:0,prA:0,maxInc:3},fixed:'Path ratio 0/0 (minden mérést külön követ)',hint:['Path configuration → Max increment: ennyit korrigálhat ciklusonként.','A kézikönyv szerint 0,5–1,0 mm, soha nem több 1,0-nál. Túl kicsi értéknél nem éri utol a varratot.'],
+crit:r=>[['Utoléri a 3 mm-es eltolást 14 mm-en belül',r.catchS!=null&&r.catchS<=14,r.catchS!=null?r.catchS+' mm alatt érte utol':'nem érte utol'],['Nem ugrik a kiugró mérésekre',r.maxErr<=2.1,'max eltérés '+f2(r.maxErr)+' mm (cél ≤ 2,10)']],
+q:['Mi történik, ha a Max increment túl kicsi (pl. 0,2)?',['Nem éri utol időben a varratot','Gyorsabban követ','Megáll a robot'],0,'A Max increment az agresszivitás: túl nagy = rángat, túl kicsi = lemarad. A valódi gépen a nagyobb Path ratio is simít.']},
+{id:15,ch:3,view:'path',sc:'curve',t:'Ív',d:'Path method és Path ratio',story:'Íves varrat (kb. 800 mm sugár). A job egyenes varratra van beállítva.',goal:'Kövesse pontosan az ívet (max eltérés 0,3 mm).',ctl:['method','prB','prA'],set:{method:'Linear',prB:100,prA:100},hint:['A Linear egyenest illeszt a mérésekre: ívnél levágja a kanyart.','Válts Circularra, vagy csökkentsd a Path ratio-t, hogy rövidebb szakaszra illesszen.'],
+crit:r=>[['Követi az ívet',r.maxErr<=.3,'max eltérés '+f2(r.maxErr)+' mm (cél ≤ 0,30)']],
+q:['Melyik Path method való kör- vagy ívvarratra?',['Linear','Circular','Fuzzy-logic'],1,'Linear: egyenes. Circular: ív, kör. Polynomial: változó alak, de érzékeny a rossz adatra.']},
+{id:16,ch:3,view:'path',sc:'noise',t:'Zajos adat',d:'Polynomial vagy Linear',story:'Egyenes varrat, de fröccsös, zajos mérésekkel. Valaki Polynomialra állította a pályát.',goal:'Legyen sima a pálya (max eltérés 0,4 mm).',ctl:['method','prB','prA'],set:{method:'Polynomial'},hint:['A Polynomial 9-ed fokú görbét illeszt, így a zajt is lekövetheti.','Egyenes varratra a Linear a legstabilabb.'],
+crit:r=>[['Sima pálya',r.maxErr<=.4,'max eltérés '+f2(r.maxErr)+' mm (cél ≤ 0,40)']],
+q:['Mi a Polynomial path tracking gyenge pontja?',['Nagyon érzékeny a rossz, zajos adatra','Nem tud egyenest követni','Lassabb a lézer'],0,'A kézikönyv szerint a változó alakú varratokra a legjobb, de nagyon érzékeny a gyenge szkennadatra.']},
+{id:17,ch:3,view:'path',sc:'blind',t:'Fűzés és darabvég',d:'Max blind és Ramp overshoot',story:'A varraton egy 25 mm-es fűzés van (ott nincs jó mérés), a darab pedig 230 mm-nél véget ér, de a program 300 mm-ig megy.',goal:'Menjen át a fűzésen, és álljon meg a darab végén (215–245 mm között).',ctl:['maxBlind','overshoot'],set:{maxBlind:15,overshoot:10},hint:['Max blind: ennél hosszabb rossz szakasznál leáll. Legyen nagyobb a fűzésnél.','Ha túl nagy, a darab vége után még vakon megy. A negatív Ramp overshoot előbb állítja meg.'],
+crit:r=>[['Átmegy a fűzésen',r.stop==null||r.stop>=200,r.stop!=null&&r.stop<200?'megállt a fűzésnél ('+r.stop+' mm)':'átment'],['Megáll a darab végén (215–245 mm)',r.stop!=null&&r.stop>=215&&r.stop<=245,r.stop!=null?'megállt '+r.stop+' mm-nél':'nem állt meg']],
+q:['Mit csinál a negatív Ramp overshoot?',['A rossz szakasz előtt állítja meg a robotot','Gyorsabban hegeszt','Kikapcsolja a Max blindot'],0,'Negatív: a rossz szakasz előtt áll meg, pozitív: utána. A darab végére a valódi megoldás az LS-END-SEARCH (a kézikönyv 15. gyakorlata).']}
+];
+MS.length=9;CH.length=1;CH[0]=[1,'A kép és a szűrők (sensor configuration)'];
+const FAULTS=[{set:{laser:30}},{set:{gain:70},part:{shiny:true}},{set:{voidf:60}},{set:{spatter:50}},{set:{median:12}},{set:{model:'I',bevelL:0,bevelR:0},part:{bevel:30,gap:1}},{set:{bevelL:25,bevelR:25}},{set:{laser:255,gain:0},part:{r:.4}}];
+function mkRandom(){for(let t=0;t<20;t++){const n=2+(Math.random()<.5?1:0),pick=[];for(const i of shuffle(FAULTS.map((_,j)=>j))){if(pick.length>=n)break;if((i===5&&pick.includes(6))||(i===6&&pick.includes(5))||(i===7&&pick.includes(0))||(i===0&&pick.includes(7)))continue;pick.push(i)}let s={...GOOD},p={...PART};for(const i of pick){Object.assign(s,FAULTS[i].set||{});Object.assign(p,FAULTS[i].part||{})}if(evalS(s,p).seam!=='grn')return{s,p}}return{s:{...GOOD,laser:30},p:{...PART}}}
+
+let cur=null,done=false,phase=1,tipN=0,dlgOpen=false,wt=null,cv=null,timer=null,ro=null,pend=0;
+function unlocked(m){if(m.id===9)return!!(P.done[7]||P.done[8]);const same=MS.filter(x=>x.ch===m.ch&&x.id!==9),i=same.indexOf(m);return i<=0||!!P.done[same[i-1].id]}
+function listM(){$('#mgrid').innerHTML=CH.map(c=>`<h3 class="chh">${c[1]}</h3><div class="grid">${MS.filter(m=>m.ch===c[0]).map(m=>{const un=unlocked(m),dn=P.done[m.id];return `<button class="mc" data-m="${m.id}" ${un?'':'disabled'}><span class="n">${m.id}</span><span class="tt">${m.t}</span><span class="st ${dn?'ok':''}">${dn?'kész':un?'':'zárva'}</span><span class="dd">${m.d}</span></button>`}).join('')}</div>`).join('')}
+function openM(id){const m=MS.find(x=>x.id===id);done=false;phase=1;tipN=0;dlgOpen=false;let s={...GOOD,...(m.set||{})},p={...PART,...(m.part||{})};if(m.random){const r=mkRandom();s=r.s;p=r.p}cur={m,s,p,story:m.story,goal:m.goal,hint:m.hint,pr:null};renderM()}
+function fmt(k){const v=cur.s[k],c=CT[k];if(OFF0.includes(k)&&!v)return 'ki';return(c[3]<1?v.toFixed(1).replace('.',','):String(v))+c[4]}
+function ctlHTML(k){const s=cur.s;
+if(k==='model')return `<div class="row"><div class="h"><span>Seam model</span></div><div class="seg">${[['I','I-varrat (egyenes él)'],['V','V-varrat (élletörés)']].map(o=>`<button class="btn${s.model===o[0]?' pri':''}" data-model="${o[0]}">${o[1]}</button>`).join('')}</div><div class="m">${MENU.model}</div></div>`;
+if(k==='method')return `<div class="row"><div class="h"><span>Path method</span></div><div class="seg">${['Linear','Circular','Polynomial'].map(o=>`<button class="btn${s.method===o?' pri':''}" data-method="${o}">${o}</button>`).join('')}</div><div class="m">${MENU.method}</div></div>`;
+const c=CT[k];return `<div class="row"><div class="h"><label for="r-${k}">${c[0]}</label><output id="o-${k}">${fmt(k)}</output></div><input type="range" id="r-${k}" data-k="${k}" min="${c[1]}" max="${c[2]}" step="${c[3]}" value="${s[k]}"><div class="m">${MENU[k]}${OFF0.includes(k)?' · 0 = ki':''}</div></div>`}
+function renderM(){const m=cur.m,pv=m.view==='path';$('#mlist').classList.add('hide');const v=$('#mview');v.classList.remove('hide');
+const leg=pv?'<span><i style="background:#f3d23a"></i>pisztoly útja</span><span><i style="background:#37d27a"></i>jó mérés</span><span><i style="background:#b46bff"></i>eldobott mérés</span><span><i style="background:rgba(238,240,243,.6)"></i>valódi varrat (szaggatott)</span><span><i style="background:#e2412f"></i>megállás</span>':'<span><i style="background:#ff5a45"></i>szűrt magasság (Z)</span><span><i style="background:rgba(200,205,215,.5)"></i>nyers mérés</span><span><i style="background:#f2f4f7"></i>jelerősség</span><span><i style="background:#f3b21f"></i>küszöb</span><span><i style="background:#b46bff"></i>fröccsnek jelölt</span><span><i style="background:#37d27a"></i>követési pont</span><span><i style="background:rgba(255,90,69,.45);height:10px"></i>lyuk (pl. a hézag)</span>'+(m.ch===2?'<span><i style="background:rgba(255,255,255,.25);height:10px"></i>Margin</span><span><i style="background:#ff9f43"></i>Padding</span><span><i style="background:#9ad0ff"></i>Range vége</span>':'');
+v.innerHTML=`<button class="btn" id="back">← Küldetések</button>
+<div class="mv"><div>
+<h2>${m.id}. ${m.t}</h2><p class="story">${cur.story}</p><p class="goal"><b>Cél:</b> ${cur.goal}</p>
+<div class="fig"><canvas id="cv" aria-label="${pv?'Path Graph felülnézet':'Élő szkennelési grafikon'}"></canvas></div><div class="rb"><span>${pv?'Path Graph · felülnézet':'XYZ Graph · élő szkennelés'}</span><span>szimulátor</span></div>
+<div class="leg">${leg}</div>
+<div class="lamps"><div class="lamp" id="L1"></div><button class="lamp" id="L2" aria-label="seam status részletei"></button><div class="lamp" id="L3"></div></div>
+<div id="dlg"></div>${pv?'<div class="crit" id="crit"></div>':''}
+</div><div>
+<div class="pane"><h3>Beállítások</h3>${m.fixed?`<p class="fixed">Rögzítve: ${m.fixed}</p>`:''}${m.ctl.map(ctlHTML).join('')}
+<div class="acts"><button class="btn" id="tip">Tipp</button>${m.decide&&phase===1?'<button class="btn pri" id="dec">Mi a megoldás?</button>':''}${m.random?'<button class="btn" id="reroll">Új hibák</button>':''}</div><div class="tips" id="tips"></div></div>
+<div id="res"></div></div></div>`;
+cv=$('#cv');if(ro)ro.disconnect();ro=new ResizeObserver(draw);ro.observe(cv.parentElement);clearInterval(timer);if(!RM&&!pv)timer=setInterval(draw,140);update();draw();window.scrollTo(0,0)}
+function lampH(c,t,sub){return `<span class="dot" style="background:${c};color:${c}"></span><span>${t}<small>${sub}</small></span>`}
+const K={grn:'#37d27a',amb:'#f3b21f',red:'#e2412f'};
+function crits(){return cur.m.crit(cur.pr)}
+function solved(){if(!cur)return false;if(cur.m.view==='path')return crits().every(c=>c[1]);return evalS(cur.s,cur.p).seam==='grn'}
+function update(){if(!cur)return;const m=cur.m;
+if(m.view==='path'){const r=cur.pr=simPath(PSC[m.sc],cur.s),seen=r.scans.filter(v=>v.s<=(r.stop!=null?r.stop+40:340)),bad=seen.filter(v=>!v.ok).length/Math.max(1,seen.length),sq=bad<.1?'grn':bad<.3?'amb':'red';
+$('#L1').innerHTML=lampH(K.grn,'sensor scanning','lézer be');
+$('#L2').innerHTML=lampH(K[sq],'seam status',Math.round(bad*100)+'% rossz mérés · koppints');
+$('#L3').innerHTML=lampH(r.stop!=null?K.red:K.grn,'path status',r.stop!=null?'megállt '+r.stop+' mm-nél':'végigment');
+$('#crit').innerHTML=crits().map(c=>`<div class="cr ${c[1]?'y':'n'}"><span class="ci">${c[1]?'✓':'✗'}</span><span>${c[0]}<small>${c[2]}</small></span></div>`).join('');
+if(dlgOpen)showDlg()}else{const e=evalS(cur.s,cur.p),on=cur.s.laser>=5;
+$('#L1').innerHTML=lampH(on?K.grn:'#5a6069','sensor scanning',on?'lézer be':'lézer ki');
+$('#L2').innerHTML=lampH(K[e.seam],'seam status',{grn:'felismerve',amb:'bizonytalan',red:'nincs meg'}[e.seam]+' · koppints');
+$('#L3').innerHTML=lampH(K[e.seam],'path status',{grn:'követ',amb:'szórt pálya',red:'megállna'}[e.seam]);
+if(dlgOpen)showDlg()}
+clearTimeout(wt);if(!done&&!(m.decide&&phase===1)&&solved())wt=setTimeout(win,1000)}
+function showDlg(){dlgOpen=true;let msg;if(cur.m.view==='path'){const r=cur.pr,w={tangent:'Angular guard: a varrat iránya a határon kívül',gap:'Geometry guard: a hézag nagyobb a Gap max-nál',tack:'nincs érvényes mérés (fűzés)',end:'nincs érvényes mérés (vége a darabnak)'};const b=r.scans.find(v=>!v.ok&&(r.stop==null||v.s<=r.stop+40));msg=r.stop!=null?`A rossz szakasz hosszabb lett, mint a Max blind (${cur.s.maxBlind} mm) – a folyamat leállt ${r.stop} mm-nél. Ok: ${w[b?b.why:'end']||'rossz mérések'}.`:b?`Voltak eldobott mérések (${w[b.why]||b.why}), de a rossz szakaszok rövidebbek a Max blind-nál.`:'Minden mérés érvényes.'}else{const e=evalS(cur.s,cur.p);msg=e.hard[0]||e.soft[0]||'Minden feltétel teljesül, a varrat felismerve.'}$('#dlg').innerHTML=`<div class="dlg" role="status"><b>Scan Analysis summary</b><p>${msg}</p><button class="btn" id="dlgx">OK</button></div>`}
+function nextOf(m){const i=MS.indexOf(m);return MS[i+1]||null}
+function win(){if(done||!cur||!solved())return;done=true;const m=cur.m,r=$('#res');
+if(m.random){const xp=Math.max(10,25-tipN*5);P.done[9]=1;addXP(xp);r.innerHTML=`<div class="pane win"><h3>Tiszta! Mindegyik hibát megtaláltad.</h3><p>+${xp} XP. Minél többször csinálod, annál gyorsabban látod meg a hibát a grafikonon.</p><div class="acts"><button class="btn pri" id="again">Új kör</button><a class="btn" href="#iskola">Tovább: Beállítás-iskola →</a></div></div>`;r.scrollIntoView({block:'nearest'});return}
+if(m.id===8){const xp=Math.max(20,60-tipN*5);P.done[8]=1;addXP(xp);r.innerHTML=`<div class="pane win"><h3>Megoldottad a valós esetet!</h3><p>Ezek voltak a hibák, sorban a lánc mentén:</p><ul><li>Túl sok gain a csiszolt sávon: túlvezérlés.</li><li>Spatter filter túl érzékeny: a hézag széleit fröccsnek nézte.</li><li>Void filter és Median túl nagy: befoltozták és kisimították a hézagot.</li><li>Bevel 20° egyenes élen: rossz modellparaméter.</li><li>És a legfontosabb: hézag nélkül a lézer nem lát semmit.</li></ul><p>+${xp} XP</p><div class="acts"><button class="btn pri" data-m="9">Tovább a Vegyes hibákra →</button></div></div>`;listM();r.scrollIntoView({block:'nearest'});return}
+pend=Math.max(10,30-tipN*5);const q=m.q,ord=shuffle([0,1,2]);r.innerHTML=`<div class="pane win"><h3>Megvan, teljesítetted!</h3><p class="m">Egy gyors kérdés, mielőtt továbbmész (+${pend} XP, ha eltalálod):</p><p class="qq2">${q[0]}</p>${ord.map(o=>`<button class="btn opt" data-qo="${o}">${q[1][o]}</button>`).join('')}<div id="qfb"></div></div>`;r.scrollIntoView({block:'nearest'})}
+function answerM(o){const m=cur.m,q=m.q,ok=o===q[2];document.querySelectorAll('[data-qo]').forEach(b=>{const k=+b.dataset.qo;b.disabled=true;if(k===q[2])b.classList.add('good');else if(k===o)b.classList.add('bad')});addXP(ok?pend:10);P.done[m.id]=1;save();listM();const nx=nextOf(m);$('#qfb').innerHTML=`<p class="fb"><b>${ok?'Igen!':'Nem egészen.'}</b> ${q[3]}</p>${nx?`<div class="acts"><button class="btn pri" data-m="${nx.id}">Következő: ${nx.t} →</button></div>`:''}`}
+function decide(){const q=cur.m.dq,ord=shuffle([0,1,2,3]);$('#res').innerHTML=`<div class="pane"><p class="qq2">${q[0]}</p>${ord.map(o=>`<button class="btn opt" data-dq="${o}">${q[1][o]}</button>`).join('')}<div id="dfb"></div></div>`;$('#res').scrollIntoView({block:'nearest'})}
+function answerD(o,btn){const q=cur.m.dq;if(o!==q[2]){btn.classList.add('bad');btn.disabled=true;$('#dfb').innerHTML='<p class="fb"><b>Ez nem segít.</b> Nézd a piros vonalat: teljesen sík. Próbáld újra.</p>';return}document.querySelectorAll('[data-dq]').forEach(b=>b.disabled=true);btn.classList.add('good');addXP(20);$('#dfb').innerHTML=`<p class="fb"><b>Pontosan.</b> ${q[3]}</p><div class="acts"><button class="btn pri" id="reglue">Fűzd újra 1,5 mm hézaggal →</button></div>`}
+function phase2(){const m=cur.m;phase=2;tipN=0;dlgOpen=false;cur.p={...PART,...m.p2.part};cur.s={...GOOD,...m.p2.set};cur.story=m.p2.story;cur.goal=m.p2.goal;cur.hint=m.p2.hint;renderM()}
+
+/* ---------- grafikonok ---------- */
+function prep(cv){if(!cv||!cv.isConnected)return null;const W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)return null;const d=window.devicePixelRatio||1;if(cv.width!==Math.round(W*d)||cv.height!==Math.round(H*d)){cv.width=Math.round(W*d);cv.height=Math.round(H*d)}const g=cv.getContext('2d');g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,W,H);return{g,W,H}}
+function label(g,t,x,y,c,al){g.font='13px Inter,sans-serif';g.textAlign=al||'left';g.lineWidth=4;g.strokeStyle='#0c0e11';g.strokeText(t,x,y);g.fillStyle=c||'rgba(238,240,243,.8)';g.fillText(t,x,y);g.textAlign='left'}
+function draw(){if(!cur||!cv)return;if(cur.m.view==='path')drawPath(cv,PSC[cur.m.sc],cur.pr,cur.s);else drawScan(cv,cur.s,cur.p,'xyz')}
+function drawScan(cv,s,p,mode,ev){const c=prep(cv);if(!c)return;const{g,W,H}=c;mode=mode||'xyz';
+const e=ev||evalS(s,p),L=10,Rr=W-10,X=i=>L+i/(N-1)*(Rr-L),t=p.t,full=mode!=='raw';
+g.strokeStyle='rgba(255,255,255,.06)';g.lineWidth=1;for(let j=1;j<4;j++){const x=L+j*(Rr-L)/4;g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke()}
+const wave=(f,col)=>{g.strokeStyle=col;g.lineWidth=2;g.beginPath();for(let i=0;i<N;i++){const y=H*.47-f(2*Math.PI*i/N)*H*.4;i?g.lineTo(X(i),y):g.moveTo(X(i),y)}g.stroke()};
+wave(Math.cos,'rgba(106,141,255,.4)');wave(Math.sin,'rgba(76,217,100,.35)');
+const S=e.S,sb=Math.min(1,Math.max(0,S/.9))*.8+.05,br=p.bevel*Math.PI/180,w=p.bevel?p.gap/2+t*Math.tan(br):0,noise=.05+s.gain*.0025,xs=[];
+const raw=[],str=[],vd=[],fl=[],zt=[];
+for(let i=0;i<N;i++){const th=2*Math.PI*i/N,x=R*Math.cos(th),ax=Math.abs(x);xs[i]=x;let z=.12*Math.sin(th);if(p.bevel&&ax<w)z-=Math.min(t,(w-ax)/Math.tan(br));if(p.tack&&ax<1.6)z=Math.max(z,-t+t*.55*(1-(ax/1.6)**2));if(p.clamp&&x<-8.5)z+=4;zt[i]=z;
+let a=sb*(1+(Math.random()-.5)*.1),v=false,f=false,zz=z+(Math.random()-.5)*noise*2;
+if(!p.tack&&ax<p.gap/2){a=.02+Math.random()*.03;v=true}else{
+if(s.laser<5){a=0;v=true}else if(e.dark&&Math.random()<Math.min(.9,(.45-S)*2.6)){a*=Math.random()*.4;v=true}
+if(p.shiny&&x>0&&x<5.5){a=Math.min(1,sb*(.35+Math.random()*1.1));if((e.spikes||e.sat)&&Math.random()<.22)zz+=(.6+Math.random()*2)*(Math.random()<.5?1:-1)}
+if(e.sat){a=Math.min(1,a*1.25);if(Math.random()<.05){zz+=(Math.random()-.5)*4;f=true}}}
+raw[i]=v?null:zz;str[i]=Math.min(1,a);vd[i]=v;fl[i]=f}
+const fz=raw.slice(),fv=vd.slice();
+for(let i=0;i<N;i++)if(fl[i]){fv[i]=true;fz[i]=null}
+if(e.flag)for(let i=0;i<N;i++){const ax=Math.abs(xs[i]);if(ax>=p.gap/2&&ax<p.gap/2+.75){fl[i]=true;fv[i]=true;fz[i]=null}}
+if(s.median>=2)for(let i=0;i<N;i++)if(fz[i]!=null)fz[i]=zt[i]+(Math.random()-.5)*noise*.8;
+if(e.mfill)for(let i=0;i<N;i++)if(vd[i]&&Math.abs(xs[i])<p.gap/2){fv[i]=false;fz[i]=zt[i]}
+let i=0;while(i<N){if(fv[i]){let j=i;while(j<N&&fv[j])j++;const len=j-i;if(len<=s.voidf&&i>0&&j<N){const a=fz[i-1]==null?0:fz[i-1],b=fz[j]==null?0:fz[j];for(let q=i;q<j;q++){fz[q]=a+(b-a)*(q-i+1)/(len+1);fv[q]=false}}i=j}else i++}
+const zmax=p.clamp?4.6:1,zmin=-(t+.5),zT=H*.16,zB=H*.6,sT=H*.67,sB=H*.95,ZY=z=>zT+(zmax-z)/(zmax-zmin)*(zB-zT),SY=a=>sB-a*(sB-sT);
+if(full)for(let q=0;q<N;q++){const x=xs[q];if((x<0&&-x>R-s.marginL)||(x>0&&x>R-s.marginR)){g.fillStyle='rgba(255,255,255,.13)';g.fillRect(X(q)-1,zT,Math.max(2,(Rr-L)/N+1),sB-zT)}}
+g.fillStyle='rgba(160,170,185,.1)';g.fillRect(L,ZY(.55),Rr-L,ZY(-.55)-ZY(.55));
+const path=(arr,col,lw,Y)=>{Y=Y||ZY;g.strokeStyle=col;g.lineWidth=lw;g.beginPath();let pen=false;for(let q=0;q<N;q++){if(arr[q]==null){pen=false;continue}const x=X(q),y=Y(arr[q]);pen?g.lineTo(x,y):g.moveTo(x,y);pen=true}g.stroke()};
+path(raw,full?'rgba(200,205,215,.35)':'#ff5a45',full?1:2);
+g.strokeStyle='#b46bff';g.lineWidth=1.5;for(let q=0;q<N;q++)if(fl[q]){g.beginPath();g.moveTo(X(q),zT);g.lineTo(X(q),sB);g.stroke()}
+if(full){path(fz,'#ff5a45',2.4);
+g.fillStyle='rgba(255,90,69,.35)';for(let q=0;q<N;q++)if(fv[q]&&(q===0||!fv[q-1])){let j=q;while(j<N&&fv[j])j++;if(j-q>=3){const x0=X(q),x1=X(j-1);g.fillRect(x0,ZY(.4),Math.max(3,x1-x0),ZY(-Math.min(t,3.2))-ZY(.4))}}
+const tick=(lim,col,dbl)=>{g.strokeStyle=col;g.lineWidth=2;for(let q=1;q<N;q++){const a=Math.abs(xs[q-1])-lim(xs[q-1]),b=Math.abs(xs[q])-lim(xs[q]);if(lim(xs[q])>0&&(a<0)!==(b<0)){const x=X(q);g.beginPath();g.moveTo(x,zT+4);g.lineTo(x,zB-4);if(dbl){g.moveTo(x+4,zT+4);g.lineTo(x+4,zB-4)}g.stroke()}}};
+if(s.padding>0)tick(()=>s.padding,'#ff9f43',false);
+if(s.rangeL>0||s.rangeR>0)tick(x=>{const rg=x<0?s.rangeL:s.rangeR;return rg>0?s.padding+rg:0},'#9ad0ff',true)}
+if(mode==='deriv'){const d1=[],d2=[];for(let q=1;q<N-1;q++){if(fz[q-1]==null||fz[q+1]==null||fz[q]==null){d1[q]=null;d2[q]=null;continue}d1[q]=(fz[q+1]-fz[q-1])/2;d2[q]=fz[q+1]-2*fz[q]+fz[q-1]}
+const mid=(sT+sB)/2,hh=(sB-sT)/2,sc=arr=>{let m=.05;for(const v of arr)if(v!=null)m=Math.max(m,Math.abs(v));return v=>mid-v/m*hh*.9};
+g.strokeStyle='rgba(255,255,255,.15)';g.beginPath();g.moveTo(L,mid);g.lineTo(Rr,mid);g.stroke();
+path(d1,'#4fc3ff',1.6,sc(d1));path(d2,'#ff7ad9',1.2,sc(d2));label(g,'1. derivált',L+4,sT-6,'#4fc3ff');label(g,'2. derivált',L+90,sT-6,'#ff7ad9')}
+else{g.setLineDash([5,5]);g.strokeStyle='rgba(243,178,31,.85)';g.lineWidth=1;g.beginPath();g.moveTo(L,SY(.35));g.lineTo(Rr,SY(.35));g.stroke();g.setLineDash([]);
+g.strokeStyle='#f2f4f7';g.lineWidth=mode==='raw'?2.2:1.6;g.beginPath();for(let q=0;q<N;q++){const y=SY(str[q]);q?g.lineTo(X(q),y):g.moveTo(X(q),y)}g.stroke();label(g,'jelerősség',L+4,sT-6)}
+if(full&&e.seam!=='red'){g.strokeStyle='#37d27a';g.lineWidth=2.5;for(const c0 of [90,270]){const ci=Math.max(0,Math.min(N-1,c0+(e.seam==='amb'?Math.round((Math.random()-.5)*50):0))),x=X(ci),y=ZY(zt[c0]);g.beginPath();g.moveTo(x-7,y-7);g.lineTo(x+7,y+7);g.moveTo(x+7,y-7);g.lineTo(x-7,y+7);g.stroke()}}
+if(p.clamp){const q=Math.round(N/2);label(g,'befogó',X(q),ZY(4.2),'#ffd9a8','center')}
+label(g,mode==='raw'?'nyers magasság':'Z magasság',L+4,zT-6)}
+function draw3D(cv,s,p,e){const c=prep(cv);if(!c)return;const{g,W,H}=c,t=p.t,k=Math.min(W/36,H/26),cx=W*.47,cy=H*.46,dx=.55*k,dy=-.3*k,P=(x,z,y)=>[cx+x*k+y*dx,cy-z*k+y*dy];
+const poly=(pts,fill,st)=>{g.beginPath();pts.forEach((q,i)=>{const[a,b]=P(...q);i?g.lineTo(a,b):g.moveTo(a,b)});g.closePath();g.fillStyle=fill;g.fill();if(st){g.strokeStyle=st;g.lineWidth=1;g.stroke()}};
+const br=p.bevel*Math.PI/180,eB=p.gap/2,eT=eB+(p.bevel?t*Math.tan(br):0),Y0=-11,Y1=11,found=e.seam!=='red'&&s.laser>=5;
+if(found){for(const sg of [-1,1]){const xo=sg*14,xt=sg*eT,xb=sg*eB;
+poly([[xo,0,Y0],[xt,0,Y0],[xt,0,Y1],[xo,0,Y1]],sg<0?'#6a727b':'#5a6169','#7d858e');
+poly([[xt,0,Y0],[xb,-t,Y0],[xb,-t,Y1],[xt,0,Y1]],'#3a4046','#59606a');
+poly([[xo,0,Y0],[xt,0,Y0],[xb,-t,Y0],[xo,-t,Y0]],'#2b2f34','#59606a')}
+if(p.clamp){poly([[-14,4,Y0],[-8.5,4,Y0],[-8.5,4,Y1],[-14,4,Y1]],'#8a6a45','#b38b5c');poly([[-14,0,Y0],[-8.5,0,Y0],[-8.5,4,Y0],[-14,4,Y0]],'#6b5234','#b38b5c')}
+if(p.tack)poly([[-1.6,-t*.45,-2],[1.6,-t*.45,-2],[1.6,-t*.45,2],[-1.6,-t*.45,2]],'#c9a24a')}
+const prof=x=>{const ax=Math.abs(x);if(p.clamp&&x<-8.5)return 4;if(!p.tack&&ax<eB)return null;if(p.bevel&&ax<eT)return-(eT-ax)/Math.tan(br)*(found?1:1);return 0};
+g.strokeStyle='#ff4a3a';g.lineWidth=2;g.beginPath();let pen=false;for(let i=0;i<=N;i++){const th=2*Math.PI*i/N,x=12*Math.cos(th),y=12*Math.sin(th),z=prof(x);if(z==null){pen=false;continue}const[a,b]=P(x,z,y);pen?g.lineTo(a,b):g.moveTo(a,b);pen=true}g.stroke();
+const cr=(x,z,col)=>{const[a,b]=P(x,z,0);g.strokeStyle=col;g.lineWidth=2.5;g.beginPath();g.moveTo(a-7,b-7);g.lineTo(a+7,b+7);g.moveTo(a+7,b-7);g.lineTo(a-7,b+7);g.stroke()};
+if(found){const j=e.seam==='amb'?(Math.random()-.5)*2:0;cr(-eT,0,'#f3d23a');cr(eT,0,'#f3d23a');cr(j,p.bevel?-t:0,'#37d27a');label(g,'zöld: követési pont · sárga: élek',12,H-12,'rgba(238,240,243,.8)')}
+else label(g,s.laser<5?'nincs szkennelés':'nincs modell – a varrat nincs felismerve',W/2,26,'#ffb4a8','center')}
+function drawPath(cv,sc,r,s){const c=prep(cv);if(!c||!r)return;const{g,W,H}=c;
+const hasGap=!!sc.gap,L=44,Rr=W-12,top=14,bot=hasGap?H*.6:H-30,s1=sc.L+40,X=s=>L+s/s1*(Rr-L);
+let lo=Infinity,hi=-Infinity;for(let s=0;s<=sc.L;s+=10){const y=sc.yT(s);lo=Math.min(lo,y);hi=Math.max(hi,y)}for(const t of r.tool){lo=Math.min(lo,t.y);hi=Math.max(hi,t.y)}
+const span=Math.max(6,hi-lo+2),mid=(lo+hi)/2,ymin=mid-span/2,ymax=mid+span/2,Y=y=>top+(ymax-y)/(ymax-ymin)*(bot-top);
+const zone=(a,b,t)=>{g.fillStyle='rgba(255,255,255,.07)';g.fillRect(X(a),top,X(b)-X(a),bot-top);label(g,t,(X(a)+X(b))/2,top+14,'rgba(238,240,243,.85)','center')};
+if(sc.tack)zone(sc.tack[0],sc.tack[1],'fűzés');if(sc.cross)zone(sc.cross[0],sc.cross[1],'kereszt');if(sc.end!=null){g.fillStyle='rgba(226,65,47,.1)';g.fillRect(X(sc.end),top,X(s1)-X(sc.end),bot-top);label(g,'nincs darab',(X(sc.end)+X(s1))/2,top+14,'#ffb4a8','center')}
+const stepY=span>14?5:span>7?2:1;g.strokeStyle='rgba(255,255,255,.07)';g.lineWidth=1;for(let y=Math.ceil(ymin/stepY)*stepY;y<=ymax;y+=stepY){g.beginPath();g.moveTo(L,Y(y));g.lineTo(Rr,Y(y));g.stroke();label(g,(y>0?'+':'')+y,L-6,Y(y)+4,'rgba(169,176,186,.9)','right')}
+for(let s=0;s<=300;s+=100)label(g,s+(s?'':' mm'),X(s),bot+18,'rgba(169,176,186,.9)','center');
+g.setLineDash([6,5]);g.strokeStyle='rgba(238,240,243,.55)';g.lineWidth=1.4;g.beginPath();for(let s=0;s<=sc.L;s+=2){const y=Y(sc.yT(s));s?g.lineTo(X(s),y):g.moveTo(X(s),y)}g.stroke();g.setLineDash([]);
+for(const v of r.scans){if(v.s>sc.L+40)continue;if(v.why==='end')continue;const y=Math.max(top,Math.min(bot,Y(v.y)));g.fillStyle=v.ok?'rgba(55,210,122,.9)':'#b46bff';g.fillRect(X(v.s)-1.5,y-1.5,3,3)}
+g.strokeStyle='#f3d23a';g.lineWidth=2.6;g.beginPath();r.tool.forEach((t,i)=>{const x=X(t.s),y=Y(t.y);i?g.lineTo(x,y):g.moveTo(x,y)});g.stroke();
+if(r.stop!=null){const t=r.tool[r.tool.length-1],x=X(r.stop),y=Y(t?t.y:0);g.strokeStyle='#e2412f';g.lineWidth=3;g.beginPath();g.moveTo(x-8,y-8);g.lineTo(x+8,y+8);g.moveTo(x+8,y-8);g.lineTo(x-8,y+8);g.stroke();label(g,'STOP '+r.stop+' mm',x,y-14,'#ffb4a8','center')}
+label(g,'haladási irány →',Rr,bot+18,'rgba(169,176,186,.9)','right');
+if(hasGap){const gT=H*.7,gB=H-26,GY=v=>gB-v/5*(gB-gT);g.fillStyle='rgba(255,255,255,.04)';g.fillRect(L,gT,Rr-L,gB-gT);
+g.setLineDash([4,4]);g.strokeStyle='#e2412f';g.lineWidth=1.4;g.beginPath();g.moveTo(L,GY(2.5));g.lineTo(Rr,GY(2.5));g.stroke();label(g,'2,5 mm: átég',Rr-4,GY(2.5)-5,'#ffb4a8','right');
+if(s.gapMax>0){g.strokeStyle='#f3b21f';g.beginPath();g.moveTo(L,GY(s.gapMax));g.lineTo(Rr,GY(s.gapMax));g.stroke();label(g,'Gap max',L+70,GY(s.gapMax)-5,'#f3d23a')}g.setLineDash([]);
+g.strokeStyle='#f2f4f7';g.lineWidth=1.8;g.beginPath();for(let s=0;s<=sc.L;s+=2){const y=GY(sc.gap(s));s?g.lineTo(X(s),y):g.moveTo(X(s),y)}g.stroke();label(g,'hézag',L+6,gT+16);
+if(r.stop!=null){g.strokeStyle='#e2412f';g.lineWidth=2;g.beginPath();g.moveTo(X(r.stop),gT);g.lineTo(X(r.stop),gB);g.stroke()}}}
+
+/* ---------- képernyő (ARC-EYE kezelőfelület) ---------- */
+const UI={
+sensor:{t:'sensor',tabs:{General:[
+{n:'Laser power',key:'laser',k:'slider',min:0,max:255,step:1,v:170,d:'Mennyire világítja meg a lézer a darabot. A kézikönyv szerint a szögtől és a felülettől függően kb. 40 és 255 között.',up:'a fehér jelerősség-vonal szakadozik vagy a küszöb körül mozog; sötét, reves, oxidos felületen; meredek szkennelési szögnél.',dn:'túlvezérelt a kép (tüskék, sok lila fröccsjel); fényes, csiszolt felületen.',tip:'Mindig ezzel kezdd, a gain előtt: 0-ról lassan fel, és közben nézd a Raw & Strength fület.'},
+{n:'Signal gain',key:'gain',k:'slider',min:0,max:100,step:1,v:0,d:'A jel erősítése, mint a fényképezőgépen az ISO. A zajt is ugyanúgy erősíti.',up:'a Laser power már magasan van, és a jel még mindig gyenge.',dn:'zajos a kép, a fröccsöt és a tükröződést is jelnek látja.',tip:'Kiindulás: 0. Csak kis lépésekben emeld.'},
+{n:'Signal offset',key:'offset',k:'slider',min:0,max:255,step:1,v:128,d:'A kép legsötétebb mintavételezett pontja. A kézikönyv szerint a szenzorzaj kiszűrésére való.',use:'a sötét háttérben zaj látszik ott, ahol nincs lézer. A kézikönyv nem írja meg, melyik irányba kell állítani: kis lépésekben próbáld, és figyeld a Raw & Strength fület.',tip:'Kiindulás: középállás (128).'},
+{n:'Signal threshold',k:'slider',min:0,max:65535,step:1,v:32767,d:'Ami e fölött van, azt veszi érvényes lézerjelnek.',up:'gyenge, hamis jeleket (szórt háttérfény) is lézernek vesz.',dn:'a valódi, de gyenge lézerjel is kiesik.',tip:'Hagyd alapon; előbb a Laser powerrel és a gainnel próbálkozz.'},
+{n:'Scan speed',key:'speed',k:'slider',min:1,max:12,step:.5,v:6.5,d:'Milyen gyorsan szkennel. Gyorsabb = sűrűbb adat, de rövidebb záridő, ezért sötétebb kép.',up:'sűrűbb adat kell a követéshez, és van elég fény.',dn:'sötét a kép, és a lézer meg a gain már nem elég.',tip:'Kiindulás: alapérték (6,5).'},
+{n:'Scan algorithm',key:'algo',k:'select',opts:['Strongest Peak','RAW debug'],v:0,d:'Hogyan dolgozza fel a képet.',use:'Strongest Peak: mindig ez a munkához, a kép legfényesebb részét elemzi. RAW debug: csak hibakereséshez, pixelenként mutatja a nyers jelet.'},
+{n:'Sub sampling',k:'select',opts:['Full'],v:0,d:'Al-pixeles számítás a finomabb felbontásért. Több adat, nagyobb terhelés az ipari PC-nek.',tip:'Hagyd Full-on. A többi opciót a kézikönyv nem írja le.'},
+{n:'Frame fill',k:'select',opts:['1 Frame','2 Frames','3 Frames'],v:1,d:'Ha belső időzítés miatt kimarad egy képkocka, a környezetéből pótolja.',tip:'Alapérték: 2 Frames. Nem kell állítani.'}],
+Advanced:[
+{n:'Signal filter',k:'select',opts:['Gaussian + Median → LO','Gaussian + Median → HI','Gaussian + Median → AVG','Sorban: Gaussian → Median','Sorban: Median → Gaussian'],v:0,d:'A két szűrő kapcsolása. Párhuzamosan mindkettő ad egy eredményt, és ezt vonja össze: LO = a kettő közül az alacsonyabb pont, HI = a magasabb, AVG = az átlag. Sorban: egymás után fut a kettő.',tip:'Hagyd párhuzamos LO-n (alapérték), hacsak nincs rá konkrét okod.'},
+{n:'Gaussian filter',key:'gauss',k:'slider',min:0,max:30,step:1,v:5,d:'Simítás: ennyi szomszéd pontot vesz figyelembe jobbra-balra.',up:'zajos, recés a vonal.',dn:'elmosódnak a részletek, a kis élek eltűnnek.',tip:'Kiindulás: 5.'},
+{n:'Median filter',key:'median',k:'slider',min:0,max:30,step:1,v:3,d:'Egyedi kiugró pontok (fröccs, közvetlen tükröződés) ellen: a szomszédok középső értékét veszi.',up:'egyedi tüskék vannak a profilban (fröccs, tükröződés).',dn:'a keskeny hézag eltűnik a szűrt (piros) vonalról.',tip:'Keskeny tompavarratnál 2–5. A kézikönyv példájában 10.'},
+{n:'Spatter filter',key:'spatter',k:'slider',min:0,max:255,step:1,v:160,d:'A folytonosság alapján dobja ki a nem odaillő pontokat. Kisebb érték = érzékenyebb szűrő.',up:'lila (fröccs) jelek vannak a varrat szélein, vagyis a valódi élt is kidobja.',dn:'sok fröccs marad a képen.',tip:'A kézikönyv példájában 80.'},
+{n:'Void filter',key:'voidf',k:'slider',min:0,max:100,step:1,v:4,d:'Ha egy pont nem mérhető vagy kiszűrték, „lyuk” lesz. Ez a beállítás adja meg, mekkora lyukat tölthet ki a környezetéből.',up:'apró kieső pontok maradnak, amik nem a varrat részei.',dn:'a hézag „befoltozódik”, és a piros vonal sík lesz.',tip:'A kézikönyv példájában 80. Hézagos varratnál a hézag mérete alá kell vinni.'},
+{n:'Max invalid',k:'slider',min:0,max:100,step:1,v:0,d:'A kitöltött (kitalált) pontokat szkennelésenként összeszámolja. Ennél több esetén a mérést megbízhatatlannak veszi. 0 = nincs ellenőrzés.',up:'(0 fölé) a job már működik, és nem akarod, hogy a nagyrészt kitöltött méréseket kövesse.',dn:'jó méréseket is eldob.',tip:'Kiindulás: 0.'},
+{n:'Derivative #1 filter',k:'dual',v:[50,50],d:'Az első derivált (lejtés) jele, ebből keresi az éleket. Bal csúszka: nyújt vagy tompít, jobb csúszka: simít.',tip:'Hagyd alapon. Akkor kell, ha egyik seam model sem ismeri fel a varratot, és egy derivált jelet követsz (Single Feature, a kézikönyv 16. gyakorlata).'},
+{n:'Derivative #2 filter',k:'dual',v:[50,50],d:'A második derivált (törés, sarok) jele. Bal csúszka: nyújt vagy tompít, jobb csúszka: simít.',tip:'Hagyd alapon.'}]}},
+seam:{t:'seam',tabs:{General:[
+{n:'Seam model',key:'group',k:'group',opts:['Weld Line','Weld Point','Single Feature'],v:0,d:'A varrattípus csoportja. Minden csoportban van egy alakkönyvtár.',use:'Weld Line: varratvonal követése vagy keresése. Weld Point: 3D sarok vagy varratvég keresése (a lézerkör legalább ¼-e lelóg a varratfelületről). Single Feature: ha egyik modell sem ismeri fel a varratot, egy derivált jelet követ.'},
+{n:'Alak (ikon)',key:'icon',k:'icons',v:1,d:'A csoporton belül azt az alakot válaszd, amelyik a darab keresztmetszetével egyezik.',use:'Mindig a valós darab szerint. Ha nem egyezik, a szoftver mindenáron a megadott alakot keresi, és vagy nem találja meg, vagy rosszat talál.'},
+{n:'Modelling method',k:'select2',opts:['3D','2D'],opts2:['Best Fit Angle'],v:[0,0],d:'Az első érték a modellezés módja (3D vagy 2D), a második a modellhez tartozó algoritmus.',tip:'Maradj 3D + Best Fit Angle-n. A többi algoritmust a kézikönyv nem írja le, ezekről a Valkot érdemes kérdezni.'},
+{n:'Plate bevel angle',key:'bevel',k:'pair',hdr:['Bal','Jobb'],v:[0,0],unit:'°',nocheck:true,d:'Élszög lemezenként (pl. V-varrat). Segít a ferde felületet kiszámolni, ha kevés rá a mérés.',use:'Mindig a rajz szerinti valós érték. Egyenes élnél 0. Ez nem „több vagy kevesebb” kérdés.'},
+{n:'Plate thickness',key:'thick',k:'pair',hdr:['Bal','Jobb'],v:[3,3],unit:'mm',nocheck:true,d:'Névleges lemezvastagság. Ebből számolja az élt és a hézagot, ha azokat nem tudja mérni.',use:'Mindig a valós vastagság.'},
+{n:'Position method',k:'select',opts:['Middle position'],v:0,d:'A lézer körbe forog, így körönként kétszer metszi a varratot. Ez dönti el, hogyan használja a két pontot.',tip:'Middle position. A többi opciót a kézikönyv nem írja le.'},
+{n:'Position location',k:'pos',v:[false,true,false,true],d:'Egy varratnak több jellemző pontja lehet. Mindegyik bepipált pont beszámít a varrat helyének kiszámításába.',tip:'Hagyd úgy, ahogy egy működő gyári jobban van.'}],
+Advanced:{'Modeling guard':[
+{n:'Tolerance',k:'pair',hdr:['Left','Right'],v:[1,1],ch:[true,true],unit:'%',d:'Egy szkennelés sosem illik 100%-ig a modellre (zaj, fröccs, sérült felület). A célzott tolerancia alapján többféleképp próbálja illeszteni a 3D modellt.',tip:'Kiindulás: 1%. A kézikönyv nem ad hangolási szabályt, csak indokolt esetben változtasd.'},
+{n:'Range',key:'range',k:'pair',hdr:['Left','Right'],v:[0,0],ch:[false,false],unit:'mm',d:'Ha be van kapcsolva, a felület modellezéséhez csak a Padding után ennyi mm adatot használ.',use:'befogó vagy szomszéd tárgy lóg a lézerkörbe: így csak a varrathoz közeli adatból számol felületet.',dn:'Túl kicsi érték: kevés adat marad a felülethez, bizonytalan lesz a modell.',tip:'Kiindulás: kikapcsolva.'},
+{n:'Padding',key:'padding',k:'pair',hdr:['Left','Right'],v:[0,0],ch:[false,false],unit:'mm',d:'A split-pont (varratközép) körül ennyi mm adatot kihagy a modellezésből.',up:'fűzés, gyökvarrat vagy előző réteg a varrat közepén elhúzza a modellt. Állítsd valamivel nagyobbra, mint a fűzés szárhossza.',dn:'túl kevés felület marad, bizonytalan lesz a modell.',tip:'Kiindulás: kikapcsolva vagy 0. A kézikönyv példájában 7 / 2 (sarokvarrat gyökvarrattal).'},
+{n:'Margin',key:'margin',k:'pair',hdr:['Left','Right'],v:[0,0],ch:[false,false],unit:'mm',d:'A lézerkör szélein ennyi mm adatot kihagy, de csak a split-pont keresésénél. A modellezésre nem hat, oda a Range kell.',up:'befogó vagy szomszéd él van a kör szélén, és a varratközepet ott keresi.',dn:'a Margin magát a varratot is kitakarja.',tip:'Kiindulás: 0. A kézikönyv példájában a befogó oldalán nagy Margin oldotta meg a hibát.'}],
+'Angular guard':[
+{n:'Lateral angle min',k:'pair',hdr:['Left','Right'],v:[-5,-5],ch:[true,true],unit:'°',d:'A felületek dőlésének alsó határa oldalanként, a szenzor nézési síkjához képest. A bal és jobb átlaga a hegesztési dőlésszög.',use:'Szűkítsd, ha ismered a pisztolyszöget és a darab helyzetét: így a hamis, rossz dőlésű felületet elveti.',dn:'Tágítsd, ha a valós dőlés (döntött pisztoly, ferde darab) kívül esik a határon, és emiatt a jó varratot is elveti.',tip:'A kézikönyv példájában ±5°.'},
+{n:'Lateral angle max',k:'pair',hdr:['Left','Right'],v:[5,5],ch:[true,true],unit:'°',d:'A felületek dőlésének felső határa oldalanként.',use:'Ugyanaz, mint a min: szűkítsd, ha ismered a pisztolyszöget.',dn:'Tágítsd, ha a jó varratot is elveti.'},
+{n:'Tangent angle',key:'tangent',k:'pair',hdr:['Min','Max'],v:[-10,10],ch:[true,true],unit:'°',d:'A varrat iránya a hegesztési koordinátarendszer függőleges (V) tengelye körül.',use:'Mindig állítsd be. Kereszteződésnél, éleknél kiszűri, ha a varrat iránya hirtelen elfordul.',dn:'Tágítsd, ha ívnél vagy zajos mérésnél sok jó mérést dob el (sok lila pont a Path Graph-on).',tip:'Kiindulás: −10 / +10°. Ennél sokkal szűkebbre ne vedd.'},
+{n:'Push angle',k:'pair',hdr:['Min','Max'],v:[0,0],ch:[false,false],unit:'°',d:'Elfordulás a hegesztési koordinátarendszer vízszintes (H) tengelye körül.',tip:'A kézikönyv nem ad rá ajánlást, általában kikapcsolva marad.'}],
+'Geometry guard':[
+{n:'Area',k:'pair',hdr:['Min','Max'],v:[0,0],ch:[false,false],unit:'mm²',d:'A varrat keresztmetszete a metszetnézetben. Ha nem mérhető (árnyékolás), a vastagságból becsüli.',use:'Ha számít a kitöltendő keresztmetszet, és határon kívül nem szabad hegeszteni.',tip:'Kiindulás: kikapcsolva.'},
+{n:'Gap',key:'gap',k:'pair',hdr:['Min','Max'],v:[0,2.5],ch:[false,true],unit:'mm',d:'A légrés a két lemez között. Határon kívül „plausible bad section”, és ha elég hosszú, megáll a folyamat.',use:'Max: állítsd a hegeszthető határ ALÁ, mert a megállás a Max blind miatt késik, közben a hézag tovább nő.',tip:'A kézikönyv példájában max 2,5 mm. A pontos értéket a hegesztési utasítás adja.'},
+{n:'Width',k:'pair',hdr:['Min','Max'],v:[0,45],ch:[false,true],unit:'mm',d:'Él-él távolság a két lemez között. Jó támpont a lengetés amplitúdójához.',use:'Max: ha a túl széles varratot már nem szabad hegeszteni.',tip:'A kézikönyv példájában max 45 mm.'},
+{n:'Mismatch',k:'pair',hdr:['Min','Max'],v:[0,0],ch:[false,false],unit:'mm',d:'Szintkülönbség a bal és jobb lemez között, előjellel (melyik a magasabb).',use:'Ha számít a lemezek elcsúszása, és határon túl meg kell állni.',tip:'Kiindulás: kikapcsolva.'}]}}},
+path:{t:'path',tabs:{General:[
+{n:'Path method',key:'method',k:'select',opts:['Calibration','Offset Gaussian-filtering','Offset Median-filtering','Fuzzy-logic path tracking','Linear path tracking','Circular path tracking','Polynomial path tracking'],v:4,d:'Ez dönti el, hogyan számolja a pályát a mérésekből.',use:'Linear: egyenes varrat, a legstabilabb. Circular: kör, ív. Polynomial: erősen változó alak, de nagyon érzékeny a rossz adatra. Offset Gaussian / Median: seam-find (állva mér). Calibration: csak kalibráláshoz. Fuzzy-logic: ne használd, kivezetik.'},
+{n:'Path ratio',key:'ratio',k:'pair',hdr:['mögötte','előtte'],v:[100,100],unit:'mm',nocheck:true,d:'Követésnél: ennyi mm mérést használ a pisztoly előtt és mögött a pálya számításához. Seam-findnál az első érték a felhasznált szkennek száma.',up:'zajos a mérés, rángat a pálya: nagyobb ablak = stabilabb.',dn:'ívnél, kanyarnál, gyorsan változó varratnál: kisebb ablak = gyorsabban reagál.',tip:'Kiindulás: 100 / 100 mm.'},
+{n:'Tack avoidance',k:'radio',opts:['Enabled','Disabled'],v:0,d:'Fűzéseket kerül el a pályaszámításban.',tip:'Hagyd Enabled-en. A kézikönyv nem ír arról, mikor kellene kikapcsolni.'},
+{n:'Interpolation delay',k:'slider',min:10,max:200,step:10,v:50,unit:'ms',d:'A követés ciklusideje.',tip:'Hagyd alapon (50 ms). A kézikönyv nem ad hangolási tanácsot.'},
+{n:'Max increment',key:'maxinc',k:'slider',min:.1,max:3,step:.1,v:1,unit:'mm',d:'Ciklusonként ennyit korrigálhat. Ez a követés agresszivitása. Seam-findnál az ezen kívüli mérés megállítja a programot.',up:'nem éri utol a varratot, lemarad (de 1,0 mm fölé soha).',dn:'rángat, minden kiugró mérést lekövet.',tip:'A kézikönyv szerint 0,5–1,0 mm, soha nem több 1,0-nál.'},
+{n:'Max blind',key:'maxblind',k:'slider',min:5,max:150,step:5,v:65,unit:'mm',d:'Ha a varratot nem ismeri fel, vagy egy szabály nem teljesül, az „bad section”. Ha ez hosszabb, mint a Max blind, megáll a folyamat.',up:'feleslegesen megáll fűzésnél vagy rövid takarásnál.',dn:'túl sokáig megy vakon, pl. a darab vége után vagy egy rossz szakaszon.',tip:'A kézikönyv példájában 65 mm.'},
+{n:'Ramp on blind',k:'pair',hdr:['mm','scans'],v:[2,25],nocheck:true,d:'Ezzel ismeri fel és hagyja ki a kiugró mérési eredményeket (rossz beállítás, fröccs, fűzés miatt).',tip:'Hagyd alapon (2,0 mm / 25 scans). A kézikönyv nem írja le a két érték hangolását, erről a Valkot érdemes kérdezni.'},
+{n:'Ramp overshoot',key:'overshoot',k:'slider',min:-50,max:50,step:5,v:10,unit:'mm',d:'Ha a rossz szakasz túllépi a Max blindot, ez dönti el, hol álljon meg hozzá képest. Negatív: előtte, pozitív: utána.',up:'(pozitív felé) a rossz szakasz elejét még be kell hegesztenie.',dn:'(negatív felé) a rossz szakasz előtt kell megállnia, pl. a darab végén vagy nyíló hézagnál.',tip:'A kézikönyv példájában 10 mm.'}],
+Advanced:[
+{n:'Position bias near',k:'xyz',v:[0,0,0],d:'Fix korrekció minden szkennadatra, mielőtt a pálya számolódna.',use:'Ha a mért pont nem az, ahová hegeszteni akarsz. A near és far különbségét a kézikönyv nem részletezi.'},
+{n:'Position bias far',k:'xyz',v:[0,0,0],d:'Fix korrekció, mint a near.',use:'Lásd: Position bias near.'},
+{n:'Rotation bias',k:'xyz',v:[0,0,0],d:'Fix szögkorrekció a mérésekre.',use:'Ha a mért orientáció tér el a kívánttól.'},
+{n:'On-the-fly bias',k:'arrows',d:'Varázspálca (középen): az aktuális mérést tanítja be nulla referenciának. Nyilak: tesztvarrat közben állítasz.',use:'Varázspálca: seam-findnál, ha a szenzor nem fér oda a jó mérési helyre (a kézikönyv 7. gyakorlata). Fel / le nyíl: a stick-out növelése vagy csökkentése. Jobbra / balra: oldalirányú eltolás a haladási irányhoz képest.'},
+{n:'save process job',k:'buttons',opts:['save process job'],d:'Elmenti a jobot. Minden beállítás után ne felejtsd el!'}]}},
+welding:{t:'welding',note:'A te gépeden van egy welding configuration menü is, de ez a Valk kézikönyvben (01-16-os verzió) nem szerepel, ezért nem tudom hitelesen leírni. Fotózd le a képernyőit, és felveszem ide.'},
+controller:{t:'controller',tabs:{General:[
+{n:'Tool active',k:'select',opts:['MIG-15mm Left','MIG-21mm'],v:0,d:'Melyik tool kalibrációjával számol az ARC-EYE. Követés közben ennek a toolnak a TCP-jét tartja a varraton.',use:'Mindig egyezzen a programban és a Panasonicban kalibrált TCP-vel. Ha nem egyezik, eltolva hegeszt, és orientációváltásnál az eltérés még nő is (a kézikönyv 8. gyakorlata).'},
+{n:'Unit sign',k:'xyzsel',v:['X+','Y+','Z+'],d:'A koordinátairányok előjele.',tip:'Telepítéskor állítják be, ne módosítsd. A kézikönyv nem részletezi.'},
+{n:'Unit resolution',k:'radio',opts:['0.1mm','0.01mm'],v:1,d:'A vezérlővel cserélt értékek felbontása.',tip:'Telepítéskor állítják be, ne módosítsd.'},
+{n:'Log messages',k:'checks',opts:['Offsets','Commands'],v:[false,false],d:'Naplózás hibakereséshez: az eltolásokat és a parancsokat írja fájlba.',use:'Ha a Valk hibakereséshez naplót kér. Normál munkához kikapcsolva.'},
+{n:'Log output filename',k:'text',v:'log.txt',d:'A naplófájl neve.'}],
+Advanced:{'Sensor Frame':[
+{n:'load / save tool data',k:'buttons',opts:['load tool data','save tool data'],d:'A kalibrációs adatok betöltése a merevlemezről, vagy mentése oda.'},
+{n:'Calibration results',k:'xyz2',d:'Az eredmény: Position X, Y, Z és Rotation X, Y, Z.'},
+{n:'CALIBRATE',k:'buttons',opts:['CALIBRATE','» (folytatás)'],d:'A szenzor beépítési helyzetének újrakalibrálása a kalibráló keresztlapon.',use:'Ha a REFERENCE job mérése több mint 1 mm összeltérést mutat. Előtte referáld a robotkart és a toolt. Közben a szervók legyenek bekapcsolva, és ne legyen rezgés. Utána mérj újra kézzel, és ha kb. 0, akkor Save Calibration.'}],
+'Tool Frame':[
+{n:'Tool Frame',k:'buttons',opts:['CALIBRATE'],d:'Az eredeti Frame Calibration korrekciós (kompenzációs) értékei.',use:'Ütközés után, ha a robot és a REFERENCE már rendben van, és csak kis maradék eltérés van.'}],
+'Frame Calibration':[
+{n:'Tool name',k:'text',v:'MIG-15mm Left',d:'A tool szöveges neve.'},
+{n:'Direction',k:'select',opts:['Left','Right'],v:0,d:'A szenzor a hegesztőpisztolyhoz képest melyik oldalon van felszerelve.',use:'A valós beépítés szerint.'},
+{n:'Position',k:'xyz',v:[78,0,0],d:'Hol van a szenzor a robot-toolhoz képest (mm).',tip:'Kalibrálással jön létre, kézzel ne írd át.'},
+{n:'Rotation',k:'xyz',v:[0,0,0],d:'Milyen szögben van a szenzor a robot-toolhoz képest.',tip:'Kalibrálással jön létre, kézzel ne írd át.'},
+{n:'Calibration',k:'buttons',opts:['CALIBRATE'],d:'Elindítja ennek a toolnak a Frame Calibration varázslóját.'}]}}},
+process:{t:'process',tabs:{General:[
+{n:'Job ID',key:'jobid',k:'text',v:'1',d:'A job száma. A robotprogram ezzel tölti be (LS-SET-JOB).'},
+{n:'Job description',key:'jobdesc',k:'text',v:'Tompa 3 mm',d:'Rövid név, hogy később megtaláld.'},
+{n:'Available groups',k:'list',opts:['1','I_CALIBRATION_I','Training'],v:2,d:'A csoportok. Ha a robotprogram tölti be (LS-SET-GROUP), a csoport neve csak szám lehet, vezető nulla nélkül.'},
+{n:'Available jobs',k:'list',opts:['10  T: Butt Narrow','11  T: Butt Narrow search'],v:0,d:'Az aktív csoport jobjai.'},
+{n:'load / save process job',k:'buttons',opts:['load process job','save process job'],d:'Betöltés: zöld = sikeres, piros = nincs kiválasztva job, vagy hibás a tartalma.',use:'Új job: Job ID + név, csoport kiválasztása, save. Kézi betöltés: csoport, job, load.'}]}},
+system:{t:'system',tabs:{General:[
+{n:'System / Version / License',k:'info',v:['CSS System','1.0.0.1','CSS-0004-…'],d:'A szoftver és a szenzor adatai.'},
+{n:'sensor connection',k:'buttons',opts:['sensor connection'],d:'Aktív ellenőrzés: ha zöld, a szenzor fizikailag csatlakozik és működik.',use:'Ha nem zöld, nyomd meg a kapcsolat felépítéséhez.'},
+{n:'controller connection',k:'buttons',opts:['controller connection'],d:'Passzív ellenőrzés: az ARC-EYE kész fogadni a robotot (szerverként várja). Hogy a robot tényleg ott van-e, azt a robot ellenőrzi induláskor és minden program elején.',use:'„CHECK THE CONNECTION WITH THE LASER SENSOR” hibánál: ha nem zöld, nyomd meg.'}]}}
+};
+const UIDEF=JSON.stringify(UI);
+let KEYS={};
+function buildKeys(){KEYS={};for(const pg of Object.values(UI)){if(!pg.tabs)continue;for(const t of Object.values(pg.tabs)){const arrs=Array.isArray(t)?[t]:Object.values(t);for(const a of arrs)for(const it of a)if(it.key)KEYS[it.key]=it}}}
+buildKeys();
+const AEMENU=[['sensor','<rect x="7" y="3" width="10" height="13" rx="1.5"/><path d="M9 16l-3 5h12l-3-5"/>'],['seam','<path d="M12 2v8M8 10h8M5 13l7 5 7-5M5 17l7 5 7-5"/>'],['path','<rect x="3" y="2" width="18" height="20" rx="1"/><path d="M10 4c5 3-5 6 0 9s0 5 0 7"/>'],['welding','<path d="M12 2v9M8 13l4-2 4 2M5 21l3-5M12 22v-7M19 21l-3-5"/>'],['controller','<path d="M4 21h9M8 21v-5l-3-5 6-6 5 3M11 5l3-3 3 3"/>']];
+const GT=[['raw','Raw & Strength'],['deriv','Derivatives'],['xyz','XYZ Graph'],['3d','3D Model'],['path','Path Graph'],['scope','Path Scope']];
+PSC.straight={seed:21,L:300,yT:s=>.006*s-.5,noise:.15,tn:2};
+const PARTS=[['Tompa 3 mm, 1,5 mm hézag',{},'straight'],['Tompa 3 mm, hézag nélkül',{gap:0},'straight'],['Tompa 3 mm, csiszolt sáv mellette',{shiny:true},'noise'],['Sötét, reves lemez',{r:.4},'straight'],['Befogó a bal oldalon',{clamp:true},'straight'],['V-varrat 30°, 6 mm, fűzéssel',{bevel:30,gap:1,t:6,tack:true},'blind'],['Kereszteződő varrat',{},'cross'],['Széthúzódó hézag',{},'gap'],['Íves varrat',{},'curve']];
+let scrP='sensor',scrT='General',scrS=null,scrOpen=true,scrGT='xyz',scrPart=0,scrScan=true,scrDlg=false,scrLast=null,scrRO=null,ITEMS=[];
+const TRACK=['Linear','Circular','Polynomial'];
+function simState(){const g=k=>KEYS[k],pr=(k,j)=>g(k).ch[j]?g(k).v[j]:0,s={...GOOD};
+s.laser=scrScan?Math.min(255,g('laser').v*Math.sqrt(6.5/Math.max(1,g('speed').v))):0;s.gain=g('gain').v;s.median=g('median').v;s.spatter=g('spatter').v;s.voidf=g('voidf').v;
+const ic=g('icon').v;s.model=g('group').v!==0?'X':ic<=1?'I':ic===2?'V':'H';s.bevelL=g('bevel').v[0];s.bevelR=g('bevel').v[1];
+s.rangeL=pr('range',0);s.rangeR=pr('range',1);s.padding=Math.min(pr('padding',0),pr('padding',1));s.marginL=pr('margin',0);s.marginR=pr('margin',1);
+const tg=g('tangent');s.tangent=(tg.ch[0]||tg.ch[1])?Math.max(Math.abs(tg.v[0]),Math.abs(tg.v[1])):0;s.gapMax=pr('gap',1);
+const M=g('method').opts[g('method').v].replace(' path tracking','');s.methodName=M;s.methodOk=TRACK.includes(M);s.method=s.methodOk?M:'Linear';
+s.prB=g('ratio').v[0];s.prA=g('ratio').v[1];s.maxInc=g('maxinc').v;s.maxBlind=g('maxblind').v;s.overshoot=g('overshoot').v;s.thick=g('thick').v;s.algo=g('algo').v;return s}
+function evalScr(s,p){const e=evalS(s,p);if(s.model==='X')e.hard.unshift('A Seam model csoport nem varratvonal-követéshez való – Weld Line kell.');
+if(s.algo===1)e.soft.push('RAW debug módban vagy – munkához Strongest Peak kell.');
+if(Math.abs(s.thick[0]-p.t)>1||Math.abs(s.thick[1]-p.t)>1)e.soft.push('A Plate thickness nem egyezik a darab vastagságával ('+p.t+' mm).');
+e.seam=e.hard.length?'red':e.soft.length?'amb':'grn';return e}
+function scrCompute(){const pt=PARTS[scrPart],p=scrMode==='task'?task.p:{...PART,...pt[1]},s=simState(),e=evalScr(s,p),sc0=scrMode==='task'?task.sc:PSC[pt[2]],sc={...sc0};
+if(e.seam==='red')sc.allBad=true;else if(e.seam==='amb'){sc.jump=(sc0.jump||0)+.12;sc.jA=Math.max(sc0.jA||1,1.5)}
+const r=simPath(sc,s);let ps='grn';if(!s.methodOk||r.stop!=null)ps='red';else if(r.maxErr>1||s.maxInc>1)ps='amb';
+scrLast={s,p,e,r,sc,ps};return scrLast}
+const WHY={tangent:'Angular guard: a varrat iránya a határon kívül',gap:'Geometry guard: a hézag nagyobb a Gap max-nál',tack:'nincs érvényes mérés (fűzés)',end:'nincs érvényes mérés (vége a darabnak)',seam:'a varrat nincs felismerve (seam status)'};
+function pathMsg(L){const{s,r}=L;if(!s.methodOk)return 'A Path method ('+s.methodName+') nem varratkövetéshez való. Követéshez Linear, Circular vagy Polynomial kell.';
+if(r.stop!=null){const b=r.scans.find(v=>!v.ok&&v.s<=r.stop+40);return 'A rossz szakasz hosszabb lett, mint a Max blind ('+s.maxBlind+' mm), ezért leállt '+r.stop+' mm-nél. Ok: '+(WHY[b?b.why:'end']||'rossz mérések')+'.'}
+if(s.maxInc>1)return 'A Max increment 1,0 mm felett van – a kézikönyv szerint soha ne legyen több.';
+if(r.maxErr>1)return 'A pálya helyenként több mint 1 mm-rel eltér a varrattól (max '+f2(r.maxErr)+' mm).';
+return 'A pálya rendben, végigkövette a varratot (max eltérés '+f2(r.maxErr)+' mm).'}
+function scrDraw(){const cv=$('#aecv');if(!cv||!scrLast)return;const L=scrLast;
+if(scrGT==='path')drawPath(cv,L.sc,L.r,L.s);
+else if(scrGT==='3d')draw3D(cv,L.s,L.p,L.e);
+else if(scrGT==='scope'){const c=prep(cv);if(!c)return;label(c.g,'Path Scope – a kézikönyv nem írja le, mit mutat, ezért itt nincs szimulálva.',c.W/2,c.H/2,'rgba(238,240,243,.8)','center')}
+else drawScan(cv,L.s,L.p,scrGT,L.e)}
+function scrSim(){scrCompute();scrDraw();const L=scrLast,dot=c=>`<span class="dot" style="background:${c};color:${c}"></span>`;
+const lm=$('#aelamps');if(lm)lm.innerHTML=`<button class="al" id="al-scan">${dot(scrScan?K.grn:'#5a6069')}<span>sensor scanning<small>${scrScan?'be':'ki · koppints'}</small></span></button><button class="al" id="al-seam">${dot(K[L.e.seam])}<span>seam status<small>${{grn:'felismerve',amb:'bizonytalan',red:'nincs meg'}[L.e.seam]} · koppints</small></span></button><button class="al" id="al-path">${dot(K[L.ps])}<span>path status<small>${L.r.stop!=null?'megállt '+L.r.stop+' mm':L.ps==='grn'?'követ':'figyelj'} · koppints</small></span></button>`;
+const inf=$('#aeinfo');if(inf){const ok=L.e.seam!=='red',p=L.p,br=p.bevel*Math.PI/180,area=p.gap*p.t+(p.bevel?p.t*p.t*Math.tan(br):0),n=v=>v.toFixed(2);
+inf.innerHTML=`<h4>Offsets</h4><div class="iv"><span>Position H</span><span>${ok?n(L.sc.yT(40)):'—'}</span></div><div class="iv"><span>Position V</span><span>${ok?'0.00':'—'}</span></div><h4>Additional</h4><div class="iv"><span>Area</span><span>${ok?n(area)+' mm²':'—'}</span></div><div class="iv"><span>Gap</span><span>${ok&&!p.tack?n(p.gap)+' mm':'—'}</span></div><h4>Job details</h4><div class="iv"><span>Active job</span><span>${KEYS.jobid.v} · ${KEYS.jobdesc.v}</span></div><p class="inote">Az értékek a szimulátorból jönnek.</p>`}
+if(scrDlg)showScrDlg(scrDlg)}
+function showScrDlg(which){scrDlg=which;const L=scrLast,msg=which==='path'?pathMsg(L):(L.e.hard[0]||L.e.soft[0]||'Minden feltétel teljesül, a varrat felismerve.');
+$('#aedlg').innerHTML=`<div class="aedlg" role="dialog" aria-label="Scan Analysis summary"><div class="aedh">${which==='path'?'Path Analysis summary':'Scan Analysis summary'}<button id="aeok2" aria-label="bezárás">×</button></div><p>${msg}</p><div class="aedf"><button class="aeokb" id="aeok">OK</button></div></div>`}
+function scrItems(){const pg=UI[scrP];if(!pg.tabs)return null;const t=pg.tabs[scrT];if(Array.isArray(t))return t;if(!scrS||!t[scrS])scrS=Object.keys(t)[0];return t[scrS]}
+function nb(v){return typeof v==='number'?(Math.round(v*100)/100).toString():v}
+const ICONS=[['I alátéttel','<rect x="5" y="16" width="23" height="14"/><rect x="32" y="16" width="23" height="14"/><rect x="12" y="31" width="36" height="4"/>'],['I-varrat','<rect x="5" y="16" width="23" height="18"/><rect x="32" y="16" width="23" height="18"/>'],['V-varrat','<polygon points="5,16 24,16 28,34 5,34"/><polygon points="36,16 55,16 55,34 32,34"/>'],['fél-V (bal)','<polygon points="5,16 23,16 28,34 5,34"/><rect x="31" y="16" width="24" height="18"/>'],['fél-V (jobb)','<rect x="5" y="16" width="24" height="18"/><polygon points="37,16 55,16 55,34 32,34"/>']];
+function ctlScr(it,i){const id=`data-ui="${i}"`,num=v=>typeof v==='number'?v.toFixed(2):v;switch(it.k){
+case 'slider':return `<input type="range" ${id} min="${it.min}" max="${it.max}" step="${it.step}" value="${it.v}" aria-label="${it.n}"><span class="vb" id="vb${i}">${nb(it.v)}${it.unit?' '+it.unit:''}</span>`;
+case 'dual':return it.v.map((v,j)=>`<input type="range" ${id} data-j="${j}" min="0" max="100" value="${v}" aria-label="${it.n} ${j?'jobb':'bal'}">`).join('');
+case 'select':case 'group':return `<select ${id} aria-label="${it.n}">${it.opts.map((o,j)=>`<option value="${j}"${j===it.v?' selected':''}>${o}</option>`).join('')}</select>`;
+case 'select2':return `<select class="sm" ${id} data-j="0" aria-label="${it.n}">${it.opts.map((o,j)=>`<option value="${j}"${j===it.v[0]?' selected':''}>${o}</option>`).join('')}</select><select ${id} data-j="1" aria-label="${it.n} algoritmus">${it.opts2.map((o,j)=>`<option value="${j}"${j===it.v[1]?' selected':''}>${o}</option>`).join('')}</select>`;
+case 'pair':return `<div class="pairg">${it.v.map((v,j)=>`<label class="pc"><span>${it.hdr[j]}</span><input type="number" ${id} data-j="${j}" value="${num(v)}" step="any">${it.unit?`<em>${it.unit}</em>`:''}${it.nocheck?'':`<input type="checkbox" ${id} data-c="${j}"${it.ch[j]?' checked':''} aria-label="${it.hdr[j]} bekapcsolva">`}</label>`).join('')}</div>`;
+case 'xyz':return `<div class="pairg">${['X','Y','Z'].map((a,j)=>`<label class="pc"><span>${a}</span><input type="number" ${id} data-j="${j}" value="${num(it.v[j])}" step="any"></label>`).join('')}</div>`;
+case 'xyz2':return `<div class="pairg">${['Pos X','Pos Y','Pos Z','Rot X','Rot Y','Rot Z'].map(a=>`<label class="pc"><span>${a}</span><span class="vb">0.00</span></label>`).join('')}</div>`;
+case 'xyzsel':return `<div class="pairg">${['X','Y','Z'].map((a,j)=>`<select class="sm" ${id} data-j="${j}" aria-label="${a}">${[a+'+',a+'−'].map(o=>`<option${o===it.v[j]?' selected':''}>${o}</option>`).join('')}</select>`).join('')}</div>`;
+case 'radio':return it.opts.map((o,j)=>`<label class="rc"><input type="radio" name="r${i}" ${id} value="${j}"${j===it.v?' checked':''}> ${o}</label>`).join('');
+case 'checks':return it.opts.map((o,j)=>`<label class="rc"><input type="checkbox" ${id} data-c="${j}"${it.v[j]?' checked':''}> ${o}</label>`).join('');
+case 'text':return `<input type="text" ${id} value="${it.v}" aria-label="${it.n}">`;
+case 'list':return `<div class="lst">${it.opts.map((o,j)=>`<button class="li${j===it.v?' on':''}" data-uil="${i}" data-j="${j}">${o}</button>`).join('')}</div>`;
+case 'info':return `<div class="pairg">${it.v.map(v=>`<span class="vb">${v}</span>`).join('')}</div>`;
+case 'buttons':return it.opts.map(o=>`<button class="sbtn" data-uib="${o}">${o}</button>`).join('');
+case 'icons':return `<div class="icg">${ICONS.map((c,j)=>`<button class="ic${j===it.v?' on':''}" data-uii="${i}" data-j="${j}" aria-label="${c[0]}" title="${c[0]}"><svg viewBox="0 0 60 38"><line x1="30" y1="2" x2="30" y2="12"/>${c[1]}</svg></button>`).join('')}</div><span class="icn">${ICONS[it.v][0]}</span>`;
+case 'pos':return `<div class="posg">${[0,1,2,3].map(j=>`<input type="checkbox" ${id} data-c="${j}"${it.v[j]?' checked':''} aria-label="pont ${j+1}">`).join('')}</div>`;
+case 'arrows':return `<div class="arw"><span></span><button class="sbtn" data-uib="fel">↑</button><span></span><button class="sbtn" data-uib="balra">←</button><button class="sbtn" data-uib="varázspálca">✳</button><button class="sbtn" data-uib="jobbra">→</button><span></span><button class="sbtn" data-uib="le">↓</button><span></span></div>`}return ''}
+function helpScr(it){const L=[];if(it.up)L.push(['up','Emeld, ha',it.up]);if(it.dn)L.push(['dn',it.up?'Vedd lejjebb, ha':'Figyelj',it.dn]);if(it.use)L.push(['use','Használd így',it.use]);if(it.tip)L.push(['tip','Tipp',it.tip]);if(!L.length)return '';return `<details class="ah"><summary>Mikor állítsd?</summary>${L.map(l=>`<p class="${l[0]}"><b>${l[1]}:</b> ${l[2]}</p>`).join('')}</details>`}
+const PIC={...Object.fromEntries(AEMENU),process:'<circle cx="9" cy="9" r="4.5"/><circle cx="16.5" cy="16" r="3.5"/>',system:'<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/>'};
+function panelHTML(){const pg=UI[scrP],ic=`<svg viewBox="0 0 24 24">${PIC[scrP]||''}</svg>`;
+const head=(tabs)=>`<div class="aeph"><div class="aept">${ic}<span><b>${pg.t}</b><small>configuration</small></span></div><div class="aehr"><div class="aeic"><button class="aei" data-uib="varázspálca" aria-label="varázspálca">✳</button><button class="aei" data-uib="súgó" aria-label="súgó">?</button><button class="aei" id="aeclose" aria-label="panel bezárása">×</button></div>${tabs||''}</div></div>`;
+if(!pg.tabs)return head('')+`<div class="aepb" id="aepb"><p class="ad big">${pg.note}</p></div>`;
+const tabs=Object.keys(pg.tabs);if(!tabs.includes(scrT))scrT=tabs[0];const tv=pg.tabs[scrT],subs=Array.isArray(tv)?null:Object.keys(tv),its=scrItems();ITEMS=[];
+return head(`<div class="aetabs">${tabs.map(t=>`<button class="atab${t===scrT?' on':''}" data-stab="${t}">${t}</button>`).join('')}</div>`)+(subs?`<div class="asub">${subs.map(s=>`<button class="asb${s===scrS?' on':''}" data-ssub="${s}">${s}</button>`).join('')}</div>`:'')+
+`<div class="aepb" id="aepb">${its.map((it,i)=>{ITEMS.push(it);return `<div class="ar"><div class="arl"><span class="an">${it.n}</span><div class="ac">${ctlScr(it,i)}</div></div><p class="ad">${it.d}</p>${helpScr(it)}</div>`}).join('')}</div>`}
+function rPanel(){const r=$('#aeright');if(!r)return;if(!scrOpen){r.className='aeinfo';r.id='aeright';r.innerHTML='<div id="aeinfo"></div>';return}const pb=$('#aepb'),st=pb?pb.scrollTop:0;r.className='aepanel';r.innerHTML=panelHTML();const nb2=$('#aepb');if(nb2)nb2.scrollTop=st}
+function rGT(){const t=$('#aegt');if(t)t.innerHTML=GT.map(x=>`<button class="gt${x[0]===scrGT?' on':''}" data-gt="${x[0]}">${x[1]}</button>`).join('')}
+function rScr(){const v=$(scrMode==='task'?'#v-eles':'#v-kepernyo');scrDlg=false;
+v.innerHTML=(scrMode==='task'?taskTop():`<h1>ARC-EYE képernyő</h1><p class="intro">Ugyanaz a felépítés, mint a gépen. Fent a menük, balra az élő kép, jobbra a beállítópanel. Amit a panelen állítasz, az azonnal látszik a bal oldali képen és a három lámpán. Minden beállítás alatt ott van, mit csinál, és a „Mikor állítsd?” részben, hogy mikor emeld, mikor vedd lejjebb.</p>
+<div class="aectl"><label for="aepart">Darab az asztalon</label><select id="aepart">${PARTS.map((x,i)=>`<option value="${i}"${i===scrPart?' selected':''}>${x[0]}</option>`).join('')}</select><button class="btn" id="sreset">Kiinduló értékek vissza</button></div>`)+`
+<div class="ae"><div class="aetop">${AEMENU.map(m=>`<button class="aem${scrOpen&&scrP===m[0]?' on':''}" data-scr="${m[0]}"><svg viewBox="0 0 24 24">${m[1]}</svg><span><b>${m[0]}</b><small>configuration</small></span></button>`).join('')}<button class="aem cog${scrOpen&&scrP==='process'?' on':''}" data-scr="process" aria-label="process configuration"><svg viewBox="0 0 24 24">${PIC.process}</svg></button></div>
+<div class="aebody${scrOpen?' open':''}"><div class="aeleft"><div class="aegt" id="aegt"></div><div class="aecv"><canvas id="aecv" aria-label="élő kép (szimuláció)"></canvas><div id="aedlg"></div></div><div class="aelamps" id="aelamps"></div></div><div id="aeright"></div></div>
+<div class="aered"><button class="sysb" data-scr="system">system configuration</button><div class="logo">arc<i></i>eye<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 6l6 6-6 6-6-6z"/></svg></div></div></div>
+${scrMode==='task'?'<div id="tres"></div>':''}<p class="note">Szimuláció: leegyszerűsített tanulómodell a Valk kézikönyv és a saját mérések alapján, a valódi géphez nem kapcsolódik. A kiinduló értékek a gyakorló darabhoz vannak beállítva. A welding configuration menü a kézikönyvben nem szerepel.</p>`;
+rGT();rPanel();const cv=$('#aecv');if(scrRO)scrRO.disconnect();scrRO=new ResizeObserver(scrDraw);scrRO.observe(cv.parentElement);scrSim()}
+setInterval(()=>{const v=$(scrMode==='task'?'#v-eles':'#v-kepernyo');if(!v||v.classList.contains('hide')||!scrScan||scrGT==='path'||scrGT==='scope'||RM)return;scrDraw()},160);
+
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function genTaskData(){const joint=Math.random()<.5?'I':'V',p={...PART};
+p.t=joint==='I'?pick([3,4,5]):pick([6,8,10]);p.bevel=joint==='V'?pick([25,30,35]):0;p.gap=joint==='I'?pick([1,1.5]):pick([.5,1]);
+const surf=pick(['normál','normál','sötét','csiszolt']);p.r=surf==='sötét'?.4:.8;p.shiny=surf==='csiszolt';
+p.clamp=Math.random()<.35;p.tack=joint==='V'&&Math.random()<.6;
+const shape=pick(['egyenes','egyenes','íves','kereszt','nyíló']);if(shape==='nyíló')p.gap=1;
+const sc={seed:{egyenes:21,íves:14,kereszt:11,nyíló:12}[shape]+(p.shiny?7:0),L:300,yT:shape==='íves'?PSC.curve.yT:(s=>.006*s-.5),noise:p.shiny?.45:.15,tn:2};
+if(p.shiny){sc.jump=.04;sc.jA=1.5}if(shape==='kereszt')sc.cross=[140,166];const g0=p.gap;sc.gap=shape==='nyíló'?(s=>1+(s>170?(s-170)*.025:0)):(()=>g0);if(p.tack)sc.tack=[100,126];
+return{p,sc,shape,surf,joint,tries:0,hints:0,done:false,res:null}}
+function idealS(t){const p=t.p,s={...GOOD};s.laser=p.r<.6?255:170;s.gain=p.r<.6?10:0;s.median=3;s.spatter=160;s.voidf=Math.max(0,Math.min(4,gapPts(p.gap)-1));s.model=p.bevel?'V':'I';s.bevelL=s.bevelR=p.bevel;s.thick=[p.t,p.t];s.algo=0;s.marginL=p.clamp?5:0;s.marginR=0;s.rangeL=p.clamp?5:0;s.rangeR=0;s.padding=p.tack?2:0;s.tangent=10;s.gapMax=t.shape==='nyíló'?1.6:2.5;s.method=t.shape==='íves'?'Circular':'Linear';s.methodName=s.method;s.methodOk=true;s.prB=s.prA=100;s.maxInc=1;s.maxBlind=65;s.overshoot=10;return s}
+function checkItems(t,s){const p=t.p,e=evalScr(s,p),I=idealS(t),face=p.bevel?p.gap/2+p.t*Math.tan(p.bevel*Math.PI/180):12,run=o=>simPath(t.sc,{...I,gapMax:0,...o}),
+r1=run({method:s.method,prB:s.prB,prA:s.prA}),r2=run({tangent:s.tangent}),r3=simPath(t.sc,{...I,gapMax:s.gapMax}),r4=run({maxBlind:s.maxBlind,overshoot:s.overshoot}),gs=r=>t.sc.gap(r.stop!=null?r.stop:300);
+return[
+['sensor','Laser power, Signal gain',!e.dark&&!e.sat,p.r<.6?'Sötét, reves felület: Laser power 255, utána Signal gain kb. 10.':p.shiny?'Csiszolt sáv: Signal gain 0, Laser power kb. 150–180.':'Laser power kb. 150–200, Signal gain 0.','Rossz képből semmi sem lesz jó.'],
+['sensor','Scan algorithm',s.algo===0,'Strongest Peak.','A RAW debug csak hibakereséshez való.'],
+['sensor','Median filter',!e.mfill&&!e.spikes,p.shiny?'2–5: a csiszolt sáv tüskéi miatt kell egy kicsi, de ne több.':'2–5.','A nagy Median a keskeny hézagot is eltünteti.'],
+['sensor','Spatter filter',!e.flag,'Emeld (pl. 160), hogy a hézag széleit ne nézze fröccsnek.','Kisebb érték = érzékenyebb szűrő.'],
+['sensor','Void filter',!e.vfill,'A hézag mérete alá, itt legfeljebb '+I.voidf+'.','A nagy Void befoltozza a hézagot.'],
+['seam','Seam model',s.model===I.model,(p.bevel?'V-varrat':'I-varrat')+' ikon (Weld Line csoport).','A szoftver azt keresi, amit megadsz.'],
+['seam','Plate bevel angle',Math.abs(s.bevelL-p.bevel)<=5&&Math.abs(s.bevelR-p.bevel)<=5,p.bevel+'° / '+p.bevel+'°, a munkalap szerint, lemezenként.','Ebből számolja a ferde felületet.'],
+['seam','Plate thickness',Math.abs(s.thick[0]-p.t)<=.5&&Math.abs(s.thick[1]-p.t)<=.5,p.t+' / '+p.t+' mm.','Ebből számol élt és hézagot, ha nem mérhető.'],
+['seam','Margin, Range',p.clamp?(s.marginL>=3.5&&s.marginL<=10&&s.rangeL>=1.5&&s.padding+s.rangeL<=8.5):(s.marginL<=10&&s.marginR<=10&&!(s.rangeL>0&&s.rangeL<1.5)&&!(s.rangeR>0&&s.rangeR<1.5)),p.clamp?'Bal Margin kb. 4–6 mm (a befogót kizárja a keresésből), és bal Range kb. 4–6 mm (a modellezésből).':'Nincs befogó: Margin 0, Range kikapcsolva.','A Margin a varratközép keresésére, a Range a felület modellezésére hat.'],
+['seam','Padding',p.tack?(s.padding>=1.8&&s.padding<=face-.5):s.padding<=face-.5,p.tack?'Kicsit nagyobb a fűzésnél: kb. 2 mm, mindkét oldalon bekapcsolva.':'Nincs fűzés: kikapcsolva.','A fűzés pontjai elhúzzák a modellt; a túl nagy Padding az adatot is elveszi.'],
+['seam','Tangent angle',s.tangent>0&&r2.rej<.25&&r2.maxErr<=.8,'Bekapcsolva, kb. −10 / +10°.','Kereszteződésnél és éleknél véd; túl szűken a jó méréseket is eldobja.'],
+['seam','Gap max',s.gapMax>0&&(t.shape==='nyíló'?(r3.stop!=null&&gs(r3)<=2.5&&gs(r3)>=1.4):(r3.stop==null&&s.gapMax<=2.5)),t.shape==='nyíló'?'Bekapcsolva, jóval 2,5 mm alatt (kb. 1,5–1,8 mm), mert a megállás a Max blind miatt késik.':'Bekapcsolva: nagyobb a mostani hézagnál, de legfeljebb 2,5 mm.','A munkalap szerint 2,5 mm felett átég.'],
+['path','Path method, Path ratio',s.methodOk&&r1.maxErr<=(t.shape==='íves'?(p.shiny?.56:.3):.45),t.shape==='íves'?'Circular path tracking (ív).':'Linear path tracking, Path ratio 100 / 100.','Egyenesre Linear, ívre Circular; a Polynomial a zajt is lekövetheti.'],
+['path','Max increment',s.maxInc>=.5&&s.maxInc<=1,'0,5–1,0 mm.','Soha ne legyen 1,0 mm felett.'],
+['path','Max blind, Ramp overshoot',r4.stop==null&&s.maxBlind>=30&&s.maxBlind<=120,p.tack?'Nagyobb a fűzésnél, pl. 65 mm.':'Kb. 65 mm.',p.tack?'Különben minden fűzésnél megáll.':'Ennél hosszabb rossz szakasznál áll meg.']].map(x=>({m:x[0],n:x[1],ok:x[2],fix:x[3],why:x[4]}))}
+/* ---------- éles feladat ---------- */
+let task=null,scrMode='free';const uiStates={free:null,task:null};
+function swapUI(js){const f=JSON.parse(js);for(const k in f)UI[k]=f[k];buildKeys()}
+function scrEnter(mode){if(scrMode!==mode){uiStates[scrMode]=JSON.stringify(UI);swapUI(uiStates[mode]||UIDEF);scrMode=mode}$(mode==='task'?'#v-kepernyo':'#v-eles').innerHTML='';if(mode==='task'&&!task)newTask();else rScr()}
+function newTask(){task=genTaskData();const p=task.p;swapUI(UIDEF);const K=KEYS,k=p.tack?0:gapPts(p.gap);
+const F=[['laser',()=>{K.laser.v=40}],['gain',()=>{K.gain.v=90;K.laser.v=220}],['median',()=>{K.median.v=14},!p.bevel],['spatter',()=>{K.spatter.v=50},k>0],['void',()=>{K.voidf.v=60},!p.bevel],['algo',()=>{K.algo.v=1}],['tangent',()=>{K.tangent.ch=[false,false]}],['gapoff',()=>{K.gap.ch[1]=false}],['gaphigh',()=>{K.gap.v[1]=4}],['offset',()=>{K.method.v=2}],['poly',()=>{K.method.v=6},p.shiny],['maxinc',()=>{K.maxinc.v=2.5}],['blind',()=>{K.maxblind.v=15},!!p.tack],['bevel',()=>{K.bevel.v=[20,20]},!p.bevel]];
+const EX=[['laser','gain'],['gapoff','gaphigh'],['offset','poly']],n=2+Math.floor(Math.random()*2),got=[];
+for(const f of shuffle(F)){if(got.length>=n)break;if(f[2]===false)continue;if(EX.some(g=>g.includes(f[0])&&g.some(x=>got.includes(x))))continue;got.push(f[0]);f[1]()}
+task.faults=got;scrPart=0;rScr()}
+function sheetHTML(){const t=task,p=t.p,R=[['Anyag','szénacél, lézervágott élek'],['Lemezvastagság',p.t+' mm'],['Varrat',p.bevel?`V-tompavarrat, élszög lemezenként ${p.bevel}°`:'I-tompavarrat (egyenes élek)'],['Hézag',t.shape==='nyíló'?'1 mm az elején; a lemezek a varrat második felében széthúzódhatnak':String(p.gap).replace('.',',')+' mm'],['Felület',{normál:'normál',sötét:'sötét, reves',csiszolt:'a varrat mellett frissen csiszolt, fényes sáv'}[t.surf]],['Befogás',p.clamp?'nagy befogó a varrat bal oldalán, belelóg a lézerkörbe':'normál, nem lóg be a lézerkörbe'],['Fűzés',p.tack?'gyökfűzések, kb. 25 mm hosszúak, kb. 3 mm szélesek':'csak a két végén, a varraton kívül'],['Varrat alakja',{egyenes:'egyenes',íves:'íves (kb. R800 mm)',kereszt:'egyenes, a közepén egy másik varrat keresztezi',nyíló:'egyenes'}[t.shape]],['Hegesztési utasítás','max. hézag 2,5 mm, felette átég']];
+return `<div class="sheet"><div class="shh">Munkalap · ${p.bevel?'V':'I'}-tompavarrat ${p.t} mm</div><dl>${R.map(r=>`<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl><p class="shn">A betöltött jobban az előző műszak elállított pár dolgot. Nézd végig mindhárom menüt (sensor, seam, path).</p></div>`}
+function taskTop(){return `<h1>Éles feladat</h1><p class="intro">Véletlen darab és egy elrontott job. Olvasd el a munkalapot, állítsd be az ARC-EYE-t a képernyőn, aztán indítsd a próbahegesztést. Minden beállítást külön kiértékelek.</p>${sheetHTML()}<div class="aectl"><button class="btn pri" id="tweld">Próbahegesztés</button><button class="btn" id="thint">Hol van még hiba? (−5 XP)</button><button class="btn" id="tnew">Új feladat</button></div><div id="thout"></div>`}
+function taskWeld(){const it=checkItems(task,simState()),bad=it.filter(x=>!x.ok);task.tries++;
+if(!bad.length&&!task.done){task.done=true;const xp=Math.max(20,60-(task.tries-1)*10-task.hints*5);P.tasks=(P.tasks||0)+1;addXP(xp);task.xp=xp}
+const grp=[['sensor','sensor configuration'],['seam','seam configuration'],['path','path configuration']];
+$('#tres').innerHTML=`<div class="pane ${bad.length?'':'win'}"><h3>${bad.length?`Próbahegesztés: ${it.length-bad.length} / ${it.length} beállítás rendben`:'Szép varrat! Minden beállítás rendben.'}</h3>${bad.length?'<p class="m">A pirosakat javítsd ki, aztán próbáld újra. Minden kör egy kis XP-be kerül.</p>':`<p>+${task.xp||0} XP. Eddig ${P.tasks} feladat kész.</p>`}
+${grp.map(g=>`<h4 class="rgh">${g[1]}</h4>${it.filter(x=>x.m===g[0]).map(x=>`<div class="cr ${x.ok?'y':'n'}"><span class="ci">${x.ok?'✓':'✗'}</span><span>${x.n}${x.ok?'':`<small><b>Helyesen:</b> ${x.fix}<br><b>Miért:</b> ${x.why}</small>`}</span></div>`).join('')}`).join('')}
+<div class="acts"><button class="btn pri" id="tnew">Új feladat</button></div></div>`;$('#tres').scrollIntoView({block:'nearest'})}
+function taskHint(){const it=checkItems(task,simState()),c={sensor:0,seam:0,path:0};it.forEach(x=>{if(!x.ok)c[x.m]++});task.hints++;
+$('#thout').innerHTML=`<p class="hint">Még hibás: <b>sensor ${c.sensor}</b> · <b>seam ${c.seam}</b> · <b>path ${c.path}</b>${c.sensor+c.seam+c.path?'':' – mehet a próbahegesztés!'}</p>`}
+/* ---------- beállítás-iskola ---------- */
+const UD=['Emeld','Vedd lejjebb','Ne nyúlj hozzá'];
+const CARDS=[
+{id:'laser',g:'sensor',n:'Laser power',menu:'sensor configuration → General',what:'Mennyire erős a lézer fénye. Ettől lesz világos vagy sötét a kép, mint a vaku a fényképezőgépen.',type:'scan',part:{},base:{},ctl:{key:'laser',min:0,max:255,step:1,start:30},look:'Húzd a csúszkát, és figyeld a fehér vonalat (jelerősség). A sárga szaggatott küszöb fölött legyen, de ne ugráljon össze-vissza.',
+qs:[['Sötét, reves lemez. A fehér vonal szakadozik, a küszöb alatt jár.',0,'Kevés fény jön vissza, több lézer kell.'],['Frissen csiszolt, fényes sáv. Tüskék és sok lila jel a képen.',1,'A fényes felület túl sok fényt ver vissza, a kép túlvezérelt.'],['A jel tiszta, folyamatos, a seam status zöld.',2,'Ami működik, ahhoz ne nyúlj.']]},
+{id:'gain',g:'sensor',n:'Signal gain',menu:'sensor configuration → General',what:'A jel erősítése, mint az ISO. A zajt is ugyanúgy erősíti, ezért csak végső esetben.',type:'scan',part:{r:.4},base:{laser:255},ctl:{key:'gain',min:0,max:100,step:1,start:0},look:'Itt a lézer már maximumon van egy sötét lemezen, mégis kevés a jel. Emeld óvatosan a gaint, és nézd, mikor lesz túl sok.',
+qs:[['A Laser power 255-ön, a jel még mindig gyenge.',0,'Ha a lézer már a plafonon van, jöhet egy kis gain.'],['A Laser power 90-en, a jel gyenge.',1,'Előbb mindig a lézert emeld, mert a gain a zajt is erősíti.',['Signal gain fel','Laser power fel','Mindkettő maximumra']],['Zajos, ugráló kép, a gain 60-on.',1,'Túlerősítés: a fröccsöt és a tükröződést is jelnek látja.']]},
+{id:'speed',g:'sensor',n:'Scan speed',menu:'sensor configuration → General',what:'Milyen gyorsan szkennel. Lassabb = hosszabb záridő = világosabb kép, gyorsabb = sűrűbb adat, de sötétebb kép.',type:'scan',part:{},base:{laser:140},ctl:{key:'speed',min:1,max:12,step:.5,start:11},look:'A lézer itt fix 140-en van. Csak a sebességgel hozd be a képet.',
+qs:[['Sötét a kép, a lézer és a gain már magasan van.',1,'Lassabb szkennelésnél több fény jut a szenzorra.'],['Világos, tiszta kép, de egy gyors varraton ritkák a mérések.',0,'Gyorsabb szkennelés = sűrűbb adat, ha van elég fény.'],['Minden rendben, alapértéken (6,5) van.',2,'Az alapérték jó kiindulás.']]},
+{id:'median',g:'sensor',n:'Median filter',menu:'sensor configuration → Advanced',what:'Egyedi kiugró pontok (fröccs, tükröződés) ellen. Kicsi érték kiszedi a tüskéket, a túl nagy a keskeny hézagot is eltünteti.',type:'scan',part:{shiny:true},base:{laser:200},ctl:{key:'median',min:0,max:20,step:1,start:0},look:'Csiszolt sáv van a hézag mellett. Keresd meg azt a tartományt, ahol a tüskék eltűnnek, de a hézag még megvan.',
+qs:[['Egy-egy tüske ugrál a profilon a csiszolt sávon, a Median 0.',0,'Egy kicsi Median (2–5) kiszedi a tüskéket.'],['Keskeny tompavarrat, a hézag eltűnt a piros vonalról, a Median 14.',1,'A Median a szomszédok középső értékét veszi, a keskeny hézag sosem kerül középre.'],['Tiszta kép, a hézag látszik, a Median 4.',2,'Ez a jó tartomány.']]},
+{id:'spatter',g:'sensor',n:'Spatter filter',menu:'sensor configuration → Advanced',what:'A folytonosság alapján dobja ki a nem odaillő pontokat. Kisebb érték = érzékenyebb.',type:'scan',part:{},base:{},ctl:{key:'spatter',min:0,max:255,step:1,start:40},look:'Figyeld a lila jeleket a hézag szélén. Addig emeld, amíg eltűnnek.',
+qs:[['Lila jelek pont a hézag két szélén.',0,'A hézag széle hirtelen ugrás, a túl érzékeny szűrő fröccsnek veszi. Nagyobb érték = kevésbé érzékeny.'],['Fröccsös felület, sok fröccs-tüske marad a képen, a Spatter 240.',1,'Kisebb értéknél érzékenyebb, több fröccsöt dob ki.'],['Nincs lila jel a varraton, a kép tiszta.',2,'Rendben van.']]},
+{id:'void',g:'sensor',n:'Void filter',menu:'sensor configuration → Advanced',what:'A hiányzó pontokat (lyukakat) eddig a méretig kitölti a környezetükből. A hézag is lyuk!',type:'scan',part:{},base:{},ctl:{key:'voidf',min:0,max:100,step:1,start:80},look:'A hézag most be van foltozva. Vidd le a Void filtert, amíg a piros vonalon megjelenik.',
+qs:[['Van hézag, a fehér vonal ott leesik, de a piros vonal sík.',1,'A Void befoltozta a hézagot. A hézag mérete alá kell vinni.'],['Sima lemezen apró, 1-2 pontos lyukak vannak, a hézag jól látszik.',0,'Egy kicsit nagyobb Void kitölti az apró lyukakat, de a hézagnál maradjon kisebb.'],['A hézag látszik, a seam status zöld.',2,'Rendben van.']]},
+{id:'model',g:'seam',n:'Seam model (alak)',menu:'seam configuration → General',what:'A varrat keresztmetszete. A szoftver mindenáron ezt az alakot keresi, akkor is, ha nincs ott.',type:'scan',part:{bevel:30,gap:1},base:{bevelL:30,bevelR:30},ctl:{key:'model',opts:[['I','I-varrat'],['V','V-varrat']],start:'I'},look:'Az asztalon egy 30°-os V-varrat van. Válaszd ki a jó alakot.',
+qs:[['Két egyenes élű lemez, hézaggal.',0,'Egyenes él = I-varrat.',['I-varrat','V-varrat','fél-V']],['Mindkét lemez éle le van élezve.',1,'Két letört él = V-varrat.',['I-varrat','V-varrat','fél-V']],['Csak az egyik lemez éle van letörve.',2,'Egy letört él = fél-V (a megfelelő oldalra).',['I-varrat','V-varrat','fél-V']]]},
+{id:'bevel',g:'seam',n:'Plate bevel angle',menu:'seam configuration → General',what:'Az élszög lemezenként. Ha nem egyezik a darabbal, a felismerés bizonytalan (sárga).',type:'scan',part:{bevel:30,gap:1},base:{model:'V'},ctl:{key:'bevel',min:0,max:45,step:1,start:10},look:'A darab 30°-os élekkel jött. Állítsd be, és figyeld a seam status lámpát.',
+qs:[['60°-os V-varrat (mindkét él letörve).',0,'Lemezenként kell megadni: a 60°-os V két 30°-os élből áll.',['30° / 30°','60° / 60°','0° / 0°']],['Egyenes élű tompavarrat.',0,'Egyenes élnél nincs élszög.',['0° / 0°','20° / 20°','45° / 45°']],['Fél-V, a bal lemez 45°-ban letörve.',0,'Csak a letört oldalra kerül szög.',['45° / 0°','45° / 45°','22,5° / 22,5°']]]},
+{id:'thick',g:'seam',n:'Plate thickness',menu:'seam configuration → General',what:'A lemezvastagság. Ebből számolja az élt és a hézagot, ha azokat nem tudja mérni.',type:'scan',part:{},base:{},ctl:{key:'thick',min:1,max:12,step:.5,start:8},look:'Az asztalon 3 mm-es lemez van. Állítsd be a valós vastagságot.',
+qs:[['A munkalap szerint 6 mm-es a lemez, a Plate thickness 3 mm.',0,'Mindig a valós vastagság kell.',['6 / 6 mm','3 / 3 mm','mindegy']],['Két különböző lemez: a bal 4, a jobb 6 mm.',0,'Lemezenként külön adod meg.',['4 / 6 mm','6 / 6 mm','5 / 5 mm']],['Mikor számít a legjobban?',0,'Ha az él vagy a hézag nem mérhető, a vastagságból számol.',['Ha az él vagy a hézag nem mérhető','Csak a lézer erejéhez kell','Soha']]]},
+{id:'margin',g:'seam',n:'Margin',menu:'seam configuration → Advanced → Modeling guard',what:'A lézerkör szélein kizár egy sávot, de csak a varratközép keresésénél. A szürke sáv a kizárt terület.',type:'scan',part:{clamp:true},base:{rangeL:5},ctl:{key:'marginL',min:0,max:12,step:.5,start:0},look:'Egy befogó lóg a kör bal szélébe, és a szoftver ott keresi a varratot. Takard ki a Marginnal.',
+qs:[['Befogó lóg a lézerkör bal szélébe, a varratközepet ott keresi.',0,'A bal Margin kizárja a befogót a keresésből.'],['A Margin 11 mm, és azt írja, hogy a varratot is eltakarja.',1,'Csak annyi kell, amennyi a befogót kitakarja.'],['Nincs semmi a kör szélén, tiszta sík lemezek.',2,'Nincs mit kizárni, maradjon 0.']]},
+{id:'range',g:'seam',n:'Range',menu:'seam configuration → Advanced → Modeling guard',what:'A felület modellezéséhez csak a varrat közelében lévő adatot használja (a kék dupla vonalig). 0 = kikapcsolva.',type:'scan',part:{clamp:true},base:{marginL:5},ctl:{key:'rangeL',min:0,max:12,step:.5,start:0},look:'A Margin már kizárja a befogót a keresésből, de a modell még torz (sárga). Állítsd be a Range-et úgy, hogy a befogó előtt érjen véget.',
+qs:[['A Margin már kizárja a befogót, de a bal felület modellje még torz.',0,'A modellezésnél a Margin nem hat, ott a Range zárja ki a befogót.',['Range be, a befogó előtt érjen véget','Margin még nagyobb','Padding fel']],['Range 0,5 mm, a modell bizonytalan, kevés az adat.',0,'Túl kevés adatból nem lehet felületet számolni.'],['Nincs befogó, semmi nem lóg be.',0,'Nincs mit kizárni.',['Kikapcsolva hagyod','5 mm-re állítod','Maximumra']]]},
+{id:'padding',g:'seam',n:'Padding',menu:'seam configuration → Advanced → Modeling guard',what:'A varratközép körül kihagy egy sávot a modellezésből (narancs vonalak). Fűzés, gyökvarrat ellen.',type:'scan',part:{bevel:30,gap:1,t:6,tack:true},base:{model:'V',bevelL:30,bevelR:30},ctl:{key:'padding',min:0,max:8,step:.1,start:0},look:'Fűzés van a gyökben, és elhúzza a modellt. Keresd meg, mekkora Padding kell, és hol lesz már túl sok.',
+qs:[['Fűzés van a gyökben, és elhúzza a varratvonalat.',0,'Kicsit nagyobbra, mint a fűzés szárhossza.'],['Padding 6 mm egy 3 mm-es V-varraton, a felületekhez alig marad adat.',1,'A túl nagy Padding a valódi felületet is kidobja.'],['Tiszta, fűzés nélküli egyenes varrat.',2,'Nincs mit kihagyni.']]},
+{id:'tangent',g:'seam',n:'Tangent angle',menu:'seam configuration → Advanced → Angular guard',what:'A varrat irányának határa. Ha hirtelen elfordul (kereszteződés), azt a mérést eldobja. 0 = kikapcsolva.',type:'path',sc:'cross',base:{},ctl:{key:'tangent',min:0,max:45,step:1,start:0},look:'Path Graph felülnézetből: a közepén egy keresztvarrat van. A sárga vonal a pisztoly útja.',
+qs:[['Kereszteződésnél a robot oldalra húz, a Tangent angle ki van kapcsolva.',0,'A manual szerint mindig legyen beállítva.',['Bekapcsolod, kb. ±10°','Kikapcsolva hagyod','±45°']],['Tangent ±2°, sok lila (eldobott) pont, a robot megáll.',0,'Túl szűk: a jó méréseket is eldobja, tágítsd.'],['Tangent ±10°, egyenes varrat, minden zöld.',2,'Rendben van.']]},
+{id:'gapmax',g:'seam',n:'Gap max',menu:'seam configuration → Advanced → Geometry guard',what:'Ha a hézag e fölé nő, rossz szakasz lesz, és a robot megáll. A megállás késik (Max blind)!',type:'path',sc:'gap',base:{},ctl:{key:'gapMax',min:0,max:5,step:.1,start:0},look:'A hézag a varrat második felében 1 mm-ről 4 mm-re nyílik, 2,5 mm felett átég (alsó grafikon). Állítsd be, hogy időben megálljon.',
+qs:[['A hegesztési utasítás szerint 2,5 mm felett átég, a Gap max ki van kapcsolva.',0,'A megállás a Max blind miatt késik, ezért a határ alá kell tenni.',['Bekapcsolod, 2,5 mm alá','Bekapcsolod, pont 2,5-re','Kikapcsolva hagyod']],['Gap max 1,0 mm, de a hézag végig 1,5 mm (jó varrat), ezért rögtön megáll.',0,'A Gap max legyen nagyobb a normál hézagnál.'],['Gap max 4 mm, a varrat 3 mm-es hézagon átégett.',1,'A hegeszthető határ alá kell.']]},
+{id:'method',g:'path',n:'Path method',menu:'path configuration → General',what:'Hogyan számolja a pályát a mérésekből: Linear egyenesre, Circular ívre, Polynomial erősen változó alakra (de érzékeny a zajra).',type:'path',sc:'curve',base:{},ctl:{key:'method',opts:[['Linear','Linear'],['Circular','Circular'],['Polynomial','Polynomial']],start:'Linear'},look:'Íves varrat van az asztalon. Próbáld ki mindhárom módszert, és nézd, melyik követi.',
+qs:[['Egyenes varrat.',0,'Egyenesre a Linear a legstabilabb.',['Linear','Circular','Polynomial']],['Kör alakú varrat egy csőcsonk körül.',1,'Körre és ívre Circular.',['Linear','Circular','Polynomial']],['Fröccsös, zajos mérés egyenes varraton, valaki Polynomialt állított be.',0,'A Polynomial a zajt is lekövetheti.',['Linear','Circular','Polynomial']]]},
+{id:'ratio',g:'path',n:'Path ratio',menu:'path configuration → General',what:'Hány mm mérésből számolja a pályát a pisztoly előtt és mögött. Nagyobb = stabilabb, kisebb = gyorsabban reagál.',type:'path',sc:'curve',base:{},ctl:{key:'ratio',min:10,max:150,step:10,start:100},look:'Íves varrat, de Linear módszerrel. Nézd, mi történik, ha rövidebb szakaszból számol.',
+qs:[['Zajos mérés, a pálya rángat.',0,'Több mérésből számolva simább.'],['Íves varrat Linear módszerrel, levágja a kanyart.',1,'Rövidebb ablakkal gyorsabban követi az ívet (vagy válts Circularra).'],['Egyenes, tiszta varrat, 100 / 100, minden rendben.',2,'Rendben van.']]},
+{id:'maxinc',g:'path',n:'Max increment',menu:'path configuration → General',what:'Ciklusonként ennyit korrigálhat. Túl nagy = rángat, túl kicsi = lemarad. Soha ne legyen 1,0 mm felett.',type:'path',sc:'inc',base:{prB:0,prA:0},ctl:{key:'maxInc',min:.1,max:3,step:.1,start:3},look:'Fröccsös felület, egy-egy mérés 2–3 mm-rel mellé ugrik, és a darab 3 mm-rel el van tolva. Keresd meg a jó középutat.',
+qs:[['Max increment 2,5 mm, a robot minden kiugrást lekövet, rángat.',1,'Túl agresszív a korrekció.'],['Max increment 0,2 mm, a robot nem éri utol a varratot.',0,'Túl lassú, emeld, de legfeljebb 1,0-ig.'],['Mi a megengedett tartomány?',0,'A kézikönyv szerint soha ne legyen 1,0 felett.',['0,5–1,0 mm','1–3 mm','Bármennyi']]]},
+{id:'maxblind',g:'path',n:'Max blind',menu:'path configuration → General',what:'Ha a rossz (nem felismert) szakasz ennél hosszabb, megáll a folyamat.',type:'path',sc:'blind',base:{},ctl:{key:'maxBlind',min:5,max:120,step:5,start:15},look:'25 mm-es fűzés van 100 mm-nél, és a darab 230 mm-nél véget ér. Menjen át a fűzésen, de a darab végén álljon meg.',
+qs:[['A robot minden 25 mm-es fűzésnél megáll.',0,'A fűzésnél nagyobbra kell.'],['A darab vége után még sokáig vakon megy.',1,'Kisebb Max blind = hamarabb megáll.'],['Átmegy a fűzéseken, és a darab végén megáll.',2,'Rendben van.']]},
+{id:'overshoot',g:'path',n:'Ramp overshoot',menu:'path configuration → General',what:'Hol álljon meg a rossz szakaszhoz képest. Negatív = előtte, pozitív = utána.',type:'path',sc:'blind',base:{maxBlind:40},ctl:{key:'overshoot',min:-30,max:30,step:5,start:30},look:'A Max blind 40 mm. Nézd, hogyan tolja a megállás helyét előre-hátra.',
+qs:[['A robotnak a darab vége előtt kell megállnia.',0,'Negatív érték: a rossz szakasz előtt áll meg.',['Negatív érték','Pozitív érték','0']],['A rossz szakasz elejét még be kell hegeszteni.',1,'Pozitív érték: a rossz szakasz után áll meg.',['Negatív érték','Pozitív érték','0']],['Mit jelent a negatív Ramp overshoot?',0,'Előtte áll meg.',['A rossz szakasz előtt áll meg','Utána áll meg','Kikapcsolja a megállást']]]}
+];
+const CGR=[['sensor','sensor configuration · a kép'],['seam','seam configuration · a varrat'],['path','path configuration · a pálya']];
+let card=null,cval=null,ccv=null,cro=null;
+function cardDone(c){const r=(P.cards||{})[c.id];return r&&r.length===3&&r.every(x=>x!=null)}
+function listCards(){const v=$('#v-iskola');const nd=CARDS.filter(cardDone).length;
+v.innerHTML=`<div id="clist"><h1>Beállítás-iskola</h1><p class="intro">Minden beállítás egy rövid kártya: mit csinál, kipróbálod egyetlen csúszkával élő képen, aztán 3 gyors helyzet, hogy mikor kell hozzányúlni. Egy kártya kb. 2 perc. ${nd} / ${CARDS.length} kész.</p>
+${CGR.map(g=>`<h3 class="chh">${g[1]}</h3><div class="grid">${CARDS.filter(c=>c.g===g[0]).map(c=>{const r=(P.cards||{})[c.id]||[],ok=r.filter(x=>x!=null).length;return `<button class="mc" data-card="${c.id}"><span class="n">${CARDS.indexOf(c)+1}</span><span class="tt">${c.n}</span><span class="st ${ok===3?'ok':''}">${ok===3?'kész':ok?ok+' / 3':''}</span><span class="dd">${c.menu.replace(/^[a-z]+ configuration → /,'')}</span></button>`}).join('')}</div>`).join('')}
+<p class="note">Ha mind megvan, jöhet az Éles feladat: ott minden beállítást egyszerre kell rendbe tenned.</p></div><div id="cview" class="hide"></div>`}
+function cState(){const c=card,s={...GOOD,...c.base,thick:[3,3],algo:0},k=c.ctl.key,v=cval;
+if(k==='bevel'){s.bevelL=s.bevelR=v}else if(k==='thick'){s.thick=[v,v]}else if(k==='speed'){s.laser=s.laser*Math.sqrt(6.5/v)}else if(k==='ratio'){s.prB=s.prA=v}else s[k]=v;
+if(c.type==='scan'){const p={...PART,...c.part};if(k!=='thick')s.thick=[p.t,p.t];return{s,p,e:evalScr(s,p)}}
+s.methodOk=true;return{s,sc:PSC[c.sc],r:simPath(PSC[c.sc],s)}}
+function capPath(sc,s,r,key){const why=()=>{const b=r.scans.find(v=>!v.ok&&v.s<=r.stop+40);return WHY[b?b.why:'end']||'rossz mérések'};
+if(key==='gap'){if(r.stop==null)return['n',`Végighegesztett, a végén ${f2(sc.gap(300))} mm-es hézagon – átégett.`];const g=sc.gap(r.stop);if(g>2.5)return['n',`Későn állt meg (${r.stop} mm), ott már ${f2(g)} mm a hézag – átégett.`];if(g<1.4)return['n',`Feleslegesen korán megállt (${r.stop} mm, a hézag csak ${f2(g)} mm).`];return['y',`Időben megállt ${r.stop} mm-nél, ott a hézag ${f2(g)} mm (2,5 alatt).`]}
+if(key==='blind'){if(r.stop==null)return['n','Nem állt meg: a darab vége (230 mm) után is ment.'];if(r.stop<200)return['n',`Megállt a fűzésnél (${r.stop} mm).`];if(r.stop>245)return['n',`Csak ${r.stop} mm-nél állt meg, a darab 230-nál véget ért – túl sokáig ment vakon.`];if(r.stop<215)return['n',`Túl korán állt meg (${r.stop} mm), a varrat vége hiányzik.`];return['y',`Átment a fűzésen, és a darab végén megállt (${r.stop} mm).`]}
+if(r.stop!=null)return['n',`Megállt ${r.stop} mm-nél (${why()}).`];
+if(key==='inc'){if(r.catchS==null||r.catchS>14)return['n',`Lemarad: ${r.catchS==null?'nem':'csak '+r.catchS+' mm után'} érte utol a varratot.`];if(r.maxErr>2.1)return['n',`Rángat: a kiugró mérésekre ${f2(r.maxErr)} mm-t ugrik.`];return['y',`Utolérte ${r.catchS} mm alatt, a legnagyobb kilengés ${f2(r.maxErr)} mm.`]}
+const lim=key==='curve'?.3:.8;if(key==='cross'&&r.rej>=.25)return['n',`Túl sok jó mérést dob el (${Math.round(r.rej*100)}%).`];
+return[r.maxErr<=lim?'y':'n',`Végigment. Legnagyobb eltérés ${f2(r.maxErr)} mm (cél ≤ ${f2(lim)}), eldobott mérés ${Math.round(r.rej*100)}%.`]}
+function cDraw(){if(!card||!ccv)return;const L=cState();if(card.type==='scan')drawScan(ccv,L.s,L.p,'xyz',L.e);else drawPath(ccv,L.sc,L.r,L.s)}
+function cCap(){const L=cState();let c;if(card.type==='scan'){const e=L.e;c=e.hard[0]?['n',e.hard[0]]:e.soft[0]?['a',e.soft[0]]:['y','Varrat felismerve, a seam status zöld.']}else c=capPath(L.sc,L.s,L.r,card.sc);
+$('#ccap').className='cap '+c[0];$('#ccap').textContent=(c[0]==='y'?'✓ ':c[0]==='a'?'! ':'✗ ')+c[1]}
+function cCtl(){const c=card.ctl;if(c.opts)return `<div class="seg">${c.opts.map(o=>`<button class="btn${cval===o[0]?' pri':''}" data-cbtn="${o[0]}">${o[1]}</button>`).join('')}</div>`;
+const f=v=>(c.step<1?(+v).toFixed(1).replace('.',','):v)+(c.key==='tangent'||c.key==='bevel'?'°':['laser','gain','median','spatter','voidf','speed'].includes(c.key)?'':' mm');
+return `<div class="row"><div class="h"><label for="cr">${card.n}</label><output id="co">${c.key==='tangent'&&!cval||c.key==='gapMax'&&!cval||c.key==='rangeL'&&!cval?'ki':f(cval)}</output></div><input type="range" id="cr" min="${c.min}" max="${c.max}" step="${c.step}" value="${cval}"></div>`}
+function openCard(id){card=CARDS.find(c=>c.id===id);cval=card.ctl.start;const st=(P.cards||{})[id]||[];$('#clist').classList.add('hide');const v=$('#cview');v.classList.remove('hide');const i=CARDS.indexOf(card),nx=CARDS[i+1];
+v.innerHTML=`<button class="btn" id="cback">← Beállítások</button><div class="mv"><div><p class="crm">${card.menu}</p><h2>${card.n}</h2><p class="what">${card.what}</p>
+<div class="fig"><canvas id="ccv" aria-label="élő kép"></canvas></div><div class="rb"><span>${card.type==='path'?'Path Graph · felülnézet':'XYZ Graph · élő szkennelés'}</span><span>próbáld ki</span></div><p class="cap" id="ccap"></p></div>
+<div><div class="pane"><h3>1. Próbáld ki</h3><p class="m2">${card.look}</p>${cCtl()}</div>
+<div class="pane" style="margin-top:12px"><h3>2. Mikor kell hozzányúlni?</h3>${card.qs.map((q,qi)=>{const o=q[3]||UD;return `<div class="cq" id="cq${qi}"><p class="qq2">${q[0]}</p><div class="seg">${o.map((t,oi)=>`<button class="btn" data-cq="${qi}" data-co="${oi}">${t}</button>`).join('')}</div><div class="cfb"></div></div>`}).join('')}</div>
+<div class="acts">${nx?`<button class="btn pri" data-card="${nx.id}">Következő: ${nx.n} →</button>`:'<a class="btn pri" href="#eles">Jöhet az Éles feladat →</a>'}</div></div></div>`;
+st.forEach((r,qi)=>{if(r!=null)markQ(qi,true)});ccv=$('#ccv');if(cro)cro.disconnect();cro=new ResizeObserver(cDraw);cro.observe(ccv.parentElement);cDraw();cCap();window.scrollTo(0,0)}
+function markQ(qi,shown){const q=card.qs[qi],box=$('#cq'+qi);box.querySelectorAll('[data-co]').forEach(b=>{b.disabled=true;if(+b.dataset.co===q[1])b.classList.add('pri')});box.querySelector('.cfb').innerHTML=`<p class="fb"><b>${(q[3]||UD)[q[1]]}.</b> ${q[2]}</p>`}
+function answerC(qi,oi,btn){const q=card.qs[qi];P.cards=P.cards||{};const r=P.cards[card.id]=P.cards[card.id]||[null,null,null];if(r[qi]!=null)return;
+if(oi!==q[1]){btn.classList.add('bad');btn.disabled=true;r.wrong=r.wrong||[];r.wrong[qi]=1;$('#cq'+qi+' .cfb').innerHTML='<p class="fb"><b>Nem egészen.</b> Gondold át, vagy próbáld ki a csúszkával!</p>';save();return}
+r[qi]=r.wrong&&r.wrong[qi]?0:1;markQ(qi);addXP(r[qi]?5:2);if(r.filter(x=>x!=null).length===3){addXP(10);toast('Kártya kész! +10 XP')}save()}
+setInterval(()=>{const v=$('#v-iskola');if(!card||!v||v.classList.contains('hide')||card.type!=='scan'||RM)return;cDraw()},160);
+
+/* ---------- hibakereső ---------- */
+const SYM=[
+{t:'„SHAPE GUARD: Global locations could not be found”',see:'A seam status piros, nem talál varratot. A Path Graph-on alig van zöld pont.',steps:[['Active job','Nézd meg, a jó job van-e betöltve (főképernyő → Active job, a programban LS-SET-GROUP / LS-SET-JOB).','Ha más job fut, hiába állítod a sajátodat.'],['XYZ Graph','Állj meg a varrat fölött, sensor scanning be. Látszik a varrat a piros vonalon?','Ha a profil sík, nincs mit megtalálni: hézag vagy élletörés kell, vagy seam-find / touch sensing.'],['Laser power, Signal gain','Ha a fehér vonal szakadozik: lézer fel, aztán óvatosan gain.','Rossz képből nincs jó felismerés.'],['Void filter, Median filter','Ha a hézag „befoltozódott”: Void a hézag mérete alá, Median 2–5.','Ezek el tudják tüntetni a keskeny hézagot.'],['Seam model, Plate thickness, Plate bevel angle','Az ikon egyezzen a darabbal, valós vastagság, egyenes élnél bevel 0 / 0.','A szoftver azt keresi, amit megadsz.'],['Margin, Range, Padding','Kezdetben 0, hacsak nincs rá okod.','Ezek a varratot is kitakarhatják.']],m:[8,4,7]},
+{t:'A fehér vonal (jelerősség) szakadozik, sok pont kiesik',see:'Sötét kép, a jel a küszöb körül, a piros vonal darabos.',steps:[['Laser power','Emeld lassan, amíg a jel stabilan a küszöb fölött van.','Több fény = több szórt fény a szenzornak.'],['Signal gain','Csak ha a lézer már magasan van: kis lépésekben fel.','A gain a zajt is erősíti.'],['Scan speed','Ha még mindig sötét: kicsit le.','Lassabb szkennelés = hosszabb záridő = világosabb kép.']],m:[1,2]},
+{t:'Ugráló, tüskés profil, sok lila jel mindenhol',see:'Túlvezérelt kép, hamis pontok, a seam status villog.',steps:[['Signal gain','Vedd vissza (akár 0-ra).','Túlerősítés: a fröccs és a tükröződés is jelnek látszik.'],['Laser power','Ha még mindig sok: lézer le.','Fényes felületen kevesebb fény kell.'],['Median filter','2–5 közé.','Kiszedi a maradék tüskéket, de a hézagot még nem tünteti el.'],['A darab','Kerüld a frissen csiszolt, fényes felületet.','A tükröződést a szenzor nem tudja használni.']],m:[3]},
+{t:'Lila jelek pont a varrat szélein',see:'A hézag vagy él mellett lila vonalak, a felismerés bizonytalan.',steps:[['Spatter filter','Emeld, amíg a lila jelek eltűnnek a varratról.','Kisebb érték = érzékenyebb. A hézag széle hirtelen ugrás, ezért a túl érzékeny szűrő fröccsnek nézi.']],m:[5]},
+{t:'Van hézag, de a piros vonal sík',see:'A fehér vonal a hézagnál leesik, de a Z profil egyenes.',steps:[['Void filter','Állítsd a hézag szélessége alá.','A hézagból nem jön vissza fény (lyuk), és a Void filter ezt kitölti, ha kisebb az értékénél.'],['Median filter','2–5 közé.','A nagy Median a keskeny hézagot kisimítja.']],m:[4,6]},
+{t:'A befogót vagy egy szomszéd élt nézi varratnak',see:'A split-pont rossz helyen, a varratvonal a befogó felé húz.',steps:[['Margin','Azon az oldalon, ahol a befogó van, akkorára, hogy a befogót eltakarja (szürke sáv).','A Margin csak a split-pont keresésénél hagy ki adatot.'],['Range','Ugyanazon az oldalon: csak a varrathoz közeli adatot használja (a befogó előtt érjen véget).','A modellezésnél a Margin nem hat, ott a Range zárja ki a befogót.']],m:[10]},
+{t:'A fűzés vagy gyökvarrat elhúzza a varratvonalat',see:'Fűzésnél vagy többrétegű varratnál rossz helyre teszi a varratvonalat.',steps:[['Padding','Valamivel nagyobb, mint a fűzés szárhossza.','A split-pont körüli adatot kihagyja a modellezésből.'],['Tack avoidance','Enabled (path configuration).','A pálya a fűzéseket átugorja.']],m:[11]},
+{t:'Kereszteződésnél vagy egy élnél elugrik',see:'Egy szakaszon a pálya hirtelen oldalra húz, majd visszatér.',steps:[['Tangent angle','Angular guard → kb. ±10°, mindig legyen beállítva.','A kereszteződésnél a varrat iránya hirtelen elfordul, ezt a guard kiszűri.'],['Túl szűkre ne','±1–3° már a jó méréseket is eldobja.','Sok eldobott mérés után a Max blind leállítja a robotot.']],m:[12]},
+{t:'Túl nagy hézagon is végighegeszt',see:'Szétnyílt varrat, átégés, a robot nem állt meg.',steps:[['Gap max','Geometry guard → a hegeszthető határ ALÁ.','A robot csak a Max blind után áll meg, közben a hézag tovább nő.'],['Max blind, Ramp overshoot','Rövidebb Max blind vagy negatív overshoot: hamarabb áll meg.','Ezek döntik el, hol áll meg a rossz szakaszhoz képest.']],m:[13,17]},
+{t:'Rángat, cikázik a robot',see:'A pálya zegzugos, a varrat hullámos.',steps:[['Előbb a kép','Nézd az XYZ Graph-ot: zajos? Akkor 1. fejezet.','Zajos képből zajos pálya lesz.'],['Max increment','0,5–1,0 mm, soha ne több 1,0-nál.','Ciklusonként ennyit korrigálhat: túl nagy = minden kiugrást lekövet.'],['Path ratio','Nagyobb érték.','Több mérésből számolja a pályát, ezért simább, de lassabban reagál.'],['Path method','Egyenes varratnál Linear, ne Polynomial.','A Polynomial a zajt is lekövetheti.']],m:[14,16]},
+{t:'Íven vagy kanyarban levágja, lemarad',see:'Egyenesen jó, de az íves szakaszon mellé megy.',steps:[['Path method','Circular.','A Linear egyenest illeszt, ívnél levágja a kanyart.'],['Path ratio','Kisebb érték.','Rövidebb szakaszra illeszt, így gyorsabban követi a változást.']],m:[15]},
+{t:'Fűzésnél vagy rövid takarásnál megáll',see:'A path status piros egy rövid rossz szakasz után.',steps:[['Max blind','Legyen nagyobb a leghosszabb fűzésnél vagy takarásnál.','Ennél hosszabb rossz szakasznál áll meg.'],['Tack avoidance','Enabled.','A fűzéseket átugorja.']],m:[17]},
+{t:'A darab vége után tovább megy, a levegőbe hegeszt',see:'A program végpontja a darabon túl van, a robot csak később áll meg.',steps:[['Max blind','Kisebb (de nagyobb a fűzéseknél).','A darab vége is rossz szakasz, ennyi után áll meg.'],['Ramp overshoot','Negatív érték.','A rossz szakasz előtt áll meg.'],['LS-END-SEARCH','A programban (a kézikönyv 15. gyakorlata).','A varrat végét automatikusan megkeresi, és ott fejezi be.']],m:[17]},
+{t:'A varrat legeleje mellé megy, aztán beáll',see:'Az első pár centi kívül a varraton, utána rendben.',steps:[['Lead-in','Üres ARC-ON (LEAD-IN) + LS-TRACK ON a varrat előtt, utána a valódi ARC-ON.','A szenzor előre mér, a varrat elején még nincs adata.'],['Vagy seam-find','LS-LASER ON → LS-SEAM-FIND → CNVCOORD → SHIFT-ON.','Megméri a kezdőpontot, és arra tolja a programot.']],m:[]},
+{t:'Végig ugyanannyival mellette hegeszt',see:'Szépen követ, de mindig ugyanannyival mellé.',steps:[['LS-SET-OFS H, V','A hegesztési pont eltolása 0,1 mm-es lépésekben, az LS-TRACK ON elé.','A követési pont nem mindig ott van, ahová hegeszteni akarsz.'],['Tool active','Egyezzen a Panasonicban kalibrált TCP-vel.','Rossz tool = minden mérés rossz helyre kerül.'],['REFERENCE','Ütközés gyanújánál: Job 0: REFERENCE.','Lehet, hogy elmozdult a szenzor.']],m:[]},
+{t:'„CHECK THE CONNECTION WITH THE LASER SENSOR”',see:'A Teach Pendanton hibaüzenet test-mode indításkor.',steps:[['controller connection','A System configuration képernyőn legyen zöld; ha nem, nyomd meg.','Ez a robotvezérlő és az ARC-EYE PC kapcsolata.'],['Indítási sorrend','Előbb az ARC-EYE PC, utána a robotvezérlő.','Az ARC-EYE szerverként várja a robotot.']],m:[]},
+{t:'„SENSOR NOT READY” a seam-findnál',see:'Az LS-SEAM-FIND hibát ad.',steps:[['LS-LASER ON','Az LS-SEAM-FIND előtt.','A seam-findhoz szkennelnie kell.'],['A robot álljon','Mozgás közben ne fusson a seam-find.','Álló helyzetben mér.']],m:[]},
+{t:'Ütközés után minden mérés el van tolva',see:'Korábban jó programok most mellé mennek.',steps:[['1. Robot és tool','Előbb a robotkart és a toolt referáld.','Ha a robot rossz, minden más is rossz.'],['2. REFERENCE','CALIBRATION csoport → Job 0: REFERENCE, kézi szkennelés. Az értékek legyenek kb. 0.','Ellenőrzi, elmozdult-e a szenzor.'],['3. Sensor Frame','Ha az összes eltérés > 1 mm: Controller configuration → Advanced → Sensor Frame → Calibrate, majd ».','Újrakalibrálja a szenzor helyzetét.'],['4. Tool Frame','Kis maradék eltérésre.','Kompenzálja a kis hibákat.'],['Soha','A Reference Position-t ne módosítsd.','Csak tanúsított integrátor tudja visszaállítani.']],m:[]}
+];
+const SET=[
+['Sensor → General','Laser power','Mennyire világítja meg a lézer a darabot (40–255).','Kevés: szakadozó jel. Sok: túlvezérlés, tükröződés.','0-ról lassan fel, amíg a jel stabil.'],
+['Sensor → General','Signal gain','Jelerősítés, mint az ISO: a zajt is erősíti.','Csak ha a lézer már magasan van, kis lépésekben.','0'],
+['Sensor → General','Signal offset','A kép legsötétebb mintavételezett pontja, a zaj levágására.','Ritkán kell állítani.','128 (középállás)'],
+['Sensor → General','Signal threshold','Ami e fölött van, azt veszi lézerjelnek.','A kézikönyv nem ad hangolási szabályt, ne állítsd, ha nem muszáj.','alapérték (32767)'],
+['Sensor → General','Scan speed','Szkennelési sebesség.','Gyorsabb: sűrűbb adat, de sötétebb kép. Lassabb: világosabb kép.','alapérték (6,5)'],
+['Sensor → General','Scan algorithm','A képfeldolgozás módja.','Strongest Peak a munkához, RAW debug csak hibakereséshez.','Strongest Peak'],
+['Sensor → General','Sub sampling','Al-pixeles számítás a finomabb felbontásért.','Több adat, nagyobb PC-terhelés.','Full'],
+['Sensor → General','Frame fill','Egy kimaradt képkockát pótol.','Nem kell állítani.','2 Frames'],
+['Sensor → Advanced','Signal filter','A Gaussian és a Median kapcsolása: párhuzamosan (LO / HI / AVG) vagy sorban.','Nem kell bántani.','párhuzamos, LO'],
+['Sensor → Advanced','Gaussian filter','Simítás: ennyi szomszéd pontból átlagol.','Nagyobb: simább, de elmosódnak a részletek.','5'],
+['Sensor → Advanced','Median filter','Kiugró pontok (fröccs, tükröződés) ellen.','Nagy érték eltünteti a keskeny hézagot. Keskeny varratnál 2–5.','kicsi (2–5); kézikönyv példa 10'],
+['Sensor → Advanced','Spatter filter','A folytonosság alapján dob ki pontokat. Kisebb = érzékenyebb.','Ha lila jel van a varraton: emeld.','kézikönyv példa 80'],
+['Sensor → Advanced','Void filter','Eddig a méretig kitölti a hiányzó pontokat.','Ha a hézag befoltozódik: a hézag mérete alá.','kicsi; kézikönyv példa 80'],
+['Sensor → Advanced','Max invalid','Ha ennél több pontot kellett kitölteni, eldobja a szkennelést.','0 = nincs ellenőrzés. Működő jobnál érdemes beállítani.','0'],
+['Sensor → Advanced','Derivative #1 / #2','Él- és sarokkereső jelek. Bal csúszka: nyújt / tompít, jobb: simít.','Általában nem kell.','alapérték'],
+['Seam → General','Seam model','A varrat alakja: csoport (pl. Weld Line) + ikon.','Egyezzen a darabbal, különben nem találja vagy rosszat talál.','a darabhoz illő ikon'],
+['Seam → General','Modelling method','3D vagy 2D, plusz egy modellhez tartozó algoritmus (pl. Best Fit Angle).','A kézikönyv nem részletezi az algoritmusokat. Maradj a 3D + Best Fit Angle-nél, ha a Valk mást nem javasol.','3D, Best Fit Angle'],
+['Seam → General','Plate bevel angle','Élszög lemezenként.','Egyenes élnél 0. Segít, ha kevés adat van a ferde felülethez.','a rajz szerinti érték'],
+['Seam → General','Plate thickness','Névleges lemezvastagság.','Ebből számol élt és hézagot, ha nem mérhető.','a valós vastagság'],
+['Seam → General','Position method','A kör kétszer metszi a varratot; ez dönti el, hogyan használja a két pontot.','Nem kell állítani.','Middle position'],
+['Seam → General','Position location','Mely jellemző pontokból számolja a varrat helyét (mind beszámít).','Hagyd úgy, ahogy egy működő gyári jobban van.','gyári job szerint'],
+['Seam → Modeling guard','Tolerance','Mennyi eltérést fogad el a modelltől (%).','Nagyobb: engedékenyebb.','1 %'],
+['Seam → Modeling guard','Range','Csak a padding után ennyi mm adatot használ a felület modellezéséhez.','Befogó, szomszéd tárgy kizárására a modellezésből. 0 = ki.','0 (ki)'],
+['Seam → Modeling guard','Padding','A split-pont (varratközép) körül ennyi mm-t kihagy a modellezésből.','Fűzés, gyökvarrat ellen: kicsit nagyobb a fűzésnél. Túl nagy: nem marad adat.','0'],
+['Seam → Modeling guard','Margin','A szkennkör szélein ennyi mm-t kihagy, de csak a split-pont keresésénél.','Befogó, szomszéd él ellen. A modellezésre nem hat, oda Range kell.','0'],
+['Seam → Angular guard','Lateral angle min / max','A felületek dőlésének határa oldalanként. Az átlaguk a hegesztési dőlésszög.','Csak akkor szűkítsd, ha ismered a pisztolyszöget.','kézikönyv példa ±5°'],
+['Seam → Angular guard','Tangent angle','A varrat iránya a függőleges tengely körül.','Mindig állítsd be, mert kereszteződésnél véd. Túl szűk: jó méréseket is eldob.','±10°'],
+['Seam → Angular guard','Push angle','Elfordulás a vízszintes tengely körül.','Általában kikapcsolva.','ki'],
+['Seam → Geometry guard','Area','A varrat keresztmetszete (mm²).','Ritkán kell.','ki'],
+['Seam → Geometry guard','Gap','A hézag. A Gap max felett rossz szakasz, utána megállás.','A hegeszthető határ ALÁ, mert a megállás késik (Max blind).','a hegesztési utasítás szerint'],
+['Seam → Geometry guard','Width','Él-él távolság.','Jó támpont a lengetés amplitúdójához.','kézikönyv példa max 45 mm'],
+['Seam → Geometry guard','Mismatch','Szintkülönbség a két lemez között, előjellel.','Ha számít a lemezek elcsúszása.','ki'],
+['Path → General','Path method','Hogyan számolja a pályát: Linear (egyenes), Circular (ív), Polynomial (változó alak), Offset Gaussian / Median (seam-find), Calibration, Fuzzy (ne).','Egyenesre Linear, ívre Circular. A Polynomial érzékeny a rossz adatra.','Linear'],
+['Path → General','Path ratio','Követésnél: hány mm adatot használ a pisztoly előtt és mögött. Seam-findnál az első érték a szkennek száma.','Nagyobb: stabilabb, de lassabban reagál.','100 / 100 mm'],
+['Path → General','Tack avoidance','A fűzéseket átugorja.','Legyen bekapcsolva.','Enabled'],
+['Path → General','Interpolation delay','A követés ciklusideje.','Nem kell állítani.','50 ms'],
+['Path → General','Max increment','Ciklusonként ennyit korrigálhat.','Rángat: csökkentsd. Lemarad: növeld, de max 1,0.','0,5–1,0 mm'],
+['Path → General','Max blind','Ennél hosszabb rossz szakasznál leáll.','Nagyobb legyen a fűzéseknél, de ne annyi, hogy a darab vége után vakon menjen.','kézikönyv példa 65 mm'],
+['Path → General','Ramp on blind','A kiugró mérések (fröccs, fűzés) felismerése és kihagyása.','A kézikönyv nem részletezi a hangolását.','2,0 mm / 25 scans'],
+['Path → General','Ramp overshoot','Hol álljon meg a rossz szakaszhoz képest.','Negatív: előtte, pozitív: utána.','kézikönyv példa 10 mm'],
+['Path → Advanced','Position bias, Rotation bias','Fix korrekció minden mérésre, mielőtt a pálya számolódna.','Ha a mért pont nem ott van, ahová hegeszteni akarsz.','0'],
+['Path → Advanced','On-the-fly bias','Varázspálca: a mostani mérés lesz a nulla. Nyilak: tesztvarrat közben fel / le (stick-out), jobbra / balra.','Seam-findnál, ha nem fér oda a szenzor; tesztvarrat finomhangolására.','—'],
+['Controller','Tool active','Melyik toolhoz számol az ARC-EYE.','Egyezzen a Panasonicban kalibrált TCP-vel és a programban használt toollal.','a kalibrált tool'],
+['Parancsok','LS-SET-OFS H, V','A hegesztési pont eltolása a követési ponthoz képest, 0,1 mm-es lépésekben.','Mindig az LS-TRACK ON elé, mert a vezérlő megjegyzi az utolsó értéket.','+0 +0'],
+['Parancsok','LS-SET-GAIN H, V','A korrekció agresszivitása: negatív simább, pozitív agresszívabb, −99 letiltja az irányt.','Csak különleges esetben kell.','+0 +0 (1:1)'],
+['Parancsok','LS-TRACK ON / OFF','Be- és kikapcsolja a követést.','ON csak az ARC-ON után lép életbe; OFF az ARC-OFF előtt.','—'],
+['Parancsok','LS-SET-GROUP, LS-SET-JOB','Csoport és job betöltése program közben.','A csoport neve csak szám lehet, vezető nulla nélkül; előbb GROUP, aztán JOB.','—'],
+['Parancsok','LS-SEAM-FIND GR#, timeout','Álló helyzetben megméri a varratot, az eredmény 10 GR változóba kerül.','Előtte LS-LASER ON. Timeout: 5 s.','5 s'],
+['Parancsok','CNVCOORD, SHIFT-ON','A mérést átváltja a szenzor TOOL rendszeréből (pl. ROBOT-ba), majd eltolja vele a programot.','A rá- és elállás is legyen az eltolt szakaszban.','—']
+];
+const M2C={10:'margin',11:'padding',12:'tangent',13:'gapmax',14:'maxinc',15:'method',16:'method',17:'maxblind'};SYM.forEach(x=>{x.m=[...new Set(x.m.map(id=>M2C[id]||id))]});
+function hkBtn(id){if(typeof id==='string'){const c=CARDS.find(x=>x.id===id);return `<button class="btn" data-card="${id}">Tanuld meg: ${c.n}</button>`}const m=MS.find(y=>y.id===id);return `<button class="btn" data-m="${id}">Gyakorold: ${id}. ${m.t}</button>`}
+let hkMode='sym',hkQ='';
+const norm=t=>t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function renderHK(){$('#v-hibakereso').innerHTML=`<h1>Hibakereső</h1><p class="intro">Mit látsz a gépen? Keresd meg a tünetet, és megmondja, mit állíts, merre és miért, sorrendben. Vagy nézd beállításonként, melyik mit csinál.</p><div class="hkbar"><input id="hkq" type="search" placeholder="Keresés, pl. hézag, rángat, befogó" value="${hkQ}" aria-label="Keresés"><div class="seg"><button class="btn${hkMode==='sym'?' pri':''}" data-hk="sym">Tünet szerint</button><button class="btn${hkMode==='set'?' pri':''}" data-hk="set">Beállítás szerint</button></div></div><div id="hkl"></div>`;listHK()}
+function listHK(){const q=norm(hkQ.trim()),mt=t=>!q||norm(t).includes(q);let h='';
+if(hkMode==='sym'){const L=SYM.filter(x=>mt(x.t+' '+x.see+' '+x.steps.flat().join(' ')));h=L.map(x=>`<details class="hk"><summary>${x.t}</summary><div class="hkb"><p class="m">${x.see}</p><ol class="steps">${x.steps.map(s=>`<li><b>${s[0]}</b>: ${s[1]}<span class="w">Miért: ${s[2]}</span></li>`).join('')}</ol>${x.m.length?`<div class="acts">${x.m.map(hkBtn).join('')}</div>`:''}</div></details>`).join('')}
+else{const L=SET.filter(x=>mt(x.join(' ')));let g='';for(const x of L){if(x[0]!==g){g=x[0];h+=`<h3 class="chh">${g}</h3>`}h+=`<details class="hk"><summary>${x[1]}</summary><div class="hkb"><dl class="kv"><dt>Mit csinál</dt><dd>${x[2]}</dd><dt>Hogyan állítsd</dt><dd>${x[3]}</dd><dt>Kiinduló érték</dt><dd>${x[4]}</dd></dl></div></details>`}}
+$('#hkl').innerHTML=h||'<p class="empty">Nincs találat. Próbálj egy másik szót.</p>'}
+
+/* ---------- gyorskérdések ---------- */
+const QB=[
+['Alapok','Milyen sorrendben halad az adat az ARC-EYE-ban?',['Sensor → Seam → Path → Robot','Seam → Sensor → Robot → Path','Path → Seam → Sensor → Robot'],0,'Kép, varratfelismerés, pálya, robot. Ezért mindig elölről, sorban állítunk.'],
+['Alapok','A lézerfény melyik részét látja a szenzor?',['A tükröződést','A szórt fényt (a látható piros foltot)','Az elnyelt fényt'],1,'Csak a szórt fényt. A tükröződés zavar, ezért nehéz a fényes, csiszolt felület.'],
+['Alapok','Hegesztés közben a path status piros lesz. Mi történik?',['Semmi','A robot hibakóddal megáll','A robot követés nélkül hegeszt tovább'],1,'A piros path status megállást jelent, hogy ne készüljön több rossz varrat.'],
+['Alapok','A seam status egy pillanatra piros, aztán zöld. Baj ez?',['Igen, azonnal meg kell állni','Nem, a rövid piros nem gond','Újra kell kalibrálni'],1,'A rövid piros nem gond. Ha sokáig piros marad, a path status is piros lesz.'],
+['Alapok','Mi a helyes bekapcsolási sorrend?',['Előbb a robotvezérlő','Előbb az ARC-EYE PC, utána a robotvezérlő','Mindegy'],1,'Az ARC-EYE szerverként várja a robotot, ezért annak kell előbb futnia.'],
+['Kép','Mi történik, ha növeled a Scan speed értékét?',['Világosabb lesz a kép','Sötétebb lesz a kép, de több adat jön','Semmi'],1,'Gyorsabb szkennelés = rövidebb záridő = sötétebb kép, cserébe sűrűbb adat.'],
+['Kép','Melyik Scan algorithm kell a normál munkához?',['RAW debug','Strongest Peak','Full'],1,'A RAW debug csak hibakereséshez való.'],
+['Szűrők','Mit jelent, ha a Max invalid értéke 0?',['Minden pontot eldob','Nincs ellenőrzés','A lézer kikapcsol'],1,'0 esetén nem nézi, hány pontot kellett kitölteni egy szkennelésben.'],
+['Varrat','Mire jó a Margin a Modeling guardban?',['A modellezésnél kihagyja az adatot','Csak a szétválasztási pont (split) keresésénél hagyja figyelmen kívül az adatot','A hézag maximumát adja meg'],1,'Modellezéshez a Range kell, a Margin csak a split-keresésre hat. Például a befogó kizárására jó.'],
+['Varrat','Fűzés van a varrat gyökében. Mit állítasz?',['Paddinget, kicsit nagyobbra a fűzésnél','Margint maximumra','Laser powert'],0,'A Padding a split-pont körüli adatot hagyja ki a modellezésből.'],
+['Varrat','Befogó lóg a lézerkörbe. Mivel zárod ki a felület modellezéséből?',['Margin','Range','Tolerance'],1,'A Range-dzsel: csak a varrathoz közeli adatot használja. A Margin a split-keresésből zár ki.'],
+['Varrat','Melyik szöghatárt érdemes mindig beállítani az Angular guardban?',['Push angle','Tangent angle','Egyiket sem'],1,'A Tangent angle megakadályozza a téves mérést, például varratkereszteződésnél.'],
+['Varrat','Mit állítasz be, hogy megálljon, ha túl nagy a hézag?',['Gap max a Geometry guardban','Max increment','Void filter'],0,'A Geometry guard Gap max értéke fölött a szakasz rossz lesz, és a folyamat megáll.'],
+['Varrat','Miért kell a Gap max-ot a hegeszthető határ alá állítani?',['Mert a robot csak a Max blind után áll meg, közben a hézag nő','Mert a Gap max cm-ben van','Nem kell'],0,'A rossz szakasznak előbb hosszabbnak kell lennie a Max blind-nál.'],
+['Pálya','Melyik Path method a legstabilabb egyenes varratra?',['Polynomial path tracking','Linear path tracking','Fuzzy-logic path tracking'],1,'A Polynomial változó alakhoz jó, de érzékeny a rossz adatra. A Fuzzy-t ne használd.'],
+['Pálya','Mit jelent követésnél a Path ratio?',['Hány mm adatot használ a pisztoly előtt és mögött','A lézer erejét','A hézag maximumát'],0,'Nagyobb érték: stabilabb, de lassabban reagál.'],
+['Pálya','Mennyi lehet a Max increment?',['Akár 5 mm','0,5–1,0 mm, soha nem több 1,0-nál','Mindegy'],1,'Ez a korrekció agresszivitása. A kézikönyv szerint soha ne legyen 1,0 mm felett.'],
+['Pálya','Mi történik, ha a rossz szakasz hosszabb, mint a Max blind?',['Leáll a folyamat','A robot gyorsít','Semmi'],0,'A Ramp overshoot dönti el, hogy a rossz szakasz előtt vagy után álljon meg.'],
+['Pálya','Mit csinál a negatív Ramp overshoot?',['A rossz szakasz előtt állítja meg a robotot','Kikapcsolja a követést','Gyorsít'],0,'Negatív: előtte, pozitív: utána.'],
+['Parancsok','Hová kerül az LS-SET-OFS?',['Az LS-TRACK ON elé','Az ARC-OFF után','Bárhová'],0,'A vezérlő megjegyzi az utolsó értéket, ezért mindig írd be a követés elé.'],
+['Parancsok','Hová kerül az LS-TRACK OFF?',['Az ARC-OFF után','Az ARC-OFF elé','A program végére'],1,'Az ARC-OFF után a robot elveszíti a hegesztési vektort.'],
+['Parancsok','Mit csinál az LS-SET-GAIN -99 egy irányban?',['Maximális korrekciót ad','Letiltja azt az irányt','Visszaáll alapra'],1,'Amíg új LS-SET-GAIN nem jön, abban az irányban nincs korrekció.'],
+['Parancsok','Milyen lehet az LS-SET-GROUP paramétere?',['Bármilyen szöveg','Csak szám, vezető nulla nélkül','Csak betű'],1,'Ezért a csoportot is számmal kell elnevezni.'],
+['Parancsok','Mi az ajánlott timeout az LS-SEAM-FIND-nál?',['1 s','5 s','30 s'],1,'Kisebbtől nem lesz gyorsabb, csak több hiba lesz. A robot úgyis továbbmegy, amint megvan a mérés.'],
+['Parancsok','Hová kerül az LS-SEAM-FIND eredménye?',['Egy GD változóba','10 egymást követő GR változóba','A Teach Pendant képernyőjére'],1,'A megadott GR indextől kezdve 10 GR változóba.'],
+['Parancsok','Mire jó a CNVCOORD a seam-find után?',['A szenzor TOOL koordinátáit átváltja másik rendszerbe (pl. ROBOT)','Kikapcsolja a lézert','Elmenti a jobot'],0,'A mérés a szenzor saját (TOOL) rendszerében van, a SHIFT-ON-hoz át kell váltani.'],
+['Parancsok','Mi a LEAD-IN arc-start lényege?',['Gyorsabb ívgyújtás','Üres arc-start: van hegesztési vektor, de nincs ív, így a szenzor előre tud mérni','Kráterkitöltés'],1,'A követéshez kell a hegesztési vektor, a lead-in ezt adja meg ív nélkül.'],
+['Kalibráció','Szabad módosítani az ARC-EYE Reference Position-t?',['Igen, ha ütközés volt','Soha, csak tanúsított integrátor tudja visszaállítani','Hetente kell'],1,'Minden mérés ehhez viszonyít.'],
+['Kalibráció','A REFERENCE job mérése 1 mm-nél nagyobb összeltérést mutat. Mi a teendő?',['Semmi','Sensor Frame újrakalibrálás (Controller configuration → Advanced)','A Laser power emelése'],1,'Előtte a robotkart és a toolt referáld.'],
+['Hibák','„CHECK THE CONNECTION WITH THE LASER SENSOR” – mit nézel?',['A controller connection jelzőt; ha nem zöld, megnyomod','A lézer erejét','A seam modellt'],0,'Ez a robotvezérlő és az ARC-EYE PC kapcsolatára vonatkozik.'],
+['Hibák','Mit jelent a 0x01 STATUS_SENSOR_NOT_READY?',['A szenzor nem szkennel','Ismeretlen job','Hőmérséklet-riasztás'],0,'Például LS-SEAM-FIND bekapcsolt lézer nélkül.']
+];
+const DAY=864e5,GAP=[0,1,3,7,16];
+let round=null;
+function startRound(){const now=Date.now(),ids=shuffle(QB.map((_,i)=>i)),due=ids.filter(i=>!C[i]||C[i].due<=now),rest=ids.filter(i=>!due.includes(i)).sort((a,b)=>C[a].due-C[b].due);round={list:[...due,...rest].slice(0,8),i:0,ok:0,ans:null,re:[]};renderQ()}
+function renderQ(){const v=$('#v-kerdesek');
+if(!round){const cnt=[0,0,0,0,0];QB.forEach((_,i)=>cnt[C[i]?C[i].b:0]++);const due=QB.filter((_,i)=>!C[i]||C[i].due<=Date.now()).length;
+v.innerHTML=`<div class="qcard"><h1>Gyorskérdések</h1><p class="intro">Körönként 8 kérdés, vegyesen az egész kézikönyvből. Amit eltalálsz, egyre ritkábban jön vissza, amit elrontasz, hamar újra előkerül. Napi egy kör elég.</p><div class="boxes">${['Tanulandó','1. szint','2. szint','3. szint','Tudom'].map((l,b)=>`<div class="bx"><div class="bxn">${cnt[b]}</div><div class="bxb"><i style="height:${cnt[b]/QB.length*100}%"></i></div><div class="bxl">${l}</div></div>`).join('')}</div><p>${due} kérdés esedékes most.</p><button class="btn pri" id="qstart">Kör indítása</button></div>`;return}
+if(round.i>=round.list.length){v.innerHTML=`<div class="qcard"><h1>${round.ok} / ${round.list.length} helyes válasz</h1><p class="intro">Az elrontott kérdések a kör végén még egyszer előjöttek, és a következő körben is elsőként jönnek.</p><div class="acts"><button class="btn pri" id="qstart">Új kör</button><button class="btn" id="qhome">Áttekintés</button></div></div>`;return}
+const id=round.list[round.i],q=QB[id];round.ord=shuffle(q[2].map((_,j)=>j));round.ans=null;
+v.innerHTML=`<div class="qcard"><div class="qtop"><span class="tag">${q[0]}</span><span>${round.i+1} / ${round.list.length}</span></div><div class="bar"><i style="width:${round.i/round.list.length*100}%"></i></div><p class="qq">${q[1]}</p><div id="qo">${round.ord.map(o=>`<button class="btn opt" data-opt="${o}">${q[2][o]}</button>`).join('')}</div><div id="qfb2"></div></div>`}
+function answerQ(o){if(round.ans!=null)return;const id=round.list[round.i],q=QB[id],ok=o===q[3],now=Date.now(),b=C[id]?C[id].b:0;round.ans=o;
+if(ok){const nb=Math.min(4,b+1);C[id]={b:nb,due:now+GAP[nb]*DAY};round.ok++;addXP(5)}else{C[id]={b:0,due:now};if(!round.re.includes(id)){round.re.push(id);round.list.push(id)}}
+st.set('c',C);document.querySelectorAll('#qo .opt').forEach(x=>{const k=+x.dataset.opt;x.disabled=true;if(k===q[3])x.classList.add('good');else if(k===o)x.classList.add('bad')});
+$('#qfb2').innerHTML=`<p class="fb"><b>${ok?'Igen!':'Nem egészen.'}</b> ${q[4]}</p><div class="acts"><button class="btn pri" id="qnext">Tovább</button></div>`}
+
+/* ---------- programrakó ---------- */
+const PZ=[
+{t:'Varratkövetés',d:'A kézikönyv 2. példakódja: egyenes varrat követéssel. Koppints a sorokra a helyes sorrendben.',L:[[1,'TOOL = 1:Stick_17'],[1,'SHIFT-OFF'],[1,'RSTALLSFT'],[2,'MOVEP GP#(50:Home)'],[3,'SENSOR-SW LASERSENSOR'],[4,'LS-SET-OFS +0 +0'],[4,'LS-SET-GAIN +0 +0'],[5,'MOVEP P001','ráállás'],[6,'MOVEL P002','varrat eleje'],[7,'ARC-SET AMP=120 VOLT=16.4'],[8,'ARC-ON ArcStart1'],[9,'LS-TRACK ON'],[10,'MOVEL P004','varrat vége'],[11,'LS-TRACK OFF'],[12,'CRATER AMP=100 VOLT=16.2'],[13,'ARC-OFF ArcEnd1'],[14,'MOVEL P005','elállás'],[15,'MOVEP GP#(50:Home)']],
+why:['A SENSOR-SW minden más LS parancs előtt jön.','Az LS-SET-OFS és az LS-SET-GAIN mindig az LS-TRACK ON előtt van, mert a vezérlő megjegyzi az utolsó értéket.','Az LS-TRACK ON csak az ARC-ON után lép életbe.','Az LS-TRACK OFF az ARC-OFF előtt jön, mert utána elvész a hegesztési vektor.']},
+{t:'Varratkeresés + eltolás',d:'A kézikönyv 4. példakódja egyszerűsítve: megméri a varrat elejét, és eltolja a programot.',L:[[1,'MOVEP GP#(50:Home)'],[2,'SENSOR-SW LASERSENSOR'],[3,'LS-SET-GROUP 1'],[4,'LS-SET-JOB 2'],[5,'MOVEL P002','mérőpont'],[6,'LS-LASER ON'],[7,'LS-SEAM-FIND GR#(1) 5.00'],[8,'LS-LASER OFF'],[9,'SETEL GD#(1) Y,Z = GR#(2), GR#(3)'],[10,'CNVCOORD ROBOT GD#(2) = TOOL P002 GD#(1)'],[11,'SHIFT-ON ROBOT = GD#(2)'],[12,'MOVEL P003','ráállás, már eltolva'],[13,'ARC-ON ArcStart1'],[14,'MOVEL P005','varrat vége'],[15,'ARC-OFF ArcEnd1'],[16,'MOVEP P006','elállás, még eltolva'],[17,'SHIFT-OFF'],[18,'MOVEP GP#(50:Home)']],
+why:['Az LS-SET-GROUP előbb jön, mint az LS-SET-JOB, mert a job a csoporton belül van.','Az LS-SEAM-FIND állva, bekapcsolt lézerrel fut, különben SENSOR NOT READY hibát kapsz.','Az eredmény GR változókba kerül. A GR#1 (hegesztési irány) kimarad.','A CNVCOORD a szenzor TOOL koordinátáiból ROBOT koordinátát csinál.','A rá- és elállás is az eltolt szakaszban van, hogy ne legyen ütközés.']}
+];
+let pz=0,built=[],pool=[],marks={},pzMsg='';
+function openPZ(i){pz=i;built=[];marks={};pzMsg='';pool=shuffle(PZ[i].L.map((x,j)=>({id:j,r:x[0],t:x[1],c:x[2]||''})));renderPZ()}
+function lnH(l,i,attr){const m=marks[l.id];return `<button class="ln ${m===true?'ok':m===false?'no':''}" ${attr}="${l.id}">${i!=null?`<span class="i">${i+1}</span>`:''}<span>${l.t}${l.c?` <span class="c">· ${l.c}</span>`:''}</span></button>`}
+function renderPZ(){const n=PZ[pz].L.length;$('#v-program').innerHTML=`<h1>Programrakó</h1><p class="intro">Rakd össze a robotprogramot a megkevert sorokból. Koppints egy sorra, és a program végére kerül. Ha rosszul raktad, koppints rá újra, és visszamegy.</p>
+<div class="seg">${PZ.map((z,i)=>`<button class="btn${i===pz?' pri':''}" data-pz="${i}">${z.t}${P.pz[i]?' · kész':''}</button>`).join('')}</div><p class="story">${PZ[pz].d}</p>
+<div class="pz"><div class="pane"><h3>Program · ${built.length} / ${n}</h3>${built.length?built.map((l,i)=>lnH(l,i,'data-b')).join(''):'<p class="empty">Még üres. Koppints egy sorra a „Sorok” listában.</p>'}</div>
+<div class="pane"><h3>Sorok</h3>${pool.length?pool.map(l=>lnH(l,null,'data-p')).join(''):'<p class="empty">Minden sor a programban van. Jöhet az ellenőrzés.</p>'}</div></div>
+<div class="acts"><button class="btn pri" id="chk" ${built.length<n?'disabled':''}>Ellenőrzés</button><button class="btn" id="rst">Újrakezdés</button></div><div id="pzres">${pzMsg}</div>`}
+function checkPZ(){const exp=PZ[pz].L.map(x=>({r:x[0],t:x[1]})).sort((a,b)=>a.r-b.r);let n=0;marks={};built.forEach((l,i)=>{const ok=l.r===exp[i].r||l.t===exp[i].t;marks[l.id]=ok;if(ok)n++});
+if(n===built.length){pzMsg=`<div class="pane win" style="margin-top:14px"><h3>Hibátlan!</h3><p>Amit ebből érdemes megjegyezni:</p><ul>${PZ[pz].why.map(w=>`<li>${w}</li>`).join('')}</ul></div>`;const first=!P.pz[pz];P.pz[pz]=1;addXP(first?40:10)}else pzMsg=`<p class="fb"><b>${n} / ${built.length} sor van jó helyen.</b> A pirosakat koppintással visszateheted.</p>`;renderPZ()}
+
+/* ---------- vezérlés ---------- */
+const TABS=['kuldetesek','iskola','eles','kepernyo','hibakereso','kerdesek','program'];
+let qInit=false,pzInit=false,hkInit=false,skInit=false;
+function route(){const h=(location.hash||'#kuldetesek').slice(1),t=TABS.includes(h)?h:'kuldetesek';for(const x of TABS)$('#v-'+x).classList.toggle('hide',x!==t);document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.dataset.t===t));if(t==='kerdesek'&&!qInit){qInit=true;renderQ()}if(t==='program'&&!pzInit){pzInit=true;openPZ(0)}if(t==='hibakereso'&&!hkInit){hkInit=true;renderHK()}if(t==='kepernyo')scrEnter('free');if(t==='eles')scrEnter('task');if(t==='iskola'&&!skInit){skInit=true;listCards()}if(t==='kuldetesek')draw()}
+document.addEventListener('input',E=>{if(E.target.id==='hkq'){hkQ=E.target.value;listHK();return}
+if(E.target.id==='cr'&&card){cval=+E.target.value;const k=card.ctl.key,c=card.ctl;$('#co').textContent=(['tangent','gapMax','rangeL'].includes(k)&&!cval)?'ki':(c.step<1?cval.toFixed(1).replace('.',','):cval)+(k==='tangent'||k==='bevel'?'°':['laser','gain','median','spatter','voidf','speed'].includes(k)?'':' mm');cDraw();cCap();return}
+if(E.target.id==='aepart'){scrPart=+E.target.value;scrSim();return}
+const ud=E.target.dataset;if(ud&&ud.ui!=null){const it=ITEMS[+ud.ui],el=E.target;if(!it)return;
+if(ud.c!=null){if(it.k==='pair')it.ch[+ud.c]=el.checked;else it.v[+ud.c]=el.checked}
+else if(it.k==='slider'){it.v=+el.value;const vb=$('#vb'+ud.ui);if(vb)vb.textContent=nb(it.v)+(it.unit?' '+it.unit:'')}
+else if(['select','group','radio'].includes(it.k))it.v=+el.value;
+else if(it.k==='text')it.v=el.value;
+else if(it.k==='xyzsel')it.v[+ud.j]=el.value;
+else if(ud.j!=null)it.v[+ud.j]=it.k==='select2'||it.k==='dual'?+el.value:(parseFloat(el.value)||0);
+scrSim();return}const k=E.target.dataset&&E.target.dataset.k;if(!k||!cur)return;const c=CT[k];cur.s[k]=Math.round(parseFloat(E.target.value)/c[3])*c[3];if(c[3]<1)cur.s[k]=Math.round(cur.s[k]*10)/10;$('#o-'+k).textContent=fmt(k);update();draw()});
+document.addEventListener('click',E=>{const b=E.target.closest('button');if(!b)return;const d=b.dataset;
+if(d.card){if(location.hash!=='#iskola')location.hash='#iskola';if(!skInit){skInit=true;listCards()}openCard(d.card);return}
+if(d.cbtn){cval=d.cbtn;document.querySelectorAll('[data-cbtn]').forEach(x=>x.classList.toggle('pri',x.dataset.cbtn===cval));cDraw();cCap();return}
+if(d.cq!=null){answerC(+d.cq,+d.co,b);return}
+if(b.id==='cback'){card=null;listCards();window.scrollTo(0,0);return}
+if(b.id==='tweld'){taskWeld();return}
+if(b.id==='thint'){taskHint();return}
+if(b.id==='tnew'){newTask();window.scrollTo(0,0);return}
+if(d.m){if((location.hash||'#kuldetesek')!=='#kuldetesek')location.hash='#kuldetesek';openM(+d.m);return}
+if(d.model){cur.s.model=d.model;document.querySelectorAll('[data-model]').forEach(x=>x.classList.toggle('pri',x.dataset.model===d.model));update();draw();return}
+if(d.method){cur.s.method=d.method;document.querySelectorAll('[data-method]').forEach(x=>x.classList.toggle('pri',x.dataset.method===d.method));update();draw();return}
+if(d.hk){hkMode=d.hk;renderHK();return}
+if(d.scr){const same=scrOpen&&scrP===d.scr;scrOpen=!same;scrP=d.scr;scrT='General';scrS=null;document.querySelectorAll('.aem').forEach(x=>x.classList.toggle('on',scrOpen&&x.dataset.scr===scrP));$('.aebody').classList.toggle('open',scrOpen);rPanel();scrSim();return}
+if(d.stab){scrT=d.stab;scrS=null;rPanel();return}
+if(d.ssub){scrS=d.ssub;rPanel();return}
+if(d.gt){scrGT=d.gt;rGT();scrDraw();return}
+if(d.uil!=null){ITEMS[+d.uil].v=+d.j;rPanel();scrSim();return}
+if(d.uii!=null){ITEMS[+d.uii].v=+d.j;rPanel();scrSim();return}
+switch(b.id){case 'aeclose':scrOpen=false;document.querySelectorAll('.aem').forEach(x=>x.classList.remove('on'));$('.aebody').classList.remove('open');rPanel();scrSim();return;
+case 'al-scan':scrScan=!scrScan;scrSim();return;
+case 'al-seam':showScrDlg('seam');return;
+case 'al-path':showScrDlg('path');return;
+case 'aeok':case 'aeok2':scrDlg=false;$('#aedlg').innerHTML='';return}
+if(d.uib){toast('„'+d.uib+'” – itt csak gyakorló gomb');return}
+if(b.id==='sreset'){const f=JSON.parse(UIDEF);for(const k in f)UI[k]=f[k];buildKeys();rPanel();scrSim();toast('Kiinduló értékek visszaállítva');return}
+if(d.qo!=null){answerM(+d.qo);return}
+if(d.dq!=null){answerD(+d.dq,b);return}
+if(d.opt!=null){answerQ(+d.opt);return}
+if(d.pz!=null){openPZ(+d.pz);return}
+if(d.p!=null){const i=pool.findIndex(l=>l.id===+d.p);if(i>-1){built.push(pool.splice(i,1)[0]);marks={};pzMsg='';renderPZ()}return}
+if(d.b!=null){const i=built.findIndex(l=>l.id===+d.b);if(i>-1){pool.push(built.splice(i,1)[0]);marks={};pzMsg='';renderPZ()}return}
+switch(b.id){
+case 'back':clearInterval(timer);clearTimeout(wt);cur=null;$('#mview').classList.add('hide');$('#mlist').classList.remove('hide');listM();window.scrollTo(0,0);break;
+case 'tip':{const h=cur.hint||[];if(tipN<h.length){tipN++;$('#tips').innerHTML=h.slice(0,tipN).map((t,i)=>`<p><b>Tipp ${i+1}:</b> ${t}</p>`).join('')}break}
+case 'L2':if(dlgOpen){dlgOpen=false;$('#dlg').innerHTML=''}else showDlg();break;
+case 'dlgx':dlgOpen=false;$('#dlg').innerHTML='';break;
+case 'dec':decide();break;
+case 'reglue':phase2();break;
+case 'reroll':case 'again':openM(9);break;
+case 'qstart':startRound();break;
+case 'qnext':round.i++;renderQ();window.scrollTo(0,0);break;
+case 'qhome':round=null;renderQ();break;
+case 'chk':checkPZ();break;
+case 'rst':openPZ(pz);break}});
+addEventListener('hashchange',route);
+function start(d){if(d&&d.P){P=d.P;if(d.C)C=d.C}hud();listM();route()}
+start({});
+}
+</script>
+</body>
+</html>

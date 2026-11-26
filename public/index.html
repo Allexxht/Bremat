@@ -43,6 +43,7 @@
   --idea: #b86e00;   --idea-soft: rgba(214, 140, 0, .13);
   --proj: #6a4bc4;   --proj-soft: rgba(106, 75, 196, .12);
   --pt: #2563c9;     --pt-soft: rgba(37, 99, 201, .12);
+  --ae: #d2452f;     --ae-soft: rgba(226, 65, 47, .12);
   --ok: #1e9a4e; --warn: #c27c00; --bad: #c8102e;
   --badge-ink: #ffffff;
   --display: 'Sora', 'Segoe UI', system-ui, sans-serif;
@@ -65,6 +66,7 @@
   --idea: #f2b84b;  --idea-soft: rgba(242, 184, 75, .14);
   --proj: #a990ff;  --proj-soft: rgba(169, 144, 255, .15);
   --pt: #6ea4ff;    --pt-soft: rgba(110, 164, 255, .15);
+  --ae: #ff7a5c;    --ae-soft: rgba(255, 122, 92, .15);
   --ok: #4ad37f; --warn: #f2b84b; --bad: #ff5468;
   color-scheme: dark;
 }
@@ -283,6 +285,7 @@ main {
 
 /* Robot programok (3. változat, 2026. nov. 26.): a DTPS mappából; termékek → tábla (Tesztre vár → Javítani kell → Kész) + oldalpanel */
 .island.pt { --tone: var(--pt); --tone-soft: var(--pt-soft); }
+.island.ae { --tone: var(--ae); --tone-soft: var(--ae-soft); }
 :root { --st-wait: #2563c9; --st-fix: #d1342f; --st-tweak: #c27c00; --st-ok: #1f9d55; --paper: #ffffff; }
 :root[data-theme="dark"] { --st-wait: #6ea4ff; --st-fix: #ff6b63; --st-tweak: #f2b84b; --st-ok: #4ad37f; --paper: #16191e; }
 .rp-list, .rp-tbl { background: var(--glass-strong); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
@@ -400,7 +403,8 @@ main {
   </div>
   <nav class="nav">
     <a href="#/" data-view="#/" style="--i:0"><i data-lucide="house"></i>Kezdőlap</a>
-    <a href="#/beallitasok" data-view="#/beallitasok" style="--i:1"><i data-lucide="settings"></i>Beállítások</a>
+    <a href="/arceye/" style="--i:1"><i data-lucide="scan-line"></i>ARC-EYE edző</a>
+    <a href="#/beallitasok" data-view="#/beallitasok" style="--i:2"><i data-lucide="settings"></i>Beállítások</a>
   </nav>
   <div class="drawer-foot">BREMAT · belső eszközök</div>
 </aside>
@@ -755,8 +759,9 @@ function renderHome() {
       ${islandShell('isValk', 'valk', 'clipboard-check', 'Valk heti lap', 'Robot karbantartás', '/valk/', 1)}
       ${islandShell('isIdeas', 'idea', 'lightbulb', 'Ötletek', 'Amit meg akarok csinálni', '#/otletek', 2)}
       ${islandShell('isPt', 'pt', 'bot', 'Robot programok', 'Mi vár tesztre, mit kell javítani', '#/teszt', 3)}
-      ${islandShell('isProj', 'proj', 'folder-kanban', 'Projektek', 'Tervek, rajzok, 3D oldalak', '#/projektek', 4)}
-      ${helyiOn() ? islandShell('isFiles', 'valk', 'folder-lock', 'Valk fájlok', 'Cellák, jigek, adapterek, termékek – csak ezen a gépen', HELYI_URL, 5) : ''}
+      ${islandShell('isAe', 'ae', 'scan-line', 'ARC-EYE edző', 'Szenzorbeállítás játékosan', '/arceye/', 4)}
+      ${islandShell('isProj', 'proj', 'folder-kanban', 'Projektek', 'Tervek, rajzok, 3D oldalak', '#/projektek', 5)}
+      ${helyiOn() ? islandShell('isFiles', 'valk', 'folder-lock', 'Valk fájlok', 'Cellák, jigek, adapterek, termékek – csak ezen a gépen', HELYI_URL, 6) : ''}
     </div></div>`;
   if (helyiOn()) fillIsland($('#isFiles'), { items: [
     { icon: 'shield-check', good: true, html: 'A fájlok a gépen maradnak, a netre nem kerülnek fel.' },
@@ -768,6 +773,7 @@ function renderHome() {
   loadValk().catch(() => {});
   loadIdeasIsland().catch(() => {});
   loadPtIsland().catch(() => {});
+  loadAeIsland();
   loadProjIsland().catch(() => {});
 }
 
@@ -1100,6 +1106,25 @@ async function loadPtIsland() {
   const sp = el.querySelector('.progress span'); if (sp && parts.n) sp.innerHTML = `<b>${parts.ok}</b> rész kész · <b>${parts.n - parts.ok}</b> hátra`;
 }
 
+// --- ARC-EYE edző sziget: a szint és a küldetések, a /arceye/ oldal böngészőben tárolt állapotából ---
+const AE_LEVELS = [[0, 'Tanonc'], [100, 'Betanított'], [250, 'Beállító'], [450, 'Varratvadász'], [700, 'ARC-EYE mester'], [1000, 'Integrátor-jelölt']];
+const AE_MISSIONS = 9;
+function loadAeIsland() {
+  const el = $('#isAe');
+  let p = null;
+  try { p = JSON.parse(store.get('aeT_p') || 'null'); } catch { p = null; }
+  const xp = Math.max(0, Number(p?.xp) || 0);
+  const done = Object.keys(p?.done || {}).filter((k) => Number(k) >= 1 && Number(k) <= AE_MISSIONS).length;
+  const lvl = AE_LEVELS.filter(([min]) => xp >= min).at(-1)[1];
+  const items = xp || done
+    ? [{ icon: 'award', html: `<b>${esc(lvl)}</b> <span class="dim">· ${xp} XP</span>` },
+       done < AE_MISSIONS ? { icon: 'target', html: `Következő: <b>${done + 1}. küldetés</b>` } : { icon: 'circle-check-big', good: true, html: 'Minden küldetés megvan.' }]
+    : [{ icon: 'play', html: 'Javítsd meg a szenzort: 9 küldetés, élő grafikonnal.' },
+       { icon: 'graduation-cap', html: '<span class="dim">Beállítás-iskola, gyorskérdések, programrakó.</span>' }];
+  fillIsland(el, { items, progress: { done, left: AE_MISSIONS - done }, foot: 'Ezen a gépen tárolja, hol tartasz.' });
+  const sp = el.querySelector('.progress span'); if (sp) sp.innerHTML = `<b>${done}</b> küldetés kész · <b>${AE_MISSIONS - done}</b> hátra`;
+}
+
 // --- Lista: a termékek ---
 async function renderPtList() {
   $('#app').innerHTML = `<div class="page" style="max-width:820px">
@@ -1172,10 +1197,10 @@ async function renderPtProduct(id) {
       <div class="rp-seg" role="group" aria-label="Állapot">${STATES.map((k) => `<button type="button" data-a="status" data-v="${k}" aria-pressed="${x.status === k}" style="--c:var(--st-${k})">${STATE[k].t}</button>`).join('')}</div>
       ${o.length ? `<div class="rp-lbl">${x.status === 'wait' ? 'Ezeket ellenőrizd a tesztnél' : 'Ezt kell javítani'}</div><div class="rp-pts">${o.map(pt).join('')}</div>` : ''}
       ${x.status === 'ok' ? `<p class="rp-good">✓ Minden tökéletes${x.ok_at ? ` (${esc(whenText(x.ok_at))})` : ''}</p>` : ''}
-      ${writing ? `<div class="rp-lbl">Észrevételek – soronként egy (javítandó pontok)</div><textarea id="rpObs" maxlength="6000" placeholder="pl. Kezdőpont 2 mm-t csúszik"></textarea>
+      ${writing ? `<div class="rp-lbl">Mi a teendő? – soronként egy pont</div><textarea id="rpObs" maxlength="6000" placeholder="pl. Kezdőpont 2 mm-t csúszik"></textarea>
         <div class="rp-acts"><button class="btn rp-fix" type="button" data-a="save"><i data-lucide="wrench"></i>Mentés – javítani kell</button><button class="btn" type="button" data-a="cancel">Mégse</button></div>`
       : `<div class="rp-acts">${x.status !== 'ok' ? `<button class="btn rp-ok" type="button" data-a="ok"><i data-lucide="check"></i>Teszteltem – minden tökéletes</button>` : ''}
-        <button class="btn" type="button" data-a="write"><i data-lucide="pencil-line"></i>Teszteltem – észrevételt írok</button></div>`}
+        <button class="btn" type="button" data-a="write"><i data-lucide="pencil-line"></i>Mi a teendő?</button></div>`}
       <div class="rp-lbl">Infó a ${esc(v.v)} verzióhoz</div>
       <div class="rp-notes">${curG.notes.slice().reverse().map(noteHtml).join('')}
         <div class="rp-add"><textarea id="rpNote" maxlength="4000" placeholder="Infó a ${esc(v.v)}-hoz…" aria-label="Új infó"></textarea><button class="btn" type="button" data-a="noteadd" aria-label="Infó mentése"><i data-lucide="send-horizontal"></i></button></div></div>

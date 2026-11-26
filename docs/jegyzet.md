@@ -462,7 +462,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   (pl. `R001_KIVETELES TOMPA.rp4`) is rész lesz. Rész kulcsa: nagybetű, `-`/szóköz → `_`.
   Legfrissebb: verziószám, aztán UJ, aztán dátum. `parseFolder`, `parseProgram` a `public/programteszt.js`-ben.
 - Állapot részenként: **Tesztre vár** (új rész, vagy új verzió jelent meg a mappában) → **Javítani kell**
-  („Teszteltem – észrevételt írok”: soronként egy pont, a verzió jelölésével) → **Kész** („Teszteltem –
+  („Mi a teendő?”: soronként egy pont, a verzió jelölésével) → **Kész** („Teszteltem –
   minden tökéletes”: a pontok kipipálva). Pontok pipálhatók; „Újra tesztelni” (Kész → Tesztre vár).
   A nyitott pontok új verziónál is megmaradnak („ezeket ellenőrizd a tesztnél”).
 - Felület: `#/teszt` (termékek, színes sáv részenként), `#/teszt/<id>` (tábla: Rész | Legfrissebb |
@@ -488,3 +488,10 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Netlify keret (nov. 26.): éles deploy szünetel → Alex az előnézetet használja; ideiglenes szinkron:
   `DTPS-szinkron.bat` (projekt fájlok, `robot-programok/`), az előnézet `/api/kozpont`-jára küld. A Blobs tároló közös.
 
+## ARC-EYE edző (`/arceye/`)
+- Önálló, egyfájlos oldal: `public/arceye/index.html` (2026-11-19-i edző, 2026-11-26-án került a Központba).
+  Küldetések, Beállítás-iskola, Éles feladat, Képernyő, Hibakereső, Gyorskérdések, Programrakó.
+- Nincs szerver, nincs kód: az előrehaladás a böngészőben (`localStorage` `aeT_p`, `aeT_c`).
+  A Központ kezdőlapjának „ARC-EYE edző” szigete ugyanebből olvassa a szintet és a kész küldetéseket.
+- Szándékosan sötét: az ARC-EYE vezérlőképernyőjét utánozza. A Központ menüjében is ott van.
+- A kézikönyvből csak fejezet/gyakorlat hivatkozás és rövid, egyszerűsített példakód-sorok vannak benne (a repó nyilvános).
