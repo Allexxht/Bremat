@@ -283,8 +283,8 @@ main {
 
 /* Robot programok (3. változat, 2026. nov. 26.): a DTPS mappából; termékek → tábla (Tesztre vár → Javítani kell → Kész) + oldalpanel */
 .island.pt { --tone: var(--pt); --tone-soft: var(--pt-soft); }
-:root { --st-wait: #2563c9; --st-fix: #d1342f; --st-ok: #1f9d55; --paper: #ffffff; }
-:root[data-theme="dark"] { --st-wait: #6ea4ff; --st-fix: #ff6b63; --st-ok: #4ad37f; --paper: #16191e; }
+:root { --st-wait: #2563c9; --st-fix: #d1342f; --st-tweak: #c27c00; --st-ok: #1f9d55; --paper: #ffffff; }
+:root[data-theme="dark"] { --st-wait: #6ea4ff; --st-fix: #ff6b63; --st-tweak: #f2b84b; --st-ok: #4ad37f; --paper: #16191e; }
 .rp-list, .rp-tbl { background: var(--glass-strong); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
 .rp-prod { display: grid; grid-template-columns: 1fr minmax(110px, 220px); gap: 8px 20px; align-items: center; padding: 16px 20px; border-top: 1px solid var(--line); text-decoration: none; }
 .rp-prod:first-child { border-top: 0; }
@@ -297,8 +297,8 @@ main {
 .rp-bar i { flex: 1; border-radius: 3px; background: var(--c); }
 .st { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
 .st::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
-.st.wait { --c: var(--st-wait); } .st.fix { --c: var(--st-fix); color: var(--st-fix); } .st.ok { --c: var(--st-ok); color: var(--st-ok); }
-.n-wait { color: var(--st-wait); } .n-fix { color: var(--st-fix); } .n-ok { color: var(--st-ok); }
+.st.wait { --c: var(--st-wait); } .st.fix { --c: var(--st-fix); color: var(--st-fix); } .st.tweak { --c: var(--st-tweak); color: var(--st-tweak); } .st.ok { --c: var(--st-ok); color: var(--st-ok); }
+.n-wait { color: var(--st-wait); } .n-fix { color: var(--st-fix); } .n-tweak { color: var(--st-tweak); } .n-ok { color: var(--st-ok); }
 .rp-head { display: flex; flex-direction: column; gap: 4px; }
 .rp-head h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: clamp(26px, 5vw, 34px); }
 .rp-head p { margin: 0; color: var(--muted); }
@@ -348,12 +348,33 @@ main {
 .rp-acts .btn { min-height: 50px; font-weight: 800; }
 .btn.rp-ok { background: var(--st-ok); border-color: var(--st-ok); color: #fff; }
 .btn.rp-fix { background: var(--text); border-color: var(--text); color: var(--paper); }
-.rp-panel textarea { width: 100%; min-height: 120px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); resize: vertical; font: inherit; color: inherit; }
+.rp-panel textarea { width: 100%; min-height: 110px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); resize: vertical; font: inherit; color: inherit; }
 .rp-panel details summary { cursor: pointer; color: var(--muted); font-weight: 700; }
 .rp-old { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; font-size: 14.5px; }
 .rp-old > div { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 10px; background: var(--hover); }
 .rp-old a { color: var(--st-wait); font-weight: 700; text-decoration: none; white-space: nowrap; }
 .rp-good { margin: 0; color: var(--st-ok); font-weight: 800; }
+.rp-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.rp-seg button { min-height: 44px; padding: 4px 6px; border-radius: 12px; border: 1px solid var(--line); background: none; font-weight: 700; font-size: 13.5px; color: var(--muted); cursor: pointer; line-height: 1.15; }
+.rp-seg button[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: #fff; }
+@media (max-width: 420px) { .rp-seg { grid-template-columns: repeat(2, 1fr); } }
+.rp-info { border-radius: 14px; background: var(--hover); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.rp-info .t { white-space: pre-wrap; overflow-wrap: anywhere; }
+.rp-info .t.empty { color: var(--muted); }
+.rp-info .row { display: flex; gap: 8px; justify-content: flex-end; }
+.rp-link { border: 0; background: none; color: var(--st-wait); font-weight: 700; cursor: pointer; padding: 2px 0; font-size: 14px; }
+.rp-notes { display: flex; flex-direction: column; gap: 6px; }
+.rp-note { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line); }
+.rp-note .t { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rp-note time { display: block; font-size: 12px; color: var(--muted); font-weight: 700; }
+.rp-note button { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 8px; font-size: 16px; }
+.rp-note button:hover { color: var(--st-fix); background: var(--hover); }
+.rp-add { display: flex; gap: 8px; align-items: flex-end; }
+.rp-add textarea { min-height: 46px; height: 46px; }
+.rp-add .btn { min-height: 46px; padding: 0 14px; }
+.rp-ver { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--line); }
+.rp-ver:first-child { border-top: 0; }
+.rp-ver .h { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
 
 @media (prefers-reduced-motion: reduce) {
   .topbar, .island, .badge, .badge::after, .greet, .card, .pcard, .skeleton, .idea-row, .rp-panel { animation: none; }
@@ -388,7 +409,7 @@ main {
 <div id="toast" role="status"></div>
 
 <script type="module">
-import { STATE, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, dtpsLink } from '/programteszt.js';
+import { STATES, STATE, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink } from '/programteszt.js';
 /* =====================================================================
    0. Régi címek: a heti lap a /valk/ címre költözött (régi könyvjelzők).
    ===================================================================== */
@@ -1057,7 +1078,7 @@ function whenText(iso) {
   return huDay.format(d);
 }
 const stHtml = (st) => `<span class="st ${st}">${STATE[st].t}</span>`;
-const ptOrder = (p) => { const s = summary(p); return s.fix || s.wait ? 0 : s.parts ? 1 : 2; };
+const ptOrder = (p) => { const s = summary(p); return s.fix || s.wait || s.tweak ? 0 : s.parts ? 1 : 2; };
 const syncText = (at) => at ? `A Teendőim 5 percenként beolvassa a DTPS mappát. Utoljára: ${whenText(at)}.` : 'Még nem jött adat a DTPS mappából. A Teendőim küldi 5 percenként (menü → BREMAT Központ → DTPS mappa beolvasása most).';
 
 // --- Sziget a kezdőlapon ---
@@ -1070,7 +1091,7 @@ async function loadPtIsland() {
   const sorted = [...products].sort((a, b) => ptOrder(a) - ptOrder(b) || (summary(b).last || '').localeCompare(summary(a).last || ''));
   for (const p of sorted.filter((x) => ptOrder(x) === 0).slice(0, 3)) {
     const s = summary(p);
-    items.push({ icon: 'box', html: `<b>${esc(p.sku)}</b> <span class="dim">· ${s.wait ? `${s.wait} tesztre vár` : ''}${s.wait && s.fix ? ' · ' : ''}${s.fix ? `${s.fix} javítani` : ''}</span>` });
+    items.push({ icon: 'box', html: `<b>${esc(p.sku)}</b> <span class="dim">· ${[s.wait && `${s.wait} tesztre vár`, s.fix && `${s.fix} javítani`, s.tweak && `${s.tweak} finomítás`].filter(Boolean).join(' · ')}</span>` });
   }
   if (!products.length) items.push({ icon: 'folder-sync', html: '<span class="dim">Még nem jött adat a DTPS mappából. A Teendőim küldi 5 percenként.</span>' });
   else if (!items.length) items.push({ icon: 'circle-check-big', good: true, html: 'Minden rész kész.' });
@@ -1095,7 +1116,7 @@ async function renderPtList() {
     return `<a class="rp-prod" href="#/teszt/${esc(p.id)}">
       <span><b>${esc(p.sku)}</b>${p.name ? `<br><span class="nm">${esc(p.name)}</span>` : ''}</span>
       <span class="rp-bar" aria-hidden="true">${parts.map((x) => `<i style="--c:var(--st-${x.status})"></i>`).join('')}</span>
-      <span class="nums">${s.wait ? `<span class="n-wait"><b>${s.wait}</b> tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix"><b>${s.fix}</b> javítani</span>` : ''}<span class="n-ok"><b>${s.ok}</b>/${s.parts} kész</span>${s.last ? `<span>utolsó program: ${whenText(s.last)}</span>` : ''}</span></a>`;
+      <span class="nums">${s.wait ? `<span class="n-wait"><b>${s.wait}</b> tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix"><b>${s.fix}</b> javítani</span>` : ''}${s.tweak ? `<span class="n-tweak"><b>${s.tweak}</b> finomítás</span>` : ''}<span class="n-ok"><b>${s.ok}</b>/${s.parts} kész</span>${s.last ? `<span>utolsó program: ${whenText(s.last)}</span>` : ''}</span></a>`;
   }).join('');
 }
 
@@ -1114,6 +1135,7 @@ async function renderPtProduct(id) {
   const todo = (x) => {
     const o = openPoints(x);
     if (x.status === 'fix') return o.length ? `<b>${esc(o[0].text)}</b>${o.length > 1 ? ` +${o.length - 1}` : ''}` : 'Kijavítva – új verzió kell';
+    if (x.status === 'tweak') return o.length ? `Finomítás · <b>${esc(o[0].text)}</b>${o.length > 1 ? ` +${o.length - 1}` : ''}` : 'Kis finomítás';
     if (x.status === 'wait') return o.length ? `Tesztelni · <b>${o.length} pont</b> ellenőrizni` : 'Tesztelni a roboton';
     return '—';
   };
@@ -1122,41 +1144,52 @@ async function renderPtProduct(id) {
     app.innerHTML = `
       <a class="backlink" href="#/teszt"><i data-lucide="arrow-left"></i>Robot programok</a>
       <div class="rp-head"><h1>${esc(p.sku)}</h1>${p.name ? `<p>${esc(p.name)}</p>` : ''}
-        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}<span class="n-ok">${s.ok}/${s.parts} kész</span></div></div>
+        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}${s.tweak ? `<span class="n-tweak">${s.tweak} finomítás</span>` : ''}<span class="n-ok">${s.ok}/${s.parts} kész</span></div></div>
       ${parts.length ? `<table class="rp-tbl"><thead><tr><th>Rész</th><th>Legfrissebb</th><th>Állapot</th><th>Mi a teendő</th></tr></thead>
         <tbody>${parts.map((x) => `<tr data-part="${esc(x.id)}" tabindex="0"><td class="part">${esc(x.name)}</td><td class="mono">${esc(latestOf(x).v)}</td><td class="c-st">${stHtml(x.status)}</td><td class="c-todo todo">${todo(x)}</td></tr>`).join('')}</tbody></table>`
         : '<div class="card glass"><p class="muted" style="margin:0">Ebben a termékmappában még nincs program.</p></div>'}
       <p class="rp-foot">${esc(syncText(synced_at))}</p>`;
     icons();
   };
+  let infoEdit = false;
+  const noteHtml = (n) => `<div class="rp-note"><div class="t"><time>${esc(whenText(n.at))}</time>${esc(n.text)}</div><button type="button" data-a="notedel" data-id="${esc(n.id)}" aria-label="Infó törlése">×</button></div>`;
   const drawPanel = () => {
     const x = p.parts.find((y) => y.id === cur);
     if (!x) return close();
-    const v = latestOf(x), o = openPoints(x), done = x.points.filter((y) => y.done), old = x.versions.slice(0, -1).reverse();
+    const v = latestOf(x), o = openPoints(x), done = x.points.filter((y) => y.done);
+    const groups = notesByVersion(x), curG = groups.find((g) => g.v === v.v) || { notes: [] }, older = groups.filter((g) => g.v !== v.v);
     const pt = (y) => `<button class="rp-pt ${y.done ? 'on' : ''}" type="button" data-a="pt" data-id="${esc(y.id)}"><i>✓</i><span>${esc(y.text)}${y.v ? `<em>${esc(y.v)}</em>` : ''}</span></button>`;
     panel.innerHTML = `<button class="x" type="button" data-a="close" aria-label="Bezár"><i data-lucide="x"></i></button>
       <h2>${esc(x.name)}<small>${esc(p.sku)}</small></h2>
-      <div class="rp-cur" style="--c:var(--st-${x.status})"><small>Legfrissebb program${v.m ? ` · ${esc(whenText(v.m))}` : ''}</small><span class="v">${esc(v.v)}</span><span class="f mono">${esc(v.file)}</span>
-        <span style="margin-top:6px">${stHtml(x.status)}</span></div>
+      <div class="rp-info"><div class="rp-lbl" style="margin:0">Összesítő infó – a részhez, minden verzióhoz</div>
+        ${infoEdit ? `<textarea id="rpInfo" maxlength="8000" placeholder="pl. mindig 2 db-ot fogunk be, a 3-as jig kell…">${esc(x.info || '')}</textarea>
+          <div class="row"><button class="btn" type="button" data-a="infocancel">Mégse</button><button class="btn rp-fix" type="button" data-a="infosave"><i data-lucide="check"></i>Mentés</button></div>`
+        : `<div class="t ${x.info ? '' : 'empty'}">${x.info ? esc(x.info) : 'Még nincs. Ide az kerül, ami minden verzióra igaz.'}</div><div class="row"><button class="rp-link" type="button" data-a="infoedit">${x.info ? 'Szerkesztés' : '+ Infó írása'}</button></div>`}</div>
+      <div class="rp-cur" style="--c:var(--st-${x.status})"><small>Legfrissebb program${v.m ? ` · ${esc(whenText(v.m))}` : ''}</small><span class="v">${esc(v.v)}</span><span class="f mono">${esc(v.file)}</span></div>
       <a class="btn rp-open" href="${esc(dtpsLink(p, v))}" target="_blank" rel="noopener"><i data-lucide="play"></i>Megnyitás DTPS-ben</a>
       <p class="rp-foot" style="margin:-10px 0 0">A programozó gépen működik, ahol a Teendőim fut.</p>
+      <div class="rp-lbl">Állapot</div>
+      <div class="rp-seg" role="group" aria-label="Állapot">${STATES.map((k) => `<button type="button" data-a="status" data-v="${k}" aria-pressed="${x.status === k}" style="--c:var(--st-${k})">${STATE[k].t}</button>`).join('')}</div>
       ${o.length ? `<div class="rp-lbl">${x.status === 'wait' ? 'Ezeket ellenőrizd a tesztnél' : 'Ezt kell javítani'}</div><div class="rp-pts">${o.map(pt).join('')}</div>` : ''}
       ${x.status === 'ok' ? `<p class="rp-good">✓ Minden tökéletes${x.ok_at ? ` (${esc(whenText(x.ok_at))})` : ''}</p>` : ''}
-      ${writing ? `<div class="rp-lbl">Észrevételek – soronként egy</div><textarea id="rpObs" maxlength="6000" placeholder="pl. Kezdőpont 2 mm-t csúszik"></textarea>
+      ${writing ? `<div class="rp-lbl">Észrevételek – soronként egy (javítandó pontok)</div><textarea id="rpObs" maxlength="6000" placeholder="pl. Kezdőpont 2 mm-t csúszik"></textarea>
         <div class="rp-acts"><button class="btn rp-fix" type="button" data-a="save"><i data-lucide="wrench"></i>Mentés – javítani kell</button><button class="btn" type="button" data-a="cancel">Mégse</button></div>`
       : `<div class="rp-acts">${x.status !== 'ok' ? `<button class="btn rp-ok" type="button" data-a="ok"><i data-lucide="check"></i>Teszteltem – minden tökéletes</button>` : ''}
-        <button class="btn" type="button" data-a="write"><i data-lucide="pencil-line"></i>Teszteltem – észrevételt írok</button>
-        ${x.status === 'ok' ? '<button class="btn" type="button" data-a="again"><i data-lucide="rotate-ccw"></i>Újra tesztelni</button>' : ''}</div>`}
+        <button class="btn" type="button" data-a="write"><i data-lucide="pencil-line"></i>Teszteltem – észrevételt írok</button></div>`}
+      <div class="rp-lbl">Infó a ${esc(v.v)} verzióhoz</div>
+      <div class="rp-notes">${curG.notes.slice().reverse().map(noteHtml).join('')}
+        <div class="rp-add"><textarea id="rpNote" maxlength="4000" placeholder="Infó a ${esc(v.v)}-hoz…" aria-label="Új infó"></textarea><button class="btn" type="button" data-a="noteadd" aria-label="Infó mentése"><i data-lucide="send-horizontal"></i></button></div></div>
       ${done.length ? `<details><summary>Kipipált pontok (${done.length})</summary><div class="rp-pts" style="margin-top:10px">${done.slice().reverse().map(pt).join('')}</div></details>` : ''}
-      ${old.length ? `<details><summary>Korábbi verziók (${old.length})</summary><div class="rp-old">${old.map((y) => `<div><span><span class="mono">${esc(y.v)}</span> · ${esc(whenText(y.m))}</span><a href="${esc(dtpsLink(p, y))}" target="_blank" rel="noopener">Megnyitás</a></div>`).join('')}</div></details>` : ''}
+      ${older.length ? `<details ${older.some((g) => g.notes.length) ? 'open' : ''}><summary>Korábbi verziók (${older.length})</summary><div style="margin-top:6px">${older.map((g) => `<div class="rp-ver"><div class="h"><span><b class="mono">${esc(g.v)}</b>${g.version?.m ? ` · ${esc(whenText(g.version.m))}` : ''}</span>${g.version ? `<a class="rp-link" href="${esc(dtpsLink(p, g.version))}" target="_blank" rel="noopener">Megnyitás</a>` : ''}</div>
+        ${g.notes.length ? `<div class="rp-notes">${g.notes.slice().reverse().map(noteHtml).join('')}</div>` : '<span class="rp-foot">Nincs infó.</span>'}</div>`).join('')}</div></details>` : ''}
       ${x.tests.length ? `<details><summary>Tesztek (${x.tests.length})</summary><div class="rp-old">${x.tests.slice().reverse().map((t) => `<div><span>${esc(whenText(t.at))} · <span class="mono">${esc(t.v || '')}</span></span><span class="${t.ok ? 'n-ok' : 'n-fix'}" style="font-weight:700">${t.ok ? 'Minden tökéletes' : `${t.n || ''} észrevétel`}</span></div>`).join('')}</div></details>` : ''}`;
     icons();
   };
-  const open = (pid) => { cur = pid; writing = false; drawPanel(); panel.hidden = false; scrim.hidden = false; panel.querySelector('.x').focus(); };
+  const open = (pid) => { cur = pid; writing = false; infoEdit = false; drawPanel(); panel.hidden = false; scrim.hidden = false; panel.querySelector('.x').focus(); };
   function close() { cur = null; writing = false; panel.hidden = true; scrim.hidden = true; }
   const run = async (op, msg) => {
     if (busy) return; busy = true;
-    try { p = await guarded(() => api.ptOp(p.id, op)); writing = false; drawTable(); drawPanel(); if (msg) toast(msg); }
+    try { p = await guarded(() => api.ptOp(p.id, op)); writing = false; infoEdit = false; drawTable(); drawPanel(); if (msg) toast(msg); return true; }
     catch (e) { if (!(e instanceof AccessError)) toast(e.message); }
     finally { busy = false; }
   };
@@ -1169,12 +1202,21 @@ async function renderPtProduct(id) {
     if (a === 'close' || !x) return close();
     if (a === 'pt') return run({ type: 'point_toggle', part: x.id, point: b.dataset.id });
     if (a === 'ok') return run({ type: 'test_ok', part: x.id }, `${x.name}: kész`);
-    if (a === 'again') return run({ type: 'status', part: x.id, status: 'wait' }, `${x.name}: tesztre vár`);
+    if (a === 'status') return run({ type: 'status', part: x.id, status: b.dataset.v }, `${x.name}: ${STATE[b.dataset.v].t}`);
+    if (a === 'infoedit') { infoEdit = true; drawPanel(); return $('#rpInfo').focus(); }
+    if (a === 'infocancel') { infoEdit = false; return drawPanel(); }
+    if (a === 'infosave') return run({ type: 'info_set', part: x.id, text: $('#rpInfo').value }, 'Összesítő infó elmentve.');
+    if (a === 'noteadd') { const t = $('#rpNote').value; if (!t.trim()) return $('#rpNote').focus(); return run({ type: 'note_add', part: x.id, text: t }, `Infó a ${latestOf(x).v}-hoz elmentve.`); }
+    if (a === 'notedel') { if (!confirm('Törlöd ezt az infót?')) return; return run({ type: 'note_delete', part: x.id, note: b.dataset.id }); }
     if (a === 'write') { writing = true; drawPanel(); return $('#rpObs').focus(); }
     if (a === 'cancel') { writing = false; return drawPanel(); }
     if (a === 'save') { const t = $('#rpObs').value; if (!t.trim()) return $('#rpObs').focus(); return run({ type: 'test_fix', part: x.id, text: t }, `${x.name}: javítani kell`); }
   });
-  panel.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.id === 'rpObs') panel.querySelector('[data-a="save"]').click(); });
+  panel.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return;
+    const k = { rpObs: 'save', rpInfo: 'infosave', rpNote: 'noteadd' }[e.target.id];
+    if (k) panel.querySelector(`[data-a="${k}"]`).click();
+  });
   const onKey = (e) => { if (e.key === 'Escape' && !panel.hidden) close(); };
   document.addEventListener('keydown', onKey);
   window.addEventListener('hashchange', () => { document.removeEventListener('keydown', onKey); panel.remove(); scrim.remove(); }, { once: true });

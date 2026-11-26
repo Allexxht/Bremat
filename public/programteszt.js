@@ -10,18 +10,21 @@
 //   R001  = 1. robot,  V… = verzió (nincs = Alap, UJ = teljesen újraírt),
 //   2950_7510 = cikkszám,  utána a rész neve.
 //
-// Részenként: állapot (Tesztre vár / Javítani kell / Kész), a javítandó pontok
-// (pipálhatók) és a tesztek listája. Új verzió a mappában → „Tesztre vár”.
+// Részenként: állapot (Tesztre vár / Javítani kell / Kis finomítás / Kész), a javítandó
+// pontok (pipálhatók), a tesztek listája, VERZIÓNKÉNTI infó (az Alaphoz írt az Alapnál
+// marad, a V1-hez írt a V1-nél…) és egy ÖSSZESÍTŐ infó a részhez (verziótól független).
+// Új verzió a mappában → „Tesztre vár”.
 // Egy termék = egy dokumentum; Alex lépései „műveletek” (applyOp).
 // =====================================================================
 
-export const STATES = ['wait', 'fix', 'ok'];
+export const STATES = ['wait', 'fix', 'tweak', 'ok'];
 export const STATE = {
-  wait: { t: 'Tesztre vár',   order: 0 },
-  fix:  { t: 'Javítani kell', order: 1 },
-  ok:   { t: 'Kész',          order: 2 },
+  wait:  { t: 'Tesztre vár',   order: 0 },
+  fix:   { t: 'Javítani kell', order: 1 },
+  tweak: { t: 'Kis finomítás', order: 2 },
+  ok:    { t: 'Kész',          order: 3 },
 };
-const MAX = { parts: 200, versions: 100, points: 300, tests: 300, products: 300, programs: 400 };
+const MAX = { parts: 200, versions: 100, points: 300, tests: 300, notes: 500, products: 300, programs: 400 };
 
 export class PtError extends Error {}
 const fail = (m) => { throw new PtError(m); };
@@ -108,7 +111,7 @@ export function syncProduct(src, item, { now = new Date(), newId }) {
     let part = p.parts.find((x) => x.key === key);
     if (!part) {
       if (p.parts.length >= MAX.parts) continue;
-      part = { id: newId(), key, name: g.name, status: 'wait', versions: [], points: [], tests: [], tested: null, ok_at: null, gone: false, created_at: ts, updated_at: ts };
+      part = { id: newId(), key, name: g.name, status: 'wait', versions: [], points: [], notes: [], info: '', tests: [], tested: null, ok_at: null, gone: false, created_at: ts, updated_at: ts };
       p.parts.push(part);
     }
     const prevLatest = latestOf(part)?.dir || null;
@@ -141,7 +144,10 @@ export function markGone(src, now = new Date()) {
  *   test_fix     { part, text }      – Teszteltem: észrevételek (soronként egy pont) → Javítani kell
  *   point_toggle { part, point }     – pont kipipálása / vissza
  *   point_delete { part, point }
- *   status       { part, status }    – kézi állapot (pl. Kész → újra Tesztre vár)
+ *   status       { part, status }    – kézi állapot (Tesztre vár / Javítani kell / Kis finomítás / Kész)
+ *   note_add     { part, text }      – infó a legfrissebb verzióhoz (a verzióval együtt megmarad)
+ *   note_delete  { part, note }
+ *   info_set     { part, text }      – összesítő infó a részhez (verziótól független)
  */
 export function applyOp(src, op, { now = new Date(), newId }) {
   if (!op || typeof op !== 'object') fail('Hibás művelet');
@@ -183,6 +189,24 @@ export function applyOp(src, op, { now = new Date(), newId }) {
       part.ok_at = op.status === 'ok' ? ts : null;
       break;
     }
+    case 'note_add': {
+      const text = str(op.text, 4000) || fail('Üres infó');
+      part.notes ||= [];
+      if (part.notes.length >= MAX.notes) fail('Túl sok infó');
+      part.notes.push({ id: newId(), text, v: v?.v || 'Alap', dir: v?.dir || null, at: ts });
+      break;
+    }
+    case 'note_delete': {
+      const x = pick(part.notes || [], op.note, 'infó');
+      part.notes = part.notes.filter((y) => y !== x);
+      break;
+    }
+    case 'info_set': {
+      const text = str(op.text, 8000) || '';
+      if ((part.info || '') === text) return src;
+      part.info = text; part.info_at = ts;
+      break;
+    }
     default:
       fail('Ismeretlen művelet');
   }
@@ -201,12 +225,23 @@ export const visibleParts = (p) => p.parts.filter((x) => !x.gone && x.versions.l
 
 export function summary(p) {
   const parts = visibleParts(p);
-  const c = { wait: 0, fix: 0, ok: 0 };
+  const c = { wait: 0, fix: 0, tweak: 0, ok: 0 };
   for (const x of parts) c[x.status]++;
   const last = parts.reduce((m, x) => { const t = latestOf(x)?.m || ''; return t > m ? t : m; }, '');
   return { ...c, parts: parts.length, complete: parts.length > 0 && c.ok === parts.length, last: last || null };
 }
 export const openPoints = (part) => part.points.filter((x) => !x.done);
+
+/** A rész infói verziónként csoportosítva, a legfrissebb verzió elöl: [{ v, notes, version }]. */
+export function notesByVersion(part) {
+  const order = part.versions.map((x) => x.v);
+  const groups = new Map();
+  for (const n of part.notes || []) { if (!groups.has(n.v)) groups.set(n.v, []); groups.get(n.v).push(n); }
+  for (const v of order) if (!groups.has(v)) groups.set(v, []);
+  const rank = (v) => { const i = order.lastIndexOf(v); return i < 0 ? -1 : i; };
+  return [...groups.entries()].sort((a, b) => rank(b[0]) - rank(a[0]))
+    .map(([v, notes]) => ({ v, notes, version: [...part.versions].reverse().find((x) => x.v === v) || null }));
+}
 
 /** Cím a helyi Központ „Megnyitás DTPS-ben” oldalához (a gépen fut, localhost). */
 export const dtpsLink = (p, ver) => `http://localhost:47801/dtps.html#t=${encodeURIComponent(p.folder)}&p=${encodeURIComponent(ver.dir)}`;

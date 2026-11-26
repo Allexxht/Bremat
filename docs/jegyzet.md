@@ -480,4 +480,11 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   (`{ products, synced_at }`, az eltűnt mappák nélkül), `pt_sync`, `pt_op` (`id`, `op`; nincs rev-ellenőrzés,
   mert a szinkron is írja). Ami eltűnik a mappából, rejtett lesz (`gone`), az adata megmarad.
 - Windows nincs a Claude-környezetben: a PowerShell részt (Teendőim, Kozpont.ps1) Alex gépén kell kipróbálni.
+- **2026-11-26 délelőtt, Alex kérései:** (1) 4. állapot: **Kis finomítás** (`tweak`, narancs), az oldalpanelen
+  az állapot kézzel is választható (4 gomb). (2) **Infó verziónként** (`notes[]`: `text`, `v`, `dir`, `at`): a
+  legfrissebb verzióhoz írt infó annál a verziónál marad; ha átírja V1-re, az Alap infói a „Korábbi verziók”
+  alatt látszanak (`notesByVersion`). (3) **Összesítő infó** a részhez (`info`, verziótól független), a panel tetején,
+  mindig. Műveletek: `note_add`, `note_delete`, `info_set`, `status` (tweak is).
+- Netlify keret (nov. 26.): éles deploy szünetel → Alex az előnézetet használja; ideiglenes szinkron:
+  `DTPS-szinkron.bat` (projekt fájlok, `robot-programok/`), az előnézet `/api/kozpont`-jára küld. A Blobs tároló közös.
 
