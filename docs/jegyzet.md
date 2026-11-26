@@ -424,6 +424,28 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Szerver: `TIME_KINDS` + `idle`. Napló oldal: az `idle` se munka, se szünet; a fejlécben „megállt: X”,
   a sávon narancs csíkos, a listában „megállt az időmérés (nem voltál a gépnél)”.
 
+## Szakaszok egy teendőn belül (2026. november 25., Alex kérése)
+- Cél: egy teendőn (pl. „Robot hegesztés”) belül szakaszok saját idővel (Előkészület 5 p, Hegesztés 1 ó …),
+  és a lezárt szakasz bekerül a Munkanaplóba.
+- Adat a `teendok.json`-ban: `stages[]` (`id`, `name`, `spent`, `done`, `doneAt`), `stage` (a futó szakasz id-ja),
+  `stageFrom` (ettől gyűjt). A szakasz ideje = `spent` + (most − max(`startedAt`, `stageFrom`)), ha a teendő fut és
+  ez a kiválasztott. Megállításkor (`StopRun`) és váltáskor `StageAccrue` könyvel. A teendő összes ideje külön marad.
+- Felület (`StageBar`, `StageChip`): a lenyitott sorban („Szakaszok:”) és a narancs kártyán. Kattintás = ezen dolgozom
+  (ha nem fut a teendő, elindul), pipa = lezárás, pipa újra = visszavétel, jobb klikk = szakasz ideje / törlés.
+  „+ Szakasz…” új nevet kér. A neveket feladatnévenként megjegyzi (`%APPDATA%\Teendoim\szakaszok.json`), a következő
+  azonos nevű teendőnél halvány „+ név” gombként jönnek (egy kattintás = létrehoz és indít).
+- Napló: lezáráskor `create` a meglévő sorral (`naplo.json`, offline is), szöveg „Teendő · Szakasz – kész (1 ó 2 p)”,
+  `hours` = a szakasz ideje (0,01 óra pontosság). A sor kulcsa `teendőid|szakaszid` – visszavételkor törlődik.
+  A teendő „Kész:” bejegyzése „Szakaszok: …” bontást kap (óra mező nélkül, hogy ne számolódjon kétszer).
+- Idősáv és Központ: a futó szakasz alatt a szegmens / `doing[].text` neve „Teendő · Szakasz”. Szerver nem változott.
+- 2026-11-25, 2. kör: a szakaszok **egymás alatt**, soronként (▶ név … idő ✓), alattuk a „+ név” / „+ Szakasz…” gombok.
+- Szaggatás: futó óránál nincs több végtelen animáció (csillogó sáv, pulzáló pont, gyűrű) és ragyogás-effekt a narancs
+  kártyán. Az átlátszó ablakot (`AllowsTransparency` + ablakárnyék) a Windows minden képkockánál egészben újra
+  összerakja, ezek folyamatosan 20–30 kép/mp-vel pörgették. Most futás közben csak a másodpercenkénti óraszám változik.
+- 2026-11-25, 3. kör: **a nap csíkja** a fejléc alatt (`DayPaint`): 7:00–15:00 (kitágul, ha korábban/tovább),
+  halvány = eltelt, színes = a mai idősáv szakaszai, vonal = most, középen „eltelt X% · még Y”. 30 mp-enként frissül, ha nyitva.
+  **Lenyitás**: nem épít újra mindent (csak új napon), nincs elmosás-effekt és soronkénti beúszás – rövid nyílás.
+
 ## Programteszt (2026. november 20., 2. változat: november 24., Alex kérése)
 - Az 1. változat (verziók V1/V2, teszt körök, hibák, statisztika) Alexnek túl bonyolult volt („nem
   tetszik”). **2. változat – egyszerű:** termék → részek (oldallemezek, tompavarrat…). Részenként:

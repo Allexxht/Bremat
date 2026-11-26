@@ -1,11 +1,11 @@
 {
-  "version": "bbd47b02b600",
+  "version": "6a8b8f26bc59",
   "files": [
     {
       "p": "Teendoim/Teendoim.ps1",
-      "sha256": "e10deb58be4d40da4c659aadb671134273fb4274e9e3c4b1d7b5032eb56fc1f2",
-      "size": 119623,
-      "u": "f/e10deb58be4d40da4c659aadb671134273fb4274e9e3c4b1d7b5032eb56fc1f2"
+      "sha256": "113c4ee0f59e9e2d6c5b868e3274d67b45c58805dc363ea14a22157993e6fe56",
+      "size": 137329,
+      "u": "f/113c4ee0f59e9e2d6c5b868e3274d67b45c58805dc363ea14a22157993e6fe56"
     },
     {
       "p": "Teendoim/Teendoim.bat",
