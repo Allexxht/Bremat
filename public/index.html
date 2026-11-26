@@ -163,6 +163,16 @@ main {
 @keyframes shimmer { 50% { opacity: .45; } }
 
 /* ---------- Kezdőlap „Színes üveg”: kereső, óra + műszak, színezett widgetek, dokk, Widgetek panel ---------- */
+/* A kezdőlapon (html.hw-on) a makett színei és háttere: a selyemszalag-canvas és a felső sáv nem kell
+   (a canvas a homályos üveg mögött minden képkockán újrarajzolna – ettől akadt a dokk). */
+:root.hw-on:not([data-theme="dark"]) {
+  --bg: #eef0f7; --glass: rgba(255, 255, 255, .42); --glass-strong: rgba(255, 255, 255, .78); --glass-line: rgba(255, 255, 255, .9);
+  --line: rgba(40, 30, 90, .1); --text: #16142a; --muted: #5d5a78; --accent: #7b3fe4; --hover: rgba(40, 30, 90, .06); --active: rgba(40, 30, 90, .14);
+  --naplo: #0a9bb0; --valk: #e0244a; --pt: #3366ff; --ae: #ff6a3d; --idea: #e39400; --proj: #8a4dff;
+  --shadow: 0 22px 60px rgba(60, 40, 140, .16), 0 2px 8px rgba(60, 40, 140, .06);
+}
+:root.hw-on:not([data-theme="dark"]) #silk, .hw-on .topbar { display: none; }
+.hw-on main { padding-top: calc(18px + env(safe-area-inset-top, 0px)); }
 .ms { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; font-size: 24px; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; direction: ltr;
   display: inline-block; width: 1em; overflow: hidden; flex: none; font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
   font-variation-settings: 'FILL' 0, 'wght' 500, 'opsz' 24; transition: font-variation-settings .45s var(--ease); }
@@ -170,25 +180,33 @@ main {
 .hw-c-naplo, .hw-naplo { --c: var(--naplo); } .hw-c-valk, .hw-valk, .hw-c-files { --c: var(--valk); } .hw-c-pt, .hw-pt { --c: var(--pt); }
 .hw-c-ae, .hw-ae { --c: var(--ae); } .hw-c-idea, .hw-idea { --c: var(--idea); } .hw-c-proj, .hw-proj, .hw-c-settings { --c: var(--proj); }
 .hw-page { width: min(1180px, 100%); display: flex; flex-direction: column; gap: 0; padding-bottom: 110px; }
-.hw-aura { position: fixed; inset: -20vmax; z-index: -1; pointer-events: none; filter: blur(50px) saturate(1.4); opacity: .75; }
-.hw-aura i { position: absolute; border-radius: 50%; animation: hwDrift 22s var(--ease) infinite alternate, hwMorph 14s ease-in-out infinite; }
-.hw-aura i:nth-child(1) { width: 46vmax; height: 46vmax; left: 8%; top: 4%; background: radial-gradient(circle, color-mix(in srgb, var(--valk) 30%, transparent), transparent 62%); }
-.hw-aura i:nth-child(2) { width: 52vmax; height: 52vmax; right: 2%; top: 12%; background: radial-gradient(circle, color-mix(in srgb, var(--naplo) 30%, transparent), transparent 62%); animation-duration: 28s, 16s; animation-delay: -8s; }
-.hw-aura i:nth-child(3) { width: 40vmax; height: 40vmax; left: 30%; bottom: 0; background: radial-gradient(circle, color-mix(in srgb, var(--proj) 30%, transparent), transparent 62%); animation-duration: 34s, 18s; animation-delay: -14s; }
-.hw-aura i:nth-child(4) { width: 30vmax; height: 30vmax; right: 24%; bottom: 10%; background: radial-gradient(circle, color-mix(in srgb, var(--idea) 30%, transparent), transparent 62%); animation-duration: 26s, 12s; animation-delay: -4s; }
+.hw-aura { position: fixed; inset: -20vmax; z-index: -1; pointer-events: none; filter: blur(50px) saturate(1.5); }
+.hw-aura i { position: absolute; border-radius: 50%; opacity: .8; animation: hwDrift 22s var(--ease) infinite alternate, hwMorph 14s var(--ease) infinite alternate; }
+.hw-aura i:nth-child(1) { width: 46vmax; height: 46vmax; left: 8%; top: 4%; background: radial-gradient(circle, #ffc2d4, transparent 62%); }
+.hw-aura i:nth-child(2) { width: 52vmax; height: 52vmax; right: 2%; top: 12%; background: radial-gradient(circle, #b8e6ff, transparent 62%); animation-delay: -8s; }
+.hw-aura i:nth-child(3) { width: 40vmax; height: 40vmax; left: 30%; bottom: 0; background: radial-gradient(circle, #d6c4ff, transparent 62%); animation-delay: -14s; }
+.hw-aura i:nth-child(4) { width: 30vmax; height: 30vmax; right: 24%; bottom: 10%; background: radial-gradient(circle, #ffe0a3, transparent 62%); animation-delay: -4s; }
+[data-theme="dark"] .hw-aura i { opacity: .18; }
 @keyframes hwDrift { to { transform: translate(6vmax, -4vmax) scale(1.12); } }
 @keyframes hwMorph { 0%, 100% { border-radius: 50%; } 33% { border-radius: 42% 58% 63% 37% / 45% 40% 60% 55%; } 66% { border-radius: 61% 39% 36% 64% / 58% 63% 37% 42%; } }
 .hw-rise, .hw { animation: hwPop .8s cubic-bezier(.34, 1.56, .64, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
-@keyframes hwPop { from { transform: scale(.94); filter: blur(6px); } }
+@keyframes hwPop { from { transform: scale(.92); filter: blur(6px); } }
+.hw-body.in > * { animation: hwIn .5s var(--ease) both; }
+@keyframes hwIn { from { opacity: 0; transform: translateY(6px); } }
 
-.hw-top { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 22px; position: relative; z-index: 5; }
-.hw-search { flex: 1; position: relative; min-width: 0; }
-.hw-search label { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 12px 0 14px; border-radius: 14px; background: var(--glass-strong); border: 1px solid var(--line); cursor: text; transition: border-color .3s, box-shadow .3s; }
+.hw-top { display: flex; align-items: center; gap: 14px 18px; padding: 10px 12px 10px 20px; border-radius: 22px; position: relative; z-index: 5; }
+.hw-top.menu { padding-left: 10px; gap: 10px 14px; }
+.hw-logo { font: 400 21px/1 'Archivo Black', 'Arial Black', sans-serif; letter-spacing: .01em; white-space: nowrap; text-decoration: none; }
+.hw-logo span { color: var(--accent); }
+.hw-search { flex: 1 1 280px; position: relative; min-width: 0; }
+.hw-search label { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 12px 0 14px; border-radius: 14px; background: rgba(255, 255, 255, .62); border: 1px solid var(--line); cursor: text; transition: border-color .3s, box-shadow .3s; }
 .hw-search label:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent); }
 .hw-search .ms { color: var(--muted); }
 .hw-search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 15.5px; }
 .hw-search input::placeholder { color: var(--muted); }
-.hw-search kbd { font: 600 12px var(--body); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; color: var(--muted); }
+.hw-search kbd { font: 600 12px var(--body); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; color: var(--muted); background: #fff; }
+[data-theme="dark"] .hw-search label, [data-theme="dark"] .hw-edit { background: var(--glass-strong); }
+[data-theme="dark"] .hw-search kbd { background: transparent; }
 .hw-res { position: absolute; left: 0; right: 0; top: calc(100% + 8px); border-radius: 18px; padding: 6px; display: flex; flex-direction: column; gap: 2px; max-height: 60vh; overflow-y: auto; background: var(--glass-strong); animation: hwDrop .3s var(--ease); }
 @keyframes hwDrop { from { transform: translateY(-6px); opacity: 0; } }
 .hw-res button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; min-height: 48px; }
@@ -198,18 +216,20 @@ main {
 .hw-res b { font: 600 15px var(--display); display: block; overflow-wrap: anywhere; }
 .hw-res small { color: var(--muted); font-size: 13px; }
 .hw-res mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
-.hw-edit { flex: none; display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-strong); font-weight: 700; font-size: 14px; cursor: pointer; }
+.hw-edit { flex: none; display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, .62); font-weight: 700; font-size: 14px; cursor: pointer; transition: background .3s; }
+.hw-edit:hover { background: var(--glass-strong); }
 .hw-edit .ms { font-size: 21px; }
 
 .hw-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px 24px; flex-wrap: wrap; margin: 26px 6px 22px; }
-.hw-time { font: 600 clamp(60px, 10vw, 104px)/.9 var(--display); letter-spacing: -.04em; background: linear-gradient(100deg, var(--pt), var(--proj) 35%, var(--valk) 65%, var(--idea)); background-size: 220% 100%;
+.hw-time { font: 600 clamp(60px, 10vw, 104px)/.9 var(--display); letter-spacing: -.04em; background: linear-gradient(100deg, var(--pt), var(--proj) 35%, var(--valk) 65%, #ff9a3d); background-size: 220% 100%;
   -webkit-background-clip: text; background-clip: text; color: transparent; animation: hwHue 9s ease-in-out infinite alternate; }
 .hw-time .colon { animation: hwBlink 2s steps(1) infinite; }
 @keyframes hwHue { to { background-position: 100% 0; } }
 @keyframes hwBlink { 50% { opacity: .25; } }
 .hw-head p { margin: 4px 0 0; font-size: 17px; color: var(--muted); }
 .hw-shift { --c: var(--naplo); border-radius: 24px; padding: 14px 20px 14px 14px; display: flex; align-items: center; gap: 14px; }
-.hw-shift .ring { width: 66px; height: 66px; }
+.hw-shift .ring { width: 62px; height: 62px; }
+.hw-shift .ring .lab .ms { font-size: 24px; color: var(--c); }
 .hw-shift-l { font-size: 13px; color: var(--muted); display: block; }
 .hw-shift b { font: 700 22px/1.15 var(--display); display: block; }
 .hw-shift small { font-size: 13px; color: var(--muted); }
@@ -224,8 +244,9 @@ main {
 .ring .lab span { font-size: 11.5px; color: var(--muted); }
 
 .hw-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; grid-auto-flow: dense; }
-.hw { position: relative; overflow: hidden; border-radius: 34px; padding: 18px; display: flex; flex-direction: column; gap: 10px; min-height: 172px; text-decoration: none; color: inherit;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--c) 18%, var(--glass)), var(--glass) 60%); transition: transform .35s var(--ease), box-shadow .35s; }
+.hw { position: relative; overflow: hidden; border-radius: 36px; padding: 18px; display: flex; flex-direction: column; gap: 10px; min-height: 170px; text-decoration: none; color: inherit;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--c) 20%, rgba(255, 255, 255, .5)), rgba(255, 255, 255, .38) 60%); transition: transform .35s var(--ease), box-shadow .35s; }
+[data-theme="dark"] .hw { background: linear-gradient(145deg, color-mix(in srgb, var(--c) 18%, var(--glass)), var(--glass) 60%); }
 .hw.wide { grid-column: span 2; }
 .hw.tall { grid-row: span 2; }
 .hw:hover { transform: translateY(-4px) scale(1.01); }
@@ -278,7 +299,7 @@ main {
   background: linear-gradient(145deg, color-mix(in srgb, var(--c) 82%, #fff), var(--c)); box-shadow: 0 6px 16px color-mix(in srgb, var(--c) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, .5);
   transition: width .2s var(--ease), height .2s var(--ease); }
 .hw-dock a .ms { font-size: 27px; }
-.hw-dock a .hw-badge { position: absolute; top: -7px; right: -7px; transform: scale(.85); box-shadow: 0 0 0 2px #fff; background: var(--text); color: var(--bg); }
+.hw-dock a .hw-badge { position: absolute; top: -7px; right: -7px; transform: scale(.85); box-shadow: 0 0 0 3px rgba(255, 255, 255, .9); }
 .hw-dock a .tip { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%) translateY(4px); white-space: nowrap; font: 600 13px var(--display); padding: 6px 10px; border-radius: 10px; background: var(--text); color: var(--bg); opacity: 0; pointer-events: none; transition: .2s; }
 .hw-dock a:hover .tip, .hw-dock a:focus-visible .tip { opacity: 1; transform: translateX(-50%); }
 .hw-dock .sep { width: 1px; align-self: stretch; background: var(--line); margin: 4px 2px; }
@@ -306,11 +327,16 @@ main {
 .hw-tog:checked::after { transform: translateX(18px); }
 .hw-panel .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); padding: 4px 4px 0; }
 
+/* Nagy képernyőn minden arányosan nagyobb (a makett arányai maradnak) */
+@media (min-width: 1400px) { .hw-page, .hw-dock { zoom: 1.1; } }
+@media (min-width: 1700px) { .hw-page, .hw-dock { zoom: 1.2; } }
+@media (min-width: 2100px) { .hw-page, .hw-dock { zoom: 1.32; } }
 @media (max-width: 900px) { .hw-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
   .hw-grid { grid-template-columns: minmax(0, 1fr); }
   .hw.wide { grid-column: auto; } .hw.tall { grid-row: auto; }
-  .hw-search kbd, .hw-edit span:not(.ms) { display: none; }
+  .hw-search kbd, .hw-edit span:not(.ms), .hw-logo { display: none; }
+  .hw-top { padding: 10px; gap: 10px; }
   .hw-edit { padding: 0 12px; }
   .hw-dock { left: 12px; right: 12px; transform: none; overflow-x: auto; scrollbar-width: none; padding: 8px; gap: 8px; border-radius: 30px; }
   .hw-dock::-webkit-scrollbar { display: none; }
@@ -579,7 +605,7 @@ const silk = (() => {
   const cv = $('#silk');
   const gl = cv.getContext('webgl', { antialias: false, premultipliedAlpha: false, alpha: false, powerPreference: 'low-power' });
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!gl) { cv.style.display = 'none'; return { redraw() {} }; }   // nincs WebGL: marad a sima háttérszín
+  if (!gl) { cv.style.display = 'none'; return { redraw() {}, pause() {} }; }   // nincs WebGL: marad a sima háttérszín
 
   const VS = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
   const FS = `
@@ -631,7 +657,7 @@ const silk = (() => {
   const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
   const prog = gl.createProgram();
   gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.warn('Háttér: a shader nem fordult le'); cv.style.display = 'none'; return { redraw() {} }; }
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.warn('Háttér: a shader nem fordult le'); cv.style.display = 'none'; return { redraw() {}, pause() {} }; }
   gl.useProgram(prog);
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);   // egy nagy háromszög, ami lefedi a képet
@@ -650,12 +676,13 @@ const silk = (() => {
     gl.uniform1f(uDark, document.documentElement.dataset.theme === 'dark' ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
+  let off = false;   // a kezdőlapon nem látszik (ott a színes köd a háttér) – akkor nem is rajzol
   function frame(now) { draw((now - t0) / 1000); raf = requestAnimationFrame(frame); }
-  function start() { cancelAnimationFrame(raf); if (calm) draw(20); else raf = requestAnimationFrame(frame); }
+  function start() { cancelAnimationFrame(raf); if (off) return; if (calm) draw(20); else raf = requestAnimationFrame(frame); }
   resize(); start();
   addEventListener('resize', () => { resize(); if (calm) draw(20); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAnimationFrame(raf); else start(); });
-  return { redraw: () => { if (calm) draw(20); } };
+  return { redraw: () => { if (calm) draw(20); }, pause: (on) => { if (off === on) return; off = on; if (on) cancelAnimationFrame(raf); else start(); } };
 })();
 
 /* =====================================================================
@@ -867,14 +894,17 @@ const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
 const fmtMin = (m) => m >= 60 ? `${Math.floor(m / 60)} ó ${m % 60} p` : `${m} p`;
 const ring = (pct, r, w, cls = '') => { const c = 2 * Math.PI * r, v = 2 * r + w + 4; return `<svg viewBox="0 0 ${v} ${v}" aria-hidden="true"><circle class="tr" cx="${v / 2}" cy="${v / 2}" r="${r}" stroke-width="${w}"/><circle class="fg ${cls}" cx="${v / 2}" cy="${v / 2}" r="${r}" stroke-width="${w}" stroke-dasharray="${c}" stroke-dashoffset="${c}" data-off="${c * (1 - pct)}"/></svg>`; };
 const ringGo = (root) => requestAnimationFrame(() => requestAnimationFrame(() => $$('circle[data-off]', root).forEach((e) => { e.style.strokeDashoffset = e.dataset.off; })));
+// Óra + Műszak: csak azt írja át, ami változott (a gyűrű a helyén tölt tovább, nem rajzolódik újra)
 function hwClock() {
   const d = new Date(), t = $('#hwTime'); if (!t) return;
-  t.innerHTML = `${String(d.getHours()).padStart(2, '0')}<span class="colon">:</span>${String(d.getMinutes()).padStart(2, '0')}`;
+  const [h, m] = [d.getHours(), d.getMinutes()].map((n) => String(n).padStart(2, '0'));
+  if (t.dataset.hm !== h + m) { t.dataset.hm = h + m; t.innerHTML = `${h}<span class="colon">:</span>${m}`; }
   const s = $('#hwShift'); if (!s) return;
-  const st = shiftState();
-  s.querySelector('.ring').innerHTML = ring(st.pct, 27, 8);
-  s.querySelector('.hw-shift-l').textContent = st.label; s.querySelector('b').textContent = st.big; s.querySelector('small').textContent = st.sub;
-  ringGo(s);
+  const st = shiftState(), set = (sel, v) => { const e = s.querySelector(sel); if (e.textContent !== v) e.textContent = v; };
+  const fg = s.querySelector('circle.fg');
+  if (!fg) { s.querySelector('.ring').innerHTML = `${ring(st.pct, 27, 8)}<div class="lab">${ms('timer')}</div>`; ringGo(s); }
+  else fg.style.strokeDashoffset = fg.dataset.off = 2 * Math.PI * 27 * (1 - st.pct);
+  set('.hw-shift-l', st.label); set('b', st.big); set('small', st.sub);
 }
 
 /* Widget-héjak: a tartalmat a betöltők töltik ki. */
@@ -901,7 +931,7 @@ function hwShells() {
 function hwFill(k, html, badge = 0) {
   const d = $(`#hwd-${k} .hw-badge`); if (d) { d.hidden = !badge; d.textContent = badge > 9 ? '9+' : badge; }
   const el = $(`#hw-${k}`); if (!el) return;
-  el.querySelector('.hw-body').innerHTML = html;
+  const body = el.querySelector('.hw-body'); body.innerHTML = html; body.classList.add('in');
   const b = el.querySelector('.hw-badge'); b.hidden = !badge; b.textContent = badge > 9 ? '9+' : badge;
   ringGo(el); hwCount(el);
 }
@@ -932,15 +962,18 @@ function renderHome() {
   ];
   const DOCK = [['naplo', '/naplo/', 'Munkanapló'], ['valk', '/valk/', 'Valk heti lap'], ['pt', '#/teszt', 'Robot programok'], ['ae', '/arceye/', 'ARC-EYE edző'], ['idea', '#/otletek', 'Ötletek'], ['proj', '#/projektek', 'Projektek'], 'sep',
     ...(helyiOn() ? [['files', HELYI_URL, 'Valk fájlok']] : []), ['settings', '#/beallitasok', 'Beállítások']];
+  document.documentElement.classList.add('hw-on'); silk.pause(document.documentElement.dataset.theme !== 'dark');
   $('#app').innerHTML = `<div class="hw-page">
     <div class="hw-aura" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     ${hwVis.intro ? `<div class="hero" id="hero" role="img" aria-label="BREMAT"></div>` : ''}
-    <div class="hw-top glass hw-rise">
+    <div class="hw-top glass hw-rise${hwVis.dock ? '' : ' menu'}">
+      ${hwVis.dock ? '' : `<button class="icon-btn" type="button" id="hwMenu" aria-label="Menü megnyitása">${ms('menu')}</button>`}
+      <a class="hw-logo" href="#/">BREMAT <span>Központ</span></a>
       <div class="hw-search" id="hwSearch">
-        <label>${ms('search')}<input id="hwQ" type="search" placeholder="Keress: cikkszám, rész, ötlet, oldal…" autocomplete="off" aria-label="Keresés a Központban" aria-controls="hwRes" aria-expanded="false"><kbd>Ctrl K</kbd></label>
+        <label>${ms('search')}<input id="hwQ" type="search" placeholder="Keress: cikkszám, rész, teendő, oldal…" autocomplete="off" aria-label="Keresés a Központban" aria-controls="hwRes" aria-expanded="false"><kbd>Ctrl K</kbd></label>
         <div class="hw-res glass" id="hwRes" role="listbox" hidden></div>
       </div>
-      <button class="hw-edit" type="button" id="hwEdit">${ms('tune')}<span>Widgetek</span></button>
+      <button class="hw-edit" type="button" id="hwEdit">${ms('settings')}<span>Widgetek</span></button>
     </div>
     <section class="hw-head">
       <div class="hw-rise" style="--i:1"><div class="hw-time tab" id="hwTime"></div><p>${hello} ${esc(huLong.format(toDate(t)))} · ${week}. hét</p></div>
@@ -959,7 +992,7 @@ function renderHome() {
       <div class="foot"><span>Ezen az eszközön megjegyzi.</span><button class="btn" type="button" id="hwAll">Mind látszik</button></div>
     </aside>`;
   hwClock();
-  clearInterval(hwTimer); hwTimer = setInterval(hwClock, 20000);
+  clearInterval(hwTimer); hwTimer = setInterval(hwClock, 5000);
   if (hwVis.intro) intro($('#hero'));
   hwWire();
   if (hwVis.naplo || hwVis.dock) loadNaplo().catch((e) => hwErr('naplo', e));
@@ -998,13 +1031,14 @@ function hwWire() {
 
   const panel = $('#hwPanel');
   $('#hwEdit').addEventListener('click', () => hwOpen(true));
+  $('#hwMenu')?.addEventListener('click', () => setMenu(true));
   $('#hwClose').addEventListener('click', () => hwOpen(false));
   $('#hwScrim').addEventListener('click', () => hwOpen(false));
   panel.addEventListener('change', (e) => { const k = e.target.dataset.k; if (!k) return; hwVis[k] = e.target.checked; hwSave(); renderHome(); hwOpen(true, k, true); });
   $('#hwAll').addEventListener('click', () => { HW_DEF.forEach(([k]) => { hwVis[k] = k !== 'intro' || hwVis.intro; }); hwSave(); renderHome(); hwOpen(true, null, true); });
 
   // fényfolt az egér alatt, a dokk nagyít
-  $$('.hw').forEach((el) => el.addEventListener('pointermove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', `${e.clientX - r.left}px`); el.style.setProperty('--my', `${e.clientY - r.top}px`); }));
+  $$('.hw').forEach((el) => el.addEventListener('pointermove', (e) => { const r = el.getBoundingClientRect(), z = el.currentCSSZoom || 1; el.style.setProperty('--mx', `${(e.clientX - r.left) / z}px`); el.style.setProperty('--my', `${(e.clientY - r.top) / z}px`); }));
   const dk = $('.hw-dock'); if (!dk) return;
   const still = () => matchMedia('(prefers-reduced-motion: reduce), (max-width: 600px)').matches;
   dk.addEventListener('pointermove', (e) => { if (still()) return; $$('a', dk).forEach((a) => { const r = a.getBoundingClientRect(), d = Math.abs(e.clientX - (r.left + r.width / 2)), k = Math.max(0, 1 - d / 150); a.style.width = a.style.height = `${54 + 24 * k}px`; }); });
@@ -1545,6 +1579,7 @@ function renderSettings() {
 const VIEWS = { '#/otletek': renderIdeas, '#/projektek': renderProjects, '#/beallitasok': renderSettings, '#/teszt': renderPtList };
 const PT_ROUTE = /^#\/teszt\/([\w-]+)$/;
 function route() {
+  document.documentElement.classList.remove('hw-on'); silk.pause(false);   // a kezdőlap a renderHome-ban kapcsolja vissza
   if (OLD.test(location.hash)) return location.replace('/valk/' + location.search + location.hash);
   if (!DEMO && !kmCode()) return renderGate();
   $('#menuBtn').hidden = false;

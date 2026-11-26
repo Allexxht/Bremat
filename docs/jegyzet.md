@@ -255,6 +255,11 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   eszközönként. A nyitó animáció alapból ki van kapcsolva (be lehet kapcsolni). Ha csak egy kicsi widget marad
   (Valk vagy ARC-EYE), kitölti a sort.
 - A dokk és a panel a `body`-ba kerül (`#hwLayer`), hogy a fejléc fölött legyen; nézetváltáskor a `route()` leveszi.
+- A kezdőlapon `html.hw-on`: a makett színei (csak világos témában), a selyemszalag-canvas és a felső fejléc
+  nem látszik (a canvas a homályos üveg mögött minden képkockán újrarajzolt – ettől akadt a dokk; most áll is:
+  `silk.pause()`). A logó a kereső sávban; ha a dokk ki van kapcsolva, ott van a menügomb is.
+- Az óra 5 mp-enként frissül, de csak a változott szöveget írja át; a Műszak gyűrű a helyén tölt tovább.
+- Nagy képernyőn `zoom` 1,1 / 1,2 / 1,32 (1400 / 1700 / 2100 px-től) – Alex kérte, hogy minden nagyobb legyen.
 - Makett: https://claude.ai/artifact/EANomSp7uc64GGX6rjAgqU
 
 ## Nyitó animáció (2026. november 5–16.)
