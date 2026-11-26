@@ -446,19 +446,38 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   halvány = eltelt, színes = a mai idősáv szakaszai, vonal = most, középen „eltelt X% · még Y”. 30 mp-enként frissül, ha nyitva.
   **Lenyitás**: nem épít újra mindent (csak új napon), nincs elmosás-effekt és soronkénti beúszás – rövid nyílás.
 
-## Programteszt (2026. november 20., 2. változat: november 24., Alex kérése)
-- Az 1. változat (verziók V1/V2, teszt körök, hibák, statisztika) Alexnek túl bonyolult volt („nem
-  tetszik”). **2. változat – egyszerű:** termék → részek (oldallemezek, tompavarrat…). Részenként:
-  **állapot** (Programozás / Tesztelés alatt / Finomítás kell / Kész, színnel), **óra** (Indít / Állj;
-  egyszerre csak egy megy – indításkor a többi, más termékeké is, megáll; „Kész”-re váltáskor is
-  megáll; egy menet legfeljebb 24 óra; „Idő javítása”: ± perc), **jegyzetek** dátummal.
-- Oldalak: `#/teszt` (lista: cikkszám, részenként színes pötty, kész/összes, idő, futó óra),
-  `#/teszt/<id>` (a részek kártyái). Kezdőlapon „Programteszt” sziget (futó óra, nyitott termékek).
-- Közös logika: `public/programteszt.js` (`newProduct`, `applyOp`, `stopRunning`, `summary`,
-  `partMs`) – a szerver (`lib/kozpont-core.mjs`) és a demó adapter is ezt használja.
-- Tárolás: `kozpont` Blobs, `pt/<uuid>` (egy termék = egy blob), törléskor másolat `pd/<uuid>`.
-  Műveletek: `pt_list`, `pt_create`, `pt_op` (`id`, `rev`, `op`; rossz `rev` → 409), `pt_delete`.
-  Rész: `name`, `status`, `spent_ms`, `running_since`, `sessions[]` (from, to, ms – későbbi
-  statisztikához), `notes[]`.
-- Fájl (DTPS program) most nincs benne. Ha kell: online csak Alex kifejezett kérésére (Valk fájlok
-  eddig csak helyben).
+## Robot programok (2026. november 20.; 3. változat: november 26., Alex kérése)
+- Előzmény: az 1. (verziók/körök/statisztika) és a 2. változat (részek + állapot + óra + jegyzet) Alexnek
+  átláthatatlan volt. A valódi gond: több terméket tesztel, részenként külön DTPS program, verziók
+  Alap → V1 → V2…, és 2 hónap után nem tudja, hol tartott, melyik a legfrissebb, melyik rész jó.
+- **3. változat:** a termékek / részek / verziók **maguktól jönnek a DTPS mappából**. A Teendőim
+  (`DtpsPump`, a `Tick`-ből) induláskor (+30 mp) és 5 percenként beolvassa:
+  `C:\robotinstallation\24-6521_260710_v1_MKU_Bremat Holland_C\Alex\<termékmappa>\Teaching\R001_….rp4\program.rp4`
+  (más mappa: `%APPDATA%\Teendoim\beallitas.json` → `dtpsDir`), és ha változott (vagy 1 órája nem
+  küldött) `pt_sync`-kel elküldi a **neveket és dátumokat** (fájl nem megy fel – Alex engedte). Kód: a
+  Munkanaplóé (a szerver a `NAPLO_ACCESS_CODE`-ot is elfogadja, csak ehhez). Menü: BREMAT Központ →
+  Robot programok / DTPS mappa beolvasása most / állapot.
+- Névszabály (Alex): `R001_` + [verzió `V7_`, `V2_UJ_`, `V7-UJ_`; nincs = Alap; UJ = újraírt] + cikkszám
+  (`2950_7510`) + `_RÉSZ NEVE` + `.rp4`. Termékmappa: „cikkszám - név”. A cikkszám nélküli program
+  (pl. `R001_KIVETELES TOMPA.rp4`) is rész lesz. Rész kulcsa: nagybetű, `-`/szóköz → `_`.
+  Legfrissebb: verziószám, aztán UJ, aztán dátum. `parseFolder`, `parseProgram` a `public/programteszt.js`-ben.
+- Állapot részenként: **Tesztre vár** (új rész, vagy új verzió jelent meg a mappában) → **Javítani kell**
+  („Teszteltem – észrevételt írok”: soronként egy pont, a verzió jelölésével) → **Kész** („Teszteltem –
+  minden tökéletes”: a pontok kipipálva). Pontok pipálhatók; „Újra tesztelni” (Kész → Tesztre vár).
+  A nyitott pontok új verziónál is megmaradnak („ezeket ellenőrizd a tesztnél”).
+- Felület: `#/teszt` (termékek, színes sáv részenként), `#/teszt/<id>` (tábla: Rész | Legfrissebb |
+  Állapot | Mi a teendő, sorrend Tesztre vár → Javítani kell → Kész; telefonon kártyasorok). Sorra
+  koppintva jobbról oldalpanel: legfrissebb program, **Megnyitás DTPS-ben**, pontok, 2 gomb, korábbi
+  verziók (mindegyik megnyitható), tesztek. Kezdőlap: „Robot programok” sziget.
+- **Megnyitás DTPS-ben:** a gomb új lapon a `http://localhost:47801/dtps.html#t=<termékmappa>&p=<programmappa>`
+  oldalt nyitja (a helyi Központ adja), az `/api/dtps`-sel (X-Helyi) indítja ugyanazt, amit a PC Tool
+  „Open” gombja (Task Manager, 2026. nov. 26.):
+  `DTPS3.exe "<installáció>" "<csoport>" "<termékmappa>" "<robot>" "<program>.rp4" /LANG:NLD "/C"`,
+  majd a lap bezárul. Csak a DTPS mappán belüli, létező programot nyit meg, 3 mp-enként legfeljebb egyet.
+  Beállítás (nem kötelező): `%APPDATA%\BrematKozpont\beallitas.json` → `dtps: { ut, exe, lang }`.
+  (Navigáció, nem fetch: a https → localhost hívást a böngészők tiltják, a lapnyitást nem.)
+- Tárolás: `kozpont` Blobs, `pt/<uuid>` (egy termék), `ptm` (utolsó szinkron). Műveletek: `pt_list`
+  (`{ products, synced_at }`, az eltűnt mappák nélkül), `pt_sync`, `pt_op` (`id`, `op`; nincs rev-ellenőrzés,
+  mert a szinkron is írja). Ami eltűnik a mappából, rejtett lesz (`gone`), az adata megmarad.
+- Windows nincs a Claude-környezetben: a PowerShell részt (Teendőim, Kozpont.ps1) Alex gépén kell kipróbálni.
+

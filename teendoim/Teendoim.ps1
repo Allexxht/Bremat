@@ -138,7 +138,7 @@ function SaveDataNow {
   } catch { Fail "Nem sikerült menteni: $_" }
 }
 
-$script:set = @{ x = $null; y = $null; pinned = $false; showDone = $false; autostart = $true; today = ''; todayMs = 0; lastSeen = $null; idleMin = 2; naplo = $false; naploNev = ''; naploKod = ''; single = $true; actsInit = $false; idleMig = $false }
+$script:set = @{ x = $null; y = $null; pinned = $false; showDone = $false; autostart = $true; today = ''; todayMs = 0; lastSeen = $null; idleMin = 2; naplo = $false; naploNev = ''; naploKod = ''; single = $true; actsInit = $false; idleMig = $false; dtpsDir = '' }
 if (Test-Path $setFile) {
   try {
     $s = ConvertFrom-Json ([IO.File]::ReadAllText($setFile, $utf8))
@@ -1445,6 +1445,7 @@ function Tick {
   if ($now - $script:lastSeenSave -gt 30000) { $script:set.lastSeen = $now; SaveSet; $script:lastSeenSave = $now }
   try { NaploPump } catch { NaploLog "$_" }
   try { UpdPump } catch { UpdLog "$_" }
+  try { DtpsPump } catch { NaploLog "DTPS: $_" }
 }
 
 # ---------- Automatikus szünet tétlenségnél ----------
@@ -2142,6 +2143,60 @@ function KozpontStart($browser) {
   try { Start-Process (Join-Path $PSHOME 'powershell.exe') -ArgumentList $args2 -WindowStyle Hidden } catch {}
 }
 
+# ---------- Robot programok: a DTPS mappa figyelése ----------
+# Induláskor (30 mp múlva) és utána 5 percenként beolvassa a DTPS mappát:
+#   <DTPS mappa>\<termékmappa>\Teaching\R001_….rp4\program.rp4
+# és ha változott (vagy 1 órája nem küldött), a programok NEVÉT és DÁTUMÁT elküldi a
+# Központnak (pt_sync) – a Központ „Robot programok” oldala ebből tudja a legfrissebb verziót.
+# A programfájlok a gépen maradnak. Kód: a Munkanaplóé. Mappa: beallitas.json → dtpsDir.
+$kozpontApi = 'https://bremat-stuff.netlify.app/api/kozpont'
+$script:dNext = [int64]((NowMs) + 30000); $script:dReq = $null; $script:dSent = ''; $script:dSentAt = [int64]0; $script:dStatus = ''
+function DtpsDir { if ($script:set.dtpsDir) { [string]$script:set.dtpsDir } else { 'C:\robotinstallation\24-6521_260710_v1_MKU_Bremat Holland_C\Alex' } }
+function DtpsScan {
+  $root = DtpsDir
+  if (-not [IO.Directory]::Exists($root)) { return $null }
+  $out = New-Object System.Collections.ArrayList
+  foreach ($pd in (New-Object IO.DirectoryInfo $root).GetDirectories()) {
+    if ($pd.Name.StartsWith('_') -or ($pd.Attributes -band [IO.FileAttributes]::Hidden)) { continue }
+    $teach = Join-Path $pd.FullName 'Teaching'
+    if (-not [IO.Directory]::Exists($teach)) { continue }
+    $progs = New-Object System.Collections.ArrayList
+    foreach ($d in ((New-Object IO.DirectoryInfo $teach).GetDirectories('*.rp4') | Sort-Object Name)) {
+      $f = Join-Path $d.FullName 'program.rp4'
+      $m = $(if ([IO.File]::Exists($f)) { [IO.File]::GetLastWriteTimeUtc($f) } else { $d.LastWriteTimeUtc })
+      [void]$progs.Add([ordered]@{ n = $d.Name; m = $m.ToString('s', [Globalization.CultureInfo]::InvariantCulture) + 'Z' })
+    }
+    if ($progs.Count) { [void]$out.Add([ordered]@{ folder = $pd.Name; programs = @($progs) }) }
+  }
+  , @($out)
+}
+function DtpsPump {
+  if ($script:dReq) {
+    if (-not $script:dReq.task.IsCompleted) { return }
+    $r = $script:dReq; $script:dReq = $null; $t = $r.task
+    if ($t.IsFaulted -or $t.IsCanceled) { $script:dStatus = 'Nincs kapcsolat a Központtal – 5 perc múlva újra.'; return }
+    $st = [int]$t.Result.StatusCode
+    if ($st -eq 200) { $script:dSent = $r.sig; $script:dSentAt = NowMs; $script:dStatus = "Elküldve: $(Get-Date -Format 'HH:mm')"; return }
+    $err = ''; try { $err = [string](ConvertFrom-Json ($t.Result.Content.ReadAsStringAsync().Result)).error } catch {}
+    $script:dStatus = "A Központ nem fogadta el ($st) $err"; NaploLog "DTPS szinkron: $st $err"
+    return
+  }
+  $now = NowMs
+  if (-not $script:nHttp -or $now -lt $script:dNext) { return }
+  $script:dNext = $now + 300000
+  $list = DtpsScan
+  if ($null -eq $list) { $script:dStatus = "Nincs meg a DTPS mappa: $(DtpsDir)"; return }
+  $sig = ConvertTo-Json -InputObject ([ordered]@{ products = $list }) -Depth 6 -Compress
+  if ($sig -eq $script:dSent -and $now - $script:dSentAt -lt 3600000) { return }
+  $code = NaploCode
+  if (-not $code) { $script:dStatus = 'Nincs megadva a belépési kód (menü → Munkanapló → Név és belépési kód).'; return }
+  $body = ConvertTo-Json -InputObject ([ordered]@{ action = 'pt_sync'; code = $code; products = $list }) -Depth 6 -Compress
+  try {
+    $content = New-Object System.Net.Http.StringContent($body, [Text.Encoding]::UTF8, 'application/json')
+    $script:dReq = @{ task = $script:nHttp.PostAsync($kozpontApi, $content); sig = $sig }
+  } catch { $script:dStatus = "Nem sikerült elküldeni: $($_.Exception.Message)" }
+}
+
 # ---------- Önfrissítés ----------
 # A Teendőim (és a mellette lévő BrematKozpont) kódja magától frissül a bremat-stuff oldalról:
 # induláskor és 3 óránként megnézi a /frissites/manifest.json-t, és letölti azt, ami változott.
@@ -2372,7 +2427,12 @@ $kmWeb = New-Object Windows.Controls.MenuItem; $kmWeb.Header = 'Központ megnyit
 $kmWeb.add_Click({ if ($kozpontPs) { KozpontStart $false }; try { Start-Process 'https://bremat-stuff.netlify.app/?helyi=1' } catch {} })
 $kmFiles = New-Object Windows.Controls.MenuItem; $kmFiles.Header = 'Valk fájlok (ezen a gépen)'
 $kmFiles.add_Click({ KozpontStart $true })
-foreach ($m in $kmWeb, $kmFiles) { [void]$kozMenu.Items.Add($m) }
+$kmPt = New-Object Windows.Controls.MenuItem; $kmPt.Header = 'Robot programok'
+$kmPt.add_Click({ if ($kozpontPs) { KozpontStart $false }; try { Start-Process 'https://bremat-stuff.netlify.app/?helyi=1#/teszt' } catch {} })
+$kmPtNow = New-Object Windows.Controls.MenuItem; $kmPtNow.Header = 'DTPS mappa beolvasása most'
+$kmPtNow.add_Click({ $script:dNext = 0; $script:dSent = ''; $script:dStatus = 'Beolvasom…' })
+$kmPtInfo = New-Object Windows.Controls.MenuItem; $kmPtInfo.IsEnabled = $false
+foreach ($m in $kmWeb, $kmFiles, (New-Object Windows.Controls.Separator), $kmPt, $kmPtNow, $kmPtInfo) { [void]$kozMenu.Items.Add($m) }
 [void]$script:menu.Items.Add($kozMenu)
 $updMenu = New-Object Windows.Controls.MenuItem; $updMenu.Header = 'Frissítés'
 $umNow = New-Object Windows.Controls.MenuItem; $umNow.Header = 'Frissítés keresése most'
@@ -2399,6 +2459,7 @@ $script:menu.add_Opened({ param($s, $e)
   $ust = UpdRead
   $umInfo.Header = $(if ($ust -and $ust.at) { "Utolsó frissítés: $(([datetime]$ust.at).ToString('yyyy.MM.dd. HH:mm'))" } else { 'Még nem frissült magától.' }) + $(if ($script:upd.msg) { " $($script:upd.msg)" } else { '' })
   $n = $script:nQueue.Count + $(if ($script:set.naplo) { $script:segDirty.Count } else { 0 })
+  $kmPtInfo.Header = $(if ($script:dStatus) { "DTPS: $script:dStatus" } else { 'DTPS: hamarosan beolvasom.' })
   $nmInfo.Header = $(if (-not $script:set.naplo -and -not $n) { 'Kikapcsolva' } elseif ($n) { "$n bejegyzés vár küldésre. $script:nStatus" } elseif ($script:nStatus) { $script:nStatus } else { 'Minden elküldve.' }) })
 $U.Tab.ContextMenu = $script:menu
 $U.MenuBtn.add_MouseLeftButtonUp({ param($s, $e)
