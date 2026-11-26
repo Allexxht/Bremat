@@ -67,6 +67,12 @@ Adatok, mentés
 - Naponta mentés: %APPDATA%\BrematKozpont\mentes\ (60 napig).
 - Beállítások → "Adatok letöltése": egy mentés a Letöltések mappába.
 
+Robot programok – Megnyitás DTPS-ben
+- A webes Központ "Robot programok" oldalán a gomb ide (localhost) nyit egy lapot, ami
+  elindítja a DTPS-t a kiválasztott programmal (mint a PC Tool "Open" gombja), és bezárul.
+- Alap DTPS mappa: C:\robotinstallation\24-6521_260710_v1_MKU_Bremat Holland_C\Alex
+  Más mappa / program: %APPDATA%\BrematKozpont\beallitas.json → "dtps": { "ut": "...", "exe": "..." }
+
 Ha valami nem megy
 - "A helyi program nem válaszol": indítsd el újra a Kozpont.bat-ot.
 - Hibák naplója: %APPDATA%\BrematKozpont\hiba.txt

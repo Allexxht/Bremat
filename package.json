@@ -5,7 +5,7 @@
   "description": "BREMAT – Valk robot heti karbantartási lap (online, Netlify Functions + Netlify Blobs)",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/km-core.test.mjs tests/naplo-core.test.mjs tests/kozpont-core.test.mjs tests/frissites.test.mjs tests/feladatok.test.mjs",
+    "test": "node --test tests/km-core.test.mjs tests/naplo-core.test.mjs tests/kozpont-core.test.mjs tests/programteszt.test.mjs tests/frissites.test.mjs tests/feladatok.test.mjs",
     "frissites": "node scripts/frissites.mjs"
   },
   "dependencies": {

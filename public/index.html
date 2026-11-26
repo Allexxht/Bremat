@@ -42,6 +42,7 @@
   --valk: #c8102e;   --valk-soft: rgba(200, 16, 46, .1);
   --idea: #b86e00;   --idea-soft: rgba(214, 140, 0, .13);
   --proj: #6a4bc4;   --proj-soft: rgba(106, 75, 196, .12);
+  --pt: #2563c9;     --pt-soft: rgba(37, 99, 201, .12);
   --ok: #1e9a4e; --warn: #c27c00; --bad: #c8102e;
   --badge-ink: #ffffff;
   --display: 'Sora', 'Segoe UI', system-ui, sans-serif;
@@ -63,6 +64,7 @@
   --valk: #ff5468;  --valk-soft: rgba(255, 84, 104, .14);
   --idea: #f2b84b;  --idea-soft: rgba(242, 184, 75, .14);
   --proj: #a990ff;  --proj-soft: rgba(169, 144, 255, .15);
+  --pt: #6ea4ff;    --pt-soft: rgba(110, 164, 255, .15);
   --ok: #4ad37f; --warn: #f2b84b; --bad: #ff5468;
   color-scheme: dark;
 }
@@ -279,8 +281,82 @@ main {
 .kbd-hint { font-size: 12.5px; color: var(--muted); }
 @media (max-width: 480px) { .kbd-hint { display: none; } }
 
+/* Robot programok (3. változat, 2026. nov. 26.): a DTPS mappából; termékek → tábla (Tesztre vár → Javítani kell → Kész) + oldalpanel */
+.island.pt { --tone: var(--pt); --tone-soft: var(--pt-soft); }
+:root { --st-wait: #2563c9; --st-fix: #d1342f; --st-ok: #1f9d55; --paper: #ffffff; }
+:root[data-theme="dark"] { --st-wait: #6ea4ff; --st-fix: #ff6b63; --st-ok: #4ad37f; --paper: #16191e; }
+.rp-list, .rp-tbl { background: var(--glass-strong); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+.rp-prod { display: grid; grid-template-columns: 1fr minmax(110px, 220px); gap: 8px 20px; align-items: center; padding: 16px 20px; border-top: 1px solid var(--line); text-decoration: none; }
+.rp-prod:first-child { border-top: 0; }
+.rp-prod:hover { background: var(--hover); }
+.rp-prod b { font-family: var(--display); font-weight: 600; font-size: 18px; }
+.rp-prod .nm { color: var(--muted); font-size: 14px; }
+.rp-prod .nums { grid-column: 1 / -1; display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.rp-prod .nums b { font-family: inherit; font-size: inherit; }
+.rp-bar { display: flex; gap: 3px; height: 10px; }
+.rp-bar i { flex: 1; border-radius: 3px; background: var(--c); }
+.st { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
+.st::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+.st.wait { --c: var(--st-wait); } .st.fix { --c: var(--st-fix); color: var(--st-fix); } .st.ok { --c: var(--st-ok); color: var(--st-ok); }
+.n-wait { color: var(--st-wait); } .n-fix { color: var(--st-fix); } .n-ok { color: var(--st-ok); }
+.rp-head { display: flex; flex-direction: column; gap: 4px; }
+.rp-head h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: clamp(26px, 5vw, 34px); }
+.rp-head p { margin: 0; color: var(--muted); }
+.rp-sum { display: flex; gap: 6px 16px; flex-wrap: wrap; font-weight: 700; margin-top: 4px; }
+.rp-tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
+.rp-tbl th { text-align: left; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 800; padding: 12px 16px; }
+.rp-tbl td { padding: 14px 16px; border-top: 1px solid var(--line); vertical-align: middle; }
+.rp-tbl tbody tr { cursor: pointer; }
+.rp-tbl tbody tr:hover td, .rp-tbl tbody tr:focus-visible td { background: var(--hover); }
+.rp-tbl tbody tr:focus-visible { outline: none; }
+.rp-tbl .part { font-weight: 800; overflow-wrap: anywhere; }
+.mono { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 14px; }
+.rp-tbl .todo { color: var(--muted); font-size: 14.5px; }
+.rp-tbl .todo b { color: var(--text); font-weight: 600; }
+.rp-foot { font-size: 13.5px; color: var(--muted); }
+@media (max-width: 640px) {
+  .rp-tbl thead { display: none; }
+  .rp-tbl, .rp-tbl tbody { display: block; }
+  .rp-tbl tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 14px 16px; border-top: 1px solid var(--line); }
+  .rp-tbl tbody tr:first-child { border-top: 0; }
+  .rp-tbl td { padding: 0; border: 0; background: none !important; }
+  .rp-tbl .c-st { grid-row: 1; grid-column: 2; }
+  .rp-tbl .c-todo { grid-column: 1 / -1; }
+  .rp-tbl tbody tr:hover { background: var(--hover); }
+}
+.rp-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 60; }
+.rp-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 100%); background: var(--paper); z-index: 61; border-left: 1px solid var(--line);
+  box-shadow: var(--shadow); overflow-y: auto; padding: 18px 22px 40px; display: flex; flex-direction: column; gap: 16px; animation: rp-in .22s var(--ease); }
+@keyframes rp-in { from { transform: translateX(24px); opacity: 0; } }
+.rp-panel .x { align-self: flex-end; border: 1px solid var(--line); background: none; width: 42px; height: 42px; border-radius: 12px; cursor: pointer; display: grid; place-items: center; color: var(--text); }
+.rp-panel .x svg { width: 20px; height: 20px; }
+.rp-panel h2 { margin: -6px 0 0; font-family: var(--display); font-weight: 600; font-size: 24px; overflow-wrap: anywhere; }
+.rp-panel h2 small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); font-weight: 600; }
+.rp-cur { border: 1px solid var(--line); border-left: 5px solid var(--c); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.rp-cur small { color: var(--muted); font-weight: 700; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; }
+.rp-cur .v { font-family: var(--display); font-size: 30px; font-weight: 700; line-height: 1.1; }
+.rp-cur .f { overflow-wrap: anywhere; color: var(--muted); }
+.rp-open { background: var(--st-wait); border-color: var(--st-wait); color: #fff; text-decoration: none; min-height: 50px; }
+.rp-lbl { font-size: 12.5px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: -8px; }
+.rp-pts { display: flex; flex-direction: column; gap: 6px; }
+.rp-pt { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: none; text-align: left; cursor: pointer; width: 100%; color: var(--text); }
+.rp-pt i { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--line); flex: none; display: grid; place-items: center; font-style: normal; font-weight: 900; color: transparent; font-size: 13px; }
+.rp-pt.on i { background: var(--st-ok); border-color: var(--st-ok); color: #fff; }
+.rp-pt.on span { text-decoration: line-through; color: var(--muted); }
+.rp-pt em { font-style: normal; font-size: 12px; color: var(--muted); font-weight: 700; margin-left: 6px; }
+.rp-acts { display: grid; gap: 8px; }
+.rp-acts .btn { min-height: 50px; font-weight: 800; }
+.btn.rp-ok { background: var(--st-ok); border-color: var(--st-ok); color: #fff; }
+.btn.rp-fix { background: var(--text); border-color: var(--text); color: var(--paper); }
+.rp-panel textarea { width: 100%; min-height: 120px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); resize: vertical; font: inherit; color: inherit; }
+.rp-panel details summary { cursor: pointer; color: var(--muted); font-weight: 700; }
+.rp-old { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; font-size: 14.5px; }
+.rp-old > div { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 10px; background: var(--hover); }
+.rp-old a { color: var(--st-wait); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.rp-good { margin: 0; color: var(--st-ok); font-weight: 800; }
+
 @media (prefers-reduced-motion: reduce) {
-  .topbar, .island, .badge, .badge::after, .greet, .card, .pcard, .skeleton, .idea-row { animation: none; }
+  .topbar, .island, .badge, .badge::after, .greet, .card, .pcard, .skeleton, .idea-row, .rp-panel { animation: none; }
   .drawer, .scrim, .nav a, body.menu-open .nav a, .island, .island .go, .progress .track i { transition: none; }
 }
 @media (max-width: 480px) { .title { font-size: 17px; } }
@@ -312,6 +388,7 @@ main {
 <div id="toast" role="status"></div>
 
 <script type="module">
+import { STATE, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, dtpsLink } from '/programteszt.js';
 /* =====================================================================
    0. Régi címek: a heti lap a /valk/ címre költözött (régi könyvjelzők).
    ===================================================================== */
@@ -468,6 +545,8 @@ const live = {
   ideaAdd: (text) => post('/api/kozpont', 'idea_add', { text }, kmCode()),
   ideaUpdate: (id, patch) => post('/api/kozpont', 'idea_update', { id, ...patch }, kmCode()),
   ideaDelete: (id) => post('/api/kozpont', 'idea_delete', { id }, kmCode()),
+  ptList: () => post('/api/kozpont', 'pt_list', {}, kmCode()),
+  ptOp: (id, op) => post('/api/kozpont', 'pt_op', { id, op }, kmCode()),
 };
 
 /* ---------- Dátum (budapesti idő) ---------- */
@@ -499,7 +578,17 @@ function demoApi() {
     idea('i4', 'Közös mappa a hegesztési programoknak', 'kesz', 12, 'A Valk fájlok alatt megvan.'),
     idea('i5', 'Tablet a cellák mellé', 'elvetve', 20, 'Túl drága, és a por miatt nem bírná.'),
   ];
+  // Robot programok: ugyanaz a logika (syncProduct, applyOp), mint a szerveren – csak memóriában
+  let ptN = 0; const ptId = () => 'demo-' + (++ptN) + '-' + Date.now().toString(36);
+  let pts = demoPt(ptId);
+  const ptSynced = new Date(Date.now() - 3 * 60000).toISOString();
   return {
+    ptList: () => d({ products: pts.filter((x) => !x.gone), synced_at: ptSynced }),
+    ptOp: (id, op) => {
+      const cur = pts.find((x) => x.id === id); if (!cur) return Promise.reject(new Error('Ismeretlen termék'));
+      try { const n = applyOp(cur, op, { now: new Date(), newId: ptId }); pts = pts.map((x) => (x.id === id ? n : x)); return d(n); }
+      catch (e) { return Promise.reject(new Error(e.message)); }
+    },
     ideas: () => d(ideas),
     ideaAdd: (text) => { const t = String(text || '').trim(); if (!t) return Promise.reject(new Error('Írd be az ötletet')); const r = { ...idea('d' + Date.now(), t, 'nyitott', 0) }; ideas = [r, ...ideas]; return d(r); },
     ideaUpdate: (id, patch) => {
@@ -520,6 +609,40 @@ function demoApi() {
     week: () => d([1, 2, 3, 4, 5].map((i) => ({ id: String(i), date: m, text: i < 6 ? `Kész: minta ${i}` : 'x' }))),
     todo: () => d({ open: 5, starred: 3, doing: [{ text: '3100.0610 új kialakítás', spent_ms: 3600000, started_at: Date.now() - 720000 }], updated_at: new Date(Date.now() - 300000).toISOString() }),
   };
+}
+// Demó: a valódi DTPS programnevek (2950.7510, 2026. nov. 26.), a szinkron és Alex lépései visszajátszva
+function demoPt(newId) {
+  const day = 86400000, base = Date.now();
+  const at = (daysAgo, h = 8) => new Date(base - daysAgo * day + (h - 8) * 3600000);
+  const P = (dir, daysAgo) => ({ n: dir, m: at(daysAgo).toISOString() });
+  const F1 = '2950.7510 - Voorraadmenger S-series - kad extra';
+  let s1 = [P('R001_2950_7510_MAIN.rp4', 6), P('R001_2950_7510_OLDAL_LEMEZ_B.rp4', 10), P('R001_2950_7510_SZOGVAS.rp4', 10), P('R001_2950_7510_VALASZFAL_B.rp4', 10),
+    P('R001_V5_2950_7510_KULSO_TOMPA.rp4', 5), P('R001_V6_2950_7510_OLDAL_L_K+Tube.rp4', 4), P('R001_V7_2950_7510_V-FAL_K+EGYEB.rp4', 4)];
+  const ctx = (d) => ({ now: at(d, 15), newId });
+  let p = syncProduct(null, { folder: F1, programs: s1 }, ctx(10));
+  const part = (key) => p.parts.find((x) => x.key === key).id;
+  const op = (d, o) => { p = applyOp(p, o, ctx(d)); };
+  op(9, { type: 'test_ok', part: part('SZOGVAS') });
+  op(8, { type: 'test_fix', part: part('OLDAL_LEMEZ_B'), text: 'Kezdőpont rossz\nSebesség lassú' });
+  op(8, { type: 'test_fix', part: part('VALASZFAL_B'), text: 'Túl sok átállás – újraírni' });
+  op(5, { type: 'test_fix', part: part('KULSO_TOMPA'), text: 'Waeving nélkül jobb' });
+  op(4, { type: 'test_fix', part: part('OLDAL_L_K+TUBE'), text: 'Cső körvarrat vége beég' });
+  op(4, { type: 'test_fix', part: part('V_FAL_K+EGYEB'), text: 'Varrat vége beég' });
+  s1 = [...s1, P('R001_V1_2950_7510_OLDAL_LEMEZ_B.rp4', 3), P('R001_V2_UJ_2950_7510_VALASZFAL_B.rp4', 0), P('R001_V6_2950_7510_KULSO_TOMPA.rp4', 3),
+    P('R001_V7_2950_7510_OLDAL_L_K+Tube.rp4', 2), P('R001_V7-UJ_2950_7510_OLDAL-L_BEL.rp4', 1), P('R001_V8_2950_7510_V-FAL_K+EGYEB.rp4', 2), P('R001_KIVETELES TOMPA.rp4', 0)];
+  p = syncProduct(p, { folder: F1, programs: s1 }, ctx(0));
+  op(2, { type: 'test_fix', part: part('OLDAL_LEMEZ_B'), text: 'Sarokvarrat túl hosszú a 4. pontnál\nPisztoly ütközik a fülnél – pozíciót váltani' });
+  op(2, { type: 'point_toggle', part: part('OLDAL_LEMEZ_B'), point: p.parts.find((x) => x.key === 'OLDAL_LEMEZ_B').points[0].id });
+  op(2, { type: 'point_toggle', part: part('OLDAL_LEMEZ_B'), point: p.parts.find((x) => x.key === 'OLDAL_LEMEZ_B').points[1].id });
+  op(1, { type: 'test_ok', part: part('OLDAL_L_K+TUBE') });
+  op(1, { type: 'test_fix', part: part('V_FAL_K+EGYEB'), text: 'Varrat vége még mindig beég – áramot csökkenteni' });
+  const q = (folder, list, d) => syncProduct(null, { folder, programs: list.map((n) => P(n, d)) }, ctx(d));
+  let m = q('2950.5750 - Mokus Kerek', ['R001_2950_5750_PALAST.rp4', 'R001_V3_2950_5750_PALAST.rp4', 'R001_2950_5750_FENEK.rp4', 'R001_V1_2950_5750_FENEK.rp4'], 30);
+  for (const x of m.parts) m = applyOp(m, { type: 'test_ok', part: x.id }, { now: at(28), newId });
+  let k = q('3100.0120 - Kontener eleje hatulja', ['R001_3100_0120_ELEJE.rp4', 'R001_V2_3100_0120_HATULJA.rp4', 'R001_3100_0120_SAROK.rp4'], 60);
+  k = applyOp(k, { type: 'test_fix', part: k.parts.find((x) => x.key === 'HATULJA').id, text: 'Nincs összerakott termék – később folytatom\nSarokvarrat kezdete 2 mm-rel elcsúszik' }, { now: at(58), newId });
+  k = applyOp(k, { type: 'test_ok', part: k.parts.find((x) => x.key === 'ELEJE').id }, { now: at(58), newId });
+  return [p, m, k];
 }
 const api = DEMO ? demoApi() : live;
 
@@ -610,8 +733,9 @@ function renderHome() {
       ${islandShell('isNaplo', 'naplo', 'notebook-pen', 'Munkanapló', 'Teendők és bejegyzések', '/naplo/', 0)}
       ${islandShell('isValk', 'valk', 'clipboard-check', 'Valk heti lap', 'Robot karbantartás', '/valk/', 1)}
       ${islandShell('isIdeas', 'idea', 'lightbulb', 'Ötletek', 'Amit meg akarok csinálni', '#/otletek', 2)}
-      ${islandShell('isProj', 'proj', 'folder-kanban', 'Projektek', 'Tervek, rajzok, 3D oldalak', '#/projektek', 3)}
-      ${helyiOn() ? islandShell('isFiles', 'valk', 'folder-lock', 'Valk fájlok', 'Cellák, jigek, adapterek, termékek – csak ezen a gépen', HELYI_URL, 4) : ''}
+      ${islandShell('isPt', 'pt', 'bot', 'Robot programok', 'Mi vár tesztre, mit kell javítani', '#/teszt', 3)}
+      ${islandShell('isProj', 'proj', 'folder-kanban', 'Projektek', 'Tervek, rajzok, 3D oldalak', '#/projektek', 4)}
+      ${helyiOn() ? islandShell('isFiles', 'valk', 'folder-lock', 'Valk fájlok', 'Cellák, jigek, adapterek, termékek – csak ezen a gépen', HELYI_URL, 5) : ''}
     </div></div>`;
   if (helyiOn()) fillIsland($('#isFiles'), { items: [
     { icon: 'shield-check', good: true, html: 'A fájlok a gépen maradnak, a netre nem kerülnek fel.' },
@@ -622,6 +746,7 @@ function renderHome() {
   loadNaplo().catch(() => {});
   loadValk().catch(() => {});
   loadIdeasIsland().catch(() => {});
+  loadPtIsland().catch(() => {});
   loadProjIsland().catch(() => {});
 }
 
@@ -917,6 +1042,146 @@ async function renderIdeas() {
 }
 
 /* =====================================================================
+   5c. Robot programok (#/teszt) – 3. változat (2026. nov. 26., Alex)
+   A termékek, részek, verziók a DTPS mappából jönnek (a Teendőim 5 percenként
+   küldi a neveket). Itt: mi vár tesztre, mit kell javítani, mi kész – és a
+   „Megnyitás DTPS-ben” gomb (a helyi Központ indítja a gépen).
+   A logika a közös /programteszt.js-ben (a szerver is azt használja).
+   ===================================================================== */
+const huDay = new Intl.DateTimeFormat('hu-HU', { timeZone: 'Europe/Budapest', month: 'short', day: 'numeric' });
+function whenText(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), ymd = ymdFmt.format(d);
+  if (ymd === today()) return `ma, ${hhmm(iso)}`;
+  if (ymd === addDays(today(), -1)) return `tegnap, ${hhmm(iso)}`;
+  return huDay.format(d);
+}
+const stHtml = (st) => `<span class="st ${st}">${STATE[st].t}</span>`;
+const ptOrder = (p) => { const s = summary(p); return s.fix || s.wait ? 0 : s.parts ? 1 : 2; };
+const syncText = (at) => at ? `A Teendőim 5 percenként beolvassa a DTPS mappát. Utoljára: ${whenText(at)}.` : 'Még nem jött adat a DTPS mappából. A Teendőim küldi 5 percenként (menü → BREMAT Központ → DTPS mappa beolvasása most).';
+
+// --- Sziget a kezdőlapon ---
+async function loadPtIsland() {
+  const el = $('#isPt');
+  let products;
+  try { ({ products } = await api.ptList()); }
+  catch (e) { fillIsland(el, { items: [{ icon: 'wifi-off', html: esc(e.message) }] }); return; }
+  const items = [];
+  const sorted = [...products].sort((a, b) => ptOrder(a) - ptOrder(b) || (summary(b).last || '').localeCompare(summary(a).last || ''));
+  for (const p of sorted.filter((x) => ptOrder(x) === 0).slice(0, 3)) {
+    const s = summary(p);
+    items.push({ icon: 'box', html: `<b>${esc(p.sku)}</b> <span class="dim">· ${s.wait ? `${s.wait} tesztre vár` : ''}${s.wait && s.fix ? ' · ' : ''}${s.fix ? `${s.fix} javítani` : ''}</span>` });
+  }
+  if (!products.length) items.push({ icon: 'folder-sync', html: '<span class="dim">Még nem jött adat a DTPS mappából. A Teendőim küldi 5 percenként.</span>' });
+  else if (!items.length) items.push({ icon: 'circle-check-big', good: true, html: 'Minden rész kész.' });
+  const parts = products.reduce((t, p) => { const s = summary(p); t.ok += s.ok; t.n += s.parts; return t; }, { ok: 0, n: 0 });
+  fillIsland(el, { items, progress: parts.n ? { done: parts.ok, left: parts.n - parts.ok } : null, foot: products.length ? `${products.length} termék` : '' });
+  const sp = el.querySelector('.progress span'); if (sp && parts.n) sp.innerHTML = `<b>${parts.ok}</b> rész kész · <b>${parts.n - parts.ok}</b> hátra`;
+}
+
+// --- Lista: a termékek ---
+async function renderPtList() {
+  $('#app').innerHTML = `<div class="page" style="max-width:820px">
+    <div class="greet"><h1>Robot programok</h1><p>Koppints egy termékre.</p></div>
+    <div class="rp-list" id="ptList"><div style="padding:20px"><div class="skeleton" style="width:60%"></div></div></div>
+    <p class="rp-foot" id="ptFoot"></p></div>`;
+  icons();
+  const { products, synced_at } = await guarded(() => api.ptList());
+  products.sort((a, b) => ptOrder(a) - ptOrder(b) || (summary(b).last || '').localeCompare(summary(a).last || ''));
+  $('#ptFoot').textContent = syncText(synced_at);
+  if (!products.length) { $('#ptList').innerHTML = `<p class="muted" style="margin:0;padding:20px">Még nincs termék.</p>`; return; }
+  $('#ptList').innerHTML = products.map((p) => {
+    const s = summary(p), parts = visibleParts(p);
+    return `<a class="rp-prod" href="#/teszt/${esc(p.id)}">
+      <span><b>${esc(p.sku)}</b>${p.name ? `<br><span class="nm">${esc(p.name)}</span>` : ''}</span>
+      <span class="rp-bar" aria-hidden="true">${parts.map((x) => `<i style="--c:var(--st-${x.status})"></i>`).join('')}</span>
+      <span class="nums">${s.wait ? `<span class="n-wait"><b>${s.wait}</b> tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix"><b>${s.fix}</b> javítani</span>` : ''}<span class="n-ok"><b>${s.ok}</b>/${s.parts} kész</span>${s.last ? `<span>utolsó program: ${whenText(s.last)}</span>` : ''}</span></a>`;
+  }).join('');
+}
+
+// --- Egy termék: a részei táblában, koppintásra oldalpanel ---
+async function renderPtProduct(id) {
+  $('#app').innerHTML = `<div class="page" id="ptRoot" style="max-width:920px"><div class="card glass"><div class="skeleton" style="width:60%"></div></div></div>`;
+  const app = $('#ptRoot');
+  let { products, synced_at } = await guarded(() => api.ptList());
+  let p = products.find((x) => x.id === id);
+  if (!p) { app.innerHTML = `<a class="backlink" href="#/teszt"><i data-lucide="arrow-left"></i>Robot programok</a><div class="card glass"><p class="muted" style="margin:0">Nincs ilyen termék (lehet, hogy eltűnt a DTPS mappából).</p></div>`; icons(); return; }
+  let cur = null, writing = false, busy = false;
+  const panel = document.createElement('aside'); panel.className = 'rp-panel'; panel.hidden = true; panel.setAttribute('aria-label', 'Rész');
+  const scrim = document.createElement('div'); scrim.className = 'rp-scrim'; scrim.hidden = true;
+  document.body.append(scrim, panel);   // a body-ban: a .page animációja ne törje a fixed helyzetet
+
+  const todo = (x) => {
+    const o = openPoints(x);
+    if (x.status === 'fix') return o.length ? `<b>${esc(o[0].text)}</b>${o.length > 1 ? ` +${o.length - 1}` : ''}` : 'Kijavítva – új verzió kell';
+    if (x.status === 'wait') return o.length ? `Tesztelni · <b>${o.length} pont</b> ellenőrizni` : 'Tesztelni a roboton';
+    return '—';
+  };
+  const drawTable = () => {
+    const parts = visibleParts(p), s = summary(p);
+    app.innerHTML = `
+      <a class="backlink" href="#/teszt"><i data-lucide="arrow-left"></i>Robot programok</a>
+      <div class="rp-head"><h1>${esc(p.sku)}</h1>${p.name ? `<p>${esc(p.name)}</p>` : ''}
+        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}<span class="n-ok">${s.ok}/${s.parts} kész</span></div></div>
+      ${parts.length ? `<table class="rp-tbl"><thead><tr><th>Rész</th><th>Legfrissebb</th><th>Állapot</th><th>Mi a teendő</th></tr></thead>
+        <tbody>${parts.map((x) => `<tr data-part="${esc(x.id)}" tabindex="0"><td class="part">${esc(x.name)}</td><td class="mono">${esc(latestOf(x).v)}</td><td class="c-st">${stHtml(x.status)}</td><td class="c-todo todo">${todo(x)}</td></tr>`).join('')}</tbody></table>`
+        : '<div class="card glass"><p class="muted" style="margin:0">Ebben a termékmappában még nincs program.</p></div>'}
+      <p class="rp-foot">${esc(syncText(synced_at))}</p>`;
+    icons();
+  };
+  const drawPanel = () => {
+    const x = p.parts.find((y) => y.id === cur);
+    if (!x) return close();
+    const v = latestOf(x), o = openPoints(x), done = x.points.filter((y) => y.done), old = x.versions.slice(0, -1).reverse();
+    const pt = (y) => `<button class="rp-pt ${y.done ? 'on' : ''}" type="button" data-a="pt" data-id="${esc(y.id)}"><i>✓</i><span>${esc(y.text)}${y.v ? `<em>${esc(y.v)}</em>` : ''}</span></button>`;
+    panel.innerHTML = `<button class="x" type="button" data-a="close" aria-label="Bezár"><i data-lucide="x"></i></button>
+      <h2>${esc(x.name)}<small>${esc(p.sku)}</small></h2>
+      <div class="rp-cur" style="--c:var(--st-${x.status})"><small>Legfrissebb program${v.m ? ` · ${esc(whenText(v.m))}` : ''}</small><span class="v">${esc(v.v)}</span><span class="f mono">${esc(v.file)}</span>
+        <span style="margin-top:6px">${stHtml(x.status)}</span></div>
+      <a class="btn rp-open" href="${esc(dtpsLink(p, v))}" target="_blank" rel="noopener"><i data-lucide="play"></i>Megnyitás DTPS-ben</a>
+      <p class="rp-foot" style="margin:-10px 0 0">A programozó gépen működik, ahol a Teendőim fut.</p>
+      ${o.length ? `<div class="rp-lbl">${x.status === 'wait' ? 'Ezeket ellenőrizd a tesztnél' : 'Ezt kell javítani'}</div><div class="rp-pts">${o.map(pt).join('')}</div>` : ''}
+      ${x.status === 'ok' ? `<p class="rp-good">✓ Minden tökéletes${x.ok_at ? ` (${esc(whenText(x.ok_at))})` : ''}</p>` : ''}
+      ${writing ? `<div class="rp-lbl">Észrevételek – soronként egy</div><textarea id="rpObs" maxlength="6000" placeholder="pl. Kezdőpont 2 mm-t csúszik"></textarea>
+        <div class="rp-acts"><button class="btn rp-fix" type="button" data-a="save"><i data-lucide="wrench"></i>Mentés – javítani kell</button><button class="btn" type="button" data-a="cancel">Mégse</button></div>`
+      : `<div class="rp-acts">${x.status !== 'ok' ? `<button class="btn rp-ok" type="button" data-a="ok"><i data-lucide="check"></i>Teszteltem – minden tökéletes</button>` : ''}
+        <button class="btn" type="button" data-a="write"><i data-lucide="pencil-line"></i>Teszteltem – észrevételt írok</button>
+        ${x.status === 'ok' ? '<button class="btn" type="button" data-a="again"><i data-lucide="rotate-ccw"></i>Újra tesztelni</button>' : ''}</div>`}
+      ${done.length ? `<details><summary>Kipipált pontok (${done.length})</summary><div class="rp-pts" style="margin-top:10px">${done.slice().reverse().map(pt).join('')}</div></details>` : ''}
+      ${old.length ? `<details><summary>Korábbi verziók (${old.length})</summary><div class="rp-old">${old.map((y) => `<div><span><span class="mono">${esc(y.v)}</span> · ${esc(whenText(y.m))}</span><a href="${esc(dtpsLink(p, y))}" target="_blank" rel="noopener">Megnyitás</a></div>`).join('')}</div></details>` : ''}
+      ${x.tests.length ? `<details><summary>Tesztek (${x.tests.length})</summary><div class="rp-old">${x.tests.slice().reverse().map((t) => `<div><span>${esc(whenText(t.at))} · <span class="mono">${esc(t.v || '')}</span></span><span class="${t.ok ? 'n-ok' : 'n-fix'}" style="font-weight:700">${t.ok ? 'Minden tökéletes' : `${t.n || ''} észrevétel`}</span></div>`).join('')}</div></details>` : ''}`;
+    icons();
+  };
+  const open = (pid) => { cur = pid; writing = false; drawPanel(); panel.hidden = false; scrim.hidden = false; panel.querySelector('.x').focus(); };
+  function close() { cur = null; writing = false; panel.hidden = true; scrim.hidden = true; }
+  const run = async (op, msg) => {
+    if (busy) return; busy = true;
+    try { p = await guarded(() => api.ptOp(p.id, op)); writing = false; drawTable(); drawPanel(); if (msg) toast(msg); }
+    catch (e) { if (!(e instanceof AccessError)) toast(e.message); }
+    finally { busy = false; }
+  };
+  app.addEventListener('click', (e) => { const r = e.target.closest('tr[data-part]'); if (r) open(r.dataset.part); });
+  app.addEventListener('keydown', (e) => { const r = e.target.closest('tr[data-part]'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(r.dataset.part); } });
+  scrim.addEventListener('click', close);
+  panel.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-a]'); if (!b) return;
+    const a = b.dataset.a, x = p.parts.find((y) => y.id === cur);
+    if (a === 'close' || !x) return close();
+    if (a === 'pt') return run({ type: 'point_toggle', part: x.id, point: b.dataset.id });
+    if (a === 'ok') return run({ type: 'test_ok', part: x.id }, `${x.name}: kész`);
+    if (a === 'again') return run({ type: 'status', part: x.id, status: 'wait' }, `${x.name}: tesztre vár`);
+    if (a === 'write') { writing = true; drawPanel(); return $('#rpObs').focus(); }
+    if (a === 'cancel') { writing = false; return drawPanel(); }
+    if (a === 'save') { const t = $('#rpObs').value; if (!t.trim()) return $('#rpObs').focus(); return run({ type: 'test_fix', part: x.id, text: t }, `${x.name}: javítani kell`); }
+  });
+  panel.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.id === 'rpObs') panel.querySelector('[data-a="save"]').click(); });
+  const onKey = (e) => { if (e.key === 'Escape' && !panel.hidden) close(); };
+  document.addEventListener('keydown', onKey);
+  window.addEventListener('hashchange', () => { document.removeEventListener('keydown', onKey); panel.remove(); scrim.remove(); }, { once: true });
+  drawTable();
+}
+
+/* =====================================================================
    6. Projektek (a lista a szerverről jön, csak kóddal)
    ===================================================================== */
 const PICONS = { tokmany: 'cylinder', adapter: 'puzzle', hegesztett: 'flame', muhely: 'wrench' };
@@ -977,16 +1242,18 @@ function renderSettings() {
 /* =====================================================================
    8. Útvonalak: a cím # utáni része dönti el, melyik nézet látszik
    ===================================================================== */
-const VIEWS = { '#/otletek': renderIdeas, '#/projektek': renderProjects, '#/beallitasok': renderSettings };
+const VIEWS = { '#/otletek': renderIdeas, '#/projektek': renderProjects, '#/beallitasok': renderSettings, '#/teszt': renderPtList };
+const PT_ROUTE = /^#\/teszt\/([\w-]+)$/;
 function route() {
   if (OLD.test(location.hash)) return location.replace('/valk/' + location.search + location.hash);
   if (!DEMO && !kmCode()) return renderGate();
   $('#menuBtn').hidden = false;
-  const key = VIEWS[location.hash] ? location.hash : '#/';
+  const ptm = !VIEWS[location.hash] && location.hash.match(PT_ROUTE);
+  const key = VIEWS[location.hash] ? location.hash : ptm ? '#/teszt/*' : '#/';
   $$('.nav a[data-view]').forEach((a) => a.toggleAttribute('aria-current', a.dataset.view === key));
   $$('.nav a[aria-current]').forEach((a) => a.setAttribute('aria-current', 'page'));
   clearInterval(tickTimer); window.scrollTo(0, 0);
-  Promise.resolve().then(VIEWS[key] || renderHome).catch((e) => { if (!(e instanceof AccessError)) console.error(e); });
+  Promise.resolve().then(ptm ? () => renderPtProduct(ptm[1]) : VIEWS[key] || renderHome).catch((e) => { if (!(e instanceof AccessError)) console.error(e); });
 }
 $('#demo').hidden = !DEMO;
 icons();

@@ -11,6 +11,11 @@
 #   adatok.json     – cellák, jigek, termékek, adatok, jegyzetek (a fájlok a helyükön maradnak)
 #   mentes\         – az adatok.json napi mentései (60 napig)
 #   kepek\          – a STEP-ből készült képek
+#
+# DTPS: a webes Központ „Robot programok” oldalán a „Megnyitás DTPS-ben” gomb a
+# http://localhost:47801/dtps.html oldalt nyitja meg, az pedig innen indítja a
+# DTPS3.exe-t ugyanazokkal az adatokkal, mint a Panasonic PC Tool „Open” gombja.
+# Beállítás (nem kötelező) a beallitas.json-ban: "dtps": { "ut": "…\Alex", "exe": "…\DTPS3.exe", "lang": "NLD" }
 param([switch]$NoBrowser)
 
 $ErrorActionPreference = 'Stop'
@@ -69,6 +74,13 @@ function LoadSettings {
     [void]$list.Add([pscustomobject]@{ id = $id; name = $name; path = $full })
   }
   $script:roots = $list
+  # DTPS: a csoport mappája (pl. ...\24-6521_..._C\Alex) és a program
+  $d = $s.dtps
+  $script:dtps = [pscustomobject]@{
+    ut   = $(if ($d -and $d.ut) { ([string]$d.ut).TrimEnd('\', '/') } else { 'C:\robotinstallation\24-6521_260710_v1_MKU_Bremat Holland_C\Alex' })
+    exe  = $(if ($d -and $d.exe) { [string]$d.exe } else { 'C:\Program Files\Panasonic Welding\PcTool\DTPS3.exe' })
+    lang = $(if ($d -and $d.lang -and ([string]$d.lang) -match '^[A-Z]{3}$') { [string]$d.lang } else { 'NLD' })
+  }
 }
 function SaveSettings($mappak) {
   $out = New-Object System.Collections.ArrayList; $seen = @{}
@@ -82,7 +94,9 @@ function SaveSettings($mappak) {
     while ($seen.ContainsKey($id)) { $id = "$id-2" }; $seen[$id] = $true
     [void]$out.Add([ordered]@{ id = $id; nev = $nev; ut = $ut })
   }
-  [IO.File]::WriteAllText($setFile, (ConvertTo-Json -InputObject ([ordered]@{ mappak = @($out) }) -Depth 4), $utf8)
+  $o = [ordered]@{ mappak = @($out) }
+  try { $old = ([IO.File]::ReadAllText($setFile, $utf8) | ConvertFrom-Json).dtps; if ($old) { $o.dtps = $old } } catch {}   # a DTPS beállítás maradjon
+  [IO.File]::WriteAllText($setFile, (ConvertTo-Json -InputObject $o -Depth 4), $utf8)
   LoadSettings; $script:index = $null
 }
 LoadSettings
@@ -204,6 +218,28 @@ function SaveData($text) {
   [IO.File]::WriteAllText($tmp, $text, $utf8)
   if (Test-Path $dataFile) { [IO.File]::Replace($tmp, $dataFile, [NullString]::Value) } else { [IO.File]::Move($tmp, $dataFile) }
   $script:rev = [Math]::Max($script:rev + 1, (Get-Item $dataFile).LastWriteTimeUtc.Ticks)
+}
+
+# ---------- DTPS: egy program megnyitása ----------
+# Ugyanaz a parancs, amit a PC Tool „Open” gombja indít (Task Manager, 2026. november 26.):
+#   DTPS3.exe "<installáció>" "<csoport>" "<termékmappa>" "<robot>" "<program>.rp4" /LANG:NLD "/C"
+# Csak a beállított DTPS mappán belüli, létező programot nyitja meg.
+$script:dtpsLast = [DateTime]::MinValue
+function DtpsOpen($b) {
+  $t = CheckName $b.t; $p = CheckName $b.p
+  $mm = [regex]::Match($p, '^R(\d{1,3})_(.+\.rp4)$', 'IgnoreCase')
+  if (-not $mm.Success) { throw 'BAD:Ez nem DTPS program.' }
+  $robot = [int]$mm.Groups[1].Value; $file = $mm.Groups[2].Value
+  $grp = $script:dtps.ut
+  if (-not [IO.Directory]::Exists($grp)) { throw "BAD:Nincs meg a DTPS mappa: $grp" }
+  if (-not [IO.Directory]::Exists((Join-Path (Join-Path (Join-Path $grp $t) 'Teaching') $p))) { throw 'BAD:Ez a program már nincs meg a DTPS mappában.' }
+  if (-not [IO.File]::Exists($script:dtps.exe)) { throw "BAD:Nincs meg a DTPS program: $($script:dtps.exe)" }
+  if (((Get-Date) - $script:dtpsLast).TotalSeconds -lt 3) { throw 'BAD:Már indul, várj pár másodpercet.' }
+  $script:dtpsLast = Get-Date
+  $inst = Split-Path $grp -Parent; $group = Split-Path $grp -Leaf
+  $argv = '"{0}" "{1}" "{2}" "{3}" "{4}" /LANG:{5} "/C"' -f $inst, $group, $t, $robot, $file, $script:dtps.lang
+  Start-Process -FilePath $script:dtps.exe -ArgumentList $argv -WorkingDirectory (Split-Path $script:dtps.exe -Parent)
+  [ordered]@{ ok = $true; file = $file }
 }
 
 # ---------- Válaszok ----------
@@ -411,6 +447,7 @@ function Handle($ctx) {
     '/api/delete' { DoDelete $b; Ok $ctx; return }
     '/api/mkdir' { SendJson $ctx 200 (DoMkdir $b); return }
     '/api/roots' { SaveSettings $b.mappak; Ok $ctx; return }
+    '/api/dtps' { SendJson $ctx 200 (DtpsOpen $b); return }
     '/api/stop' { Ok $ctx; $script:stop = $true; return }
   }
   SendErr $ctx 404 'Nincs ilyen.'

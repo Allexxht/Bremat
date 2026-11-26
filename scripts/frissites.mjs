@@ -26,6 +26,7 @@ export const FILES = [
   ['BrematKozpont/Kozpont.bat', 'helyi/Kozpont.bat', 'bat'],
   ['BrematKozpont/OLVASS.txt', 'helyi/OLVASS.txt', 'txt'],
   ['BrematKozpont/web/index.html', 'helyi/web/index.html', 'raw'],
+  ['BrematKozpont/web/dtps.html', 'helyi/web/dtps.html', 'raw'],
 ];
 
 const BOM = Buffer.from([0xef, 0xbb, 0xbf]);

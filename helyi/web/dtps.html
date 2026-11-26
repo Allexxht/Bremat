@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Megnyitás DTPS-ben</title>
+<style>
+  /* A webes Központ „Robot programok” oldaláról nyílik: elindítja a DTPS-t ezen a gépen, majd bezárul. */
+  :root { color-scheme: light; --bg: #eef3f8; --paper: #fff; --text: #14171c; --muted: #6a7282; --ok: #1f9d55; --bad: #d1342f; --line: #e4e7ec; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--text);
+    font: 16px/1.45 'Segoe UI', system-ui, sans-serif; padding: 16px; box-sizing: border-box; }
+  .box { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 28px 30px; max-width: 520px; width: 100%;
+    display: flex; flex-direction: column; gap: 10px; text-align: center; }
+  h1 { margin: 0; font-size: 22px; }
+  .f { font-family: ui-monospace, Consolas, monospace; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+  .ok h1 { color: var(--ok); } .err h1 { color: var(--bad); }
+  button { margin-top: 6px; min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); font: inherit; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="box" id="box"><h1>Megnyitás a DTPS-ben…</h1><div class="f" id="f"></div></div>
+<script>
+(async () => {
+  const box = document.getElementById('box');
+  const q = new URLSearchParams(location.hash.slice(1));
+  const t = q.get('t') || '', p = q.get('p') || '';
+  history.replaceState(null, '', location.pathname);   // frissítéskor ne induljon újra
+  const show = (cls, title, sub) => {
+    box.className = 'box ' + cls;
+    box.innerHTML = '';
+    const h = document.createElement('h1'); h.textContent = title; box.append(h);
+    if (sub) { const d = document.createElement('div'); d.className = 'f'; d.textContent = sub; box.append(d); }
+  };
+  if (!t || !p) { show('err', 'Hiányzik a program neve.', 'Nyisd meg a Központ Robot programok oldaláról.'); return; }
+  document.getElementById('f').textContent = p;
+  try {
+    const r = await fetch('/api/dtps', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Helyi': '1' }, body: JSON.stringify({ t, p }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Nem sikerült elindítani.');
+    show('ok', '✓ A DTPS megnyitja', d.file || p);
+    setTimeout(() => window.close(), 1500);
+  } catch (e) {
+    show('err', 'Nem sikerült megnyitni', e.message);
+    const b = document.createElement('button'); b.textContent = 'Bezárás'; b.onclick = () => window.close(); box.append(b);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,8 @@
 // =====================================================================
 // Netlify Function: /api/kozpont – a Központ (kezdőlap) projektlistája és
 // az Ötletek. Saját Blobs tároló: "kozpont". Ugyanaz a belépési kód, mint a
-// heti lapé (KM_ACCESS_CODE).
+// heti lapé (KM_ACCESS_CODE). A DTPS szinkront (pt_sync) a Teendőim a
+// Munkanapló kódjával is küldheti (NAPLO_ACCESS_CODE, ha be van állítva).
 // =====================================================================
 import { getStore } from '@netlify/blobs';
 import { handle, KmError } from '../../lib/kozpont-core.mjs';
@@ -28,7 +29,7 @@ const json = (status, body) => new Response(JSON.stringify(body), {
 export default async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'Csak POST kérés engedélyezett' });
   try {
-    return json(200, { data: await handle(await req.text(), { accessCode: process.env.KM_ACCESS_CODE, store: blobStore() }) });
+    return json(200, { data: await handle(await req.text(), { accessCode: process.env.KM_ACCESS_CODE, syncCode: process.env.NAPLO_ACCESS_CODE, store: blobStore() }) });
   } catch (e) {
     if (e instanceof KmError) return json(e.status, { error: e.message });
     console.error(e);
