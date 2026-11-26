@@ -492,6 +492,10 @@ main {
 .rp-open { background: var(--st-wait); border-color: var(--st-wait); color: #fff; text-decoration: none; min-height: 50px; }
 .rp-lbl { font-size: 12.5px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: -8px; }
 .rp-pts { display: flex; flex-direction: column; gap: 6px; }
+.rp-ptw { display: flex; gap: 6px; align-items: stretch; }
+.rp-ptdel { flex: none; width: 44px; border-radius: 12px; border: 1px solid var(--line); background: none; color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+.rp-ptdel svg { width: 18px; height: 18px; }
+.rp-ptdel:hover { color: var(--st-fix); border-color: var(--st-fix); }
 .rp-pt { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: none; text-align: left; cursor: pointer; width: 100%; color: var(--text); }
 .rp-pt i { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--line); flex: none; display: grid; place-items: center; font-style: normal; font-weight: 900; color: transparent; font-size: 13px; }
 .rp-pt.on i { background: var(--st-ok); border-color: var(--st-ok); color: #fff; }
@@ -1475,7 +1479,7 @@ async function renderPtProduct(id) {
     if (!x) return close();
     const v = latestOf(x), o = openPoints(x), done = x.points.filter((y) => y.done);
     const groups = notesByVersion(x), curG = groups.find((g) => g.v === v.v) || { notes: [] }, older = groups.filter((g) => g.v !== v.v);
-    const pt = (y) => `<button class="rp-pt ${y.done ? 'on' : ''}" type="button" data-a="pt" data-id="${esc(y.id)}"><i>✓</i><span>${esc(y.text)}${y.v ? `<em>${esc(y.v)}</em>` : ''}</span></button>`;
+    const pt = (y) => `<div class="rp-ptw"><button class="rp-pt ${y.done ? 'on' : ''}" type="button" data-a="pt" data-id="${esc(y.id)}"><i>✓</i><span>${esc(y.text)}${y.v ? `<em>${esc(y.v)}</em>` : ''}</span></button><button class="rp-ptdel" type="button" data-a="ptdel" data-id="${esc(y.id)}" aria-label="Pont törlése" title="Törlés"><i data-lucide="trash-2"></i></button></div>`;
     panel.innerHTML = `<button class="x" type="button" data-a="close" aria-label="Bezár"><i data-lucide="x"></i></button>
       <h2>${esc(x.name)}<small>${esc(p.sku)}</small></h2>
       <div class="rp-info"><div class="rp-lbl" style="margin:0">Összesítő infó – a részhez, minden verzióhoz</div>
@@ -1526,6 +1530,7 @@ async function renderPtProduct(id) {
     const a = b.dataset.a, x = p.parts.find((y) => y.id === cur);
     if (a === 'close' || !x) return close();
     if (a === 'pt') return run({ type: 'point_toggle', part: x.id, point: b.dataset.id });
+    if (a === 'ptdel') { const y = x.points.find((z) => z.id === b.dataset.id); if (!y || !confirm(`Törlöd ezt a pontot?\n\n${y.text}`)) return; return run({ type: 'point_delete', part: x.id, point: y.id }, 'Pont törölve.'); }
     if (a === 'ok') return run({ type: 'test_ok', part: x.id }, `${x.name}: kész`);
     if (a === 'status') return run({ type: 'status', part: x.id, status: b.dataset.v }, `${x.name}: ${STATE[b.dataset.v].t}`);
     if (a === 'mark') return run({ type: 'mark', part: x.id, mark: b.dataset.v || null }, `${x.name}: ${MARKS[b.dataset.v]?.t || 'jelölés nélkül'}`);

@@ -508,6 +508,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - **Jelölés** a részen (az állapottól független, `mark`: `strike` | `test` | `temp` | null; művelet `mark`):
   Kihúzva (áthúzva, halvány, a tábla aljára kerül, a számolásba nem számít – `countedParts`, `summary().struck`),
   Csak teszt (szaggatott lila keret), Ideiglenes (pontozott narancs keret). Új verziónál megmarad.
+- A pontok mellett kuka gomb (`point_delete`, megerősítéssel): a véletlenül felvett pont törölhető.
 - Netlify keret (nov. 26.): éles deploy szünetel → Alex az előnézetet használja; ideiglenes szinkron:
   `DTPS-szinkron.bat` (projekt fájlok, `robot-programok/`), az előnézet `/api/kozpont`-jára küld. A Blobs tároló közös.
 
