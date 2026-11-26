@@ -19,11 +19,27 @@
 
 export const STATES = ['wait', 'fix', 'tweak', 'ok'];
 export const STATE = {
-  wait:  { t: 'Tesztre vár',   order: 0 },
-  fix:   { t: 'Javítani kell', order: 1 },
-  tweak: { t: 'Kis finomítás', order: 2 },
-  ok:    { t: 'Kész',          order: 3 },
+  wait:   { t: 'Tesztre vár',   order: 0 },
+  fix:    { t: 'Javítani kell', order: 1 },
+  custom: { t: 'Saját állapot', order: 1.5 },   // Alex bármit beírhat, színnel (2026. nov. 26.)
+  tweak:  { t: 'Kis finomítás', order: 2 },
+  ok:     { t: 'Kész',          order: 3 },
 };
+/** A saját állapot színei (kulcs tárolódik, nem a színkód). */
+export const COLORS = {
+  violet: { t: 'Lila', hex: '#7b3fe4' }, pink: { t: 'Rózsaszín', hex: '#d6337a' }, orange: { t: 'Narancs', hex: '#e8631c' },
+  teal: { t: 'Türkiz', hex: '#0a9bb0' }, blue: { t: 'Kék', hex: '#2563c9' }, green: { t: 'Zöld', hex: '#1f9d55' },
+  amber: { t: 'Sárga', hex: '#c27c00' }, red: { t: 'Piros', hex: '#d1342f' }, grey: { t: 'Szürke', hex: '#6b7280' },
+};
+/** A rész állapota megjelenítéshez: { k, t, color } – a color CSS-érték (a beépítetteknél a --st-* változó). */
+export function stateOf(part) {
+  if (part.status === 'custom') {
+    const c = COLORS[part.custom?.c] ? part.custom.c : 'grey';
+    return { k: 'custom', t: part.custom?.t || STATE.custom.t, color: COLORS[c].hex, c };
+  }
+  const k = STATE[part.status] ? part.status : 'wait';
+  return { k, t: STATE[k].t, color: `var(--st-${k})` };
+}
 const MAX = { parts: 200, versions: 100, points: 300, tests: 300, notes: 500, products: 300, programs: 400 };
 
 export class PtError extends Error {}
@@ -145,6 +161,7 @@ export function markGone(src, now = new Date()) {
  *   point_toggle { part, point }     – pont kipipálása / vissza
  *   point_delete { part, point }
  *   status       { part, status }    – kézi állapot (Tesztre vár / Javítani kell / Kis finomítás / Kész)
+ *   status_custom { part, text, color } – saját állapot: bármilyen szöveg (max. 40 betű) + szín (COLORS kulcsa)
  *   note_add     { part, text }      – infó a legfrissebb verzióhoz (a verzióval együtt megmarad)
  *   note_delete  { part, note }
  *   info_set     { part, text }      – összesítő infó a részhez (verziótól független)
@@ -189,6 +206,13 @@ export function applyOp(src, op, { now = new Date(), newId }) {
       part.ok_at = op.status === 'ok' ? ts : null;
       break;
     }
+    case 'status_custom': {
+      const t = str(op.text, 40) || fail('Írd be az állapotot');
+      if (!COLORS[op.color]) fail('Érvénytelen szín');
+      if (part.status === 'custom' && part.custom?.t === t && part.custom?.c === op.color) return src;
+      part.status = 'custom'; part.custom = { t, c: op.color }; part.ok_at = null;
+      break;
+    }
     case 'note_add': {
       const text = str(op.text, 4000) || fail('Üres infó');
       part.notes ||= [];
@@ -219,16 +243,28 @@ export function applyOp(src, op, { now = new Date(), newId }) {
 
 // ---------- Megjelenítéshez ----------
 
-/** A látható részek: Tesztre vár → Javítani kell → Kész, azon belül a legutóbb változott elöl. */
+/** Az eddig használt saját állapotok (gyors választáshoz), a leggyakoribb elöl. */
+export function usedCustoms(products) {
+  const m = new Map();
+  for (const p of products) for (const x of p.parts) if (x.custom?.t && COLORS[x.custom.c]) {
+    const key = `${x.custom.t}\u0000${x.custom.c}`; m.set(key, { t: x.custom.t, c: x.custom.c, n: (m.get(key)?.n || 0) + 1 });
+  }
+  return [...m.values()].sort((a, b) => b.n - a.n).slice(0, 8);
+}
+
+/** A látható részek: Tesztre vár → Javítani kell → (saját) → Kész, azon belül a legutóbb változott elöl. */
 export const visibleParts = (p) => p.parts.filter((x) => !x.gone && x.versions.length)
-  .sort((a, b) => STATE[a.status].order - STATE[b.status].order || (b.updated_at || '').localeCompare(a.updated_at || ''));
+  .sort((a, b) => (STATE[a.status]?.order ?? 0) - (STATE[b.status]?.order ?? 0) || (b.updated_at || '').localeCompare(a.updated_at || ''));
 
 export function summary(p) {
   const parts = visibleParts(p);
-  const c = { wait: 0, fix: 0, tweak: 0, ok: 0 };
-  for (const x of parts) c[x.status]++;
+  const c = { wait: 0, fix: 0, tweak: 0, ok: 0, custom: 0 }, customs = new Map();
+  for (const x of parts) {
+    c[STATE[x.status] ? x.status : 'wait']++;
+    if (x.status === 'custom') { const s = stateOf(x), key = `${s.t}\u0000${s.c}`; customs.set(key, { t: s.t, c: s.c, color: s.color, n: (customs.get(key)?.n || 0) + 1 }); }
+  }
   const last = parts.reduce((m, x) => { const t = latestOf(x)?.m || ''; return t > m ? t : m; }, '');
-  return { ...c, parts: parts.length, complete: parts.length > 0 && c.ok === parts.length, last: last || null };
+  return { ...c, customs: [...customs.values()], parts: parts.length, complete: parts.length > 0 && c.ok === parts.length, last: last || null };
 }
 export const openPoints = (part) => part.points.filter((x) => !x.done);
 

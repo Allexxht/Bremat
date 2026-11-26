@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { handle } from '../lib/kozpont-core.mjs';
 import { memoryStore } from '../lib/km-core.mjs';
-import { parseProgram, parseFolder, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink, PtError } from '../public/programteszt.js';
+import { parseProgram, parseFolder, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink, stateOf, usedCustoms, PtError } from '../public/programteszt.js';
 
 const CODE = 'ABCDE-12345-FGHIJ-67890';
 const NAPLO = 'NAPLO-12345-FGHIJ-00000';
@@ -136,4 +136,28 @@ test('verziónkénti infó, összesítő infó, kis finomítás', async () => {
   assert.equal(applyOp(p, { type: 'info_set', part: a, text: 'Mindig 2 db-ot fogunk be.' }, ctx), p);
   const s = summary(applyOp(p, { type: 'status', part: a, status: 'tweak' }, ctx));
   assert.equal(s.tweak, 1);
+});
+
+test('saját állapot: bármilyen szöveg + szín, sorrend, összesítés', () => {
+  const ctx = { now: new Date('2026-11-26T12:00:00Z'), newId: (() => { let i = 0; return () => `n${++i}`; })() };
+  let p = syncProduct(null, { folder: F7510, programs: progs('R001_2950_7510_A.rp4', 'R001_2950_7510_B.rp4', 'R001_2950_7510_C.rp4') }, ctx);
+  const [a, b, c] = p.parts.map((x) => x.id);
+  assert.throws(() => applyOp(p, { type: 'status_custom', part: a, text: '  ', color: 'violet' }, ctx), PtError);
+  assert.throws(() => applyOp(p, { type: 'status_custom', part: a, text: 'Jigre vár', color: 'red;}' }, ctx), PtError);
+  p = applyOp(p, { type: 'status_custom', part: a, text: '  Jigre vár  ', color: 'violet' }, ctx);
+  p = applyOp(p, { type: 'status', part: b, status: 'ok' }, ctx);
+  const A = p.parts.find((x) => x.id === a);
+  assert.deepEqual([A.status, A.custom], ['custom', { t: 'Jigre vár', c: 'violet' }]);
+  assert.deepEqual([stateOf(A).t, stateOf(A).color], ['Jigre vár', '#7b3fe4']);
+  assert.equal(applyOp(p, { type: 'status_custom', part: a, text: 'Jigre vár', color: 'violet' }, ctx), p, 'ugyanaz → nincs változás');
+  assert.equal(applyOp(p, { type: 'status_custom', part: a, text: 'x'.repeat(60), color: 'grey' }, ctx).parts.find((x) => x.id === a).custom.t.length, 40);
+  // sorrend: Tesztre vár → saját → Kész
+  assert.deepEqual(visibleParts(p).map((x) => x.id), [c, a, b]);
+  const s = summary(p);
+  assert.deepEqual([s.wait, s.custom, s.ok], [1, 1, 1]);
+  assert.deepEqual(s.customs.map((x) => [x.t, x.n]), [['Jigre vár', 1]]);
+  assert.deepEqual(usedCustoms([p]).map((x) => x.t), ['Jigre vár']);
+  // beépített állapotra vissza
+  p = applyOp(p, { type: 'status', part: a, status: 'fix' }, ctx);
+  assert.equal(stateOf(p.parts.find((x) => x.id === a)).t, 'Javítani kell');
 });

@@ -501,6 +501,10 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   legfrissebb verzióhoz írt infó annál a verziónál marad; ha átírja V1-re, az Alap infói a „Korábbi verziók”
   alatt látszanak (`notesByVersion`). (3) **Összesítő infó** a részhez (`info`, verziótól független), a panel tetején,
   mindig. Műveletek: `note_add`, `note_delete`, `info_set`, `status` (tweak is).
+- **2026-11-26 délután:** **saját állapot** – Alex bármit beírhat (max. 40 betű) és színt választ hozzá
+  (`status: 'custom'`, `custom: { t, c }`, a szín a `COLORS` kulcsa, nem színkód). Művelet: `status_custom`.
+  Sorrendben a Javítani kell és a Kis finomítás közé kerül; az összesítő (`summary().customs`) szövegenként számolja.
+  A panelen „+ Saját állapot” gomb, alatta a korábban használtak (`usedCustoms`) egy kattintással. Új verzió → Tesztre vár.
 - Netlify keret (nov. 26.): éles deploy szünetel → Alex az előnézetet használja; ideiglenes szinkron:
   `DTPS-szinkron.bat` (projekt fájlok, `robot-programok/`), az előnézet `/api/kozpont`-jára küld. A Blobs tároló közös.
 

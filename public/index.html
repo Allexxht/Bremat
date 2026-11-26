@@ -501,6 +501,17 @@ main {
 .rp-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .rp-seg button { min-height: 44px; padding: 4px 6px; border-radius: 12px; border: 1px solid var(--line); background: none; font-weight: 700; font-size: 13.5px; color: var(--muted); cursor: pointer; line-height: 1.15; }
 .rp-seg button[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: #fff; }
+.rp-seg .cust { grid-column: 1 / -1; border-style: dashed; overflow-wrap: anywhere; }
+.rp-seg .cust[aria-pressed="true"] { border-style: solid; }
+.rp-custom { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--hover); }
+.rp-custom input { min-height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); font-size: 16px; }
+.rp-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.rp-colors button { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--paper); background: var(--c); box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
+.rp-colors button[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--c); }
+.rp-used { display: flex; flex-wrap: wrap; gap: 6px; }
+.rp-used button { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font-weight: 700; font-size: 13.5px; cursor: pointer; }
+.rp-used button::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.rp-custom .row { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 420px) { .rp-seg { grid-template-columns: repeat(2, 1fr); } }
 .rp-info { border-radius: 14px; background: var(--hover); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
 .rp-info .t { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -554,7 +565,7 @@ main {
 <div id="toast" role="status"></div>
 
 <script type="module">
-import { STATES, STATE, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink } from '/programteszt.js';
+import { STATES, STATE, COLORS, stateOf, usedCustoms, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink } from '/programteszt.js';
 /* =====================================================================
    0. Régi címek: a heti lap a /valk/ címre költözött (régi könyvjelzők).
    ===================================================================== */
@@ -1356,7 +1367,8 @@ function whenText(iso) {
   if (ymd === addDays(today(), -1)) return `tegnap, ${hhmm(iso)}`;
   return huDay.format(d);
 }
-const stHtml = (st) => `<span class="st ${st}">${STATE[st].t}</span>`;
+const stHtml = (x) => { const s = stateOf(x); return `<span class="st ${s.k}" style="--c:${s.color}${s.k === 'custom' ? `;color:${s.color}` : ''}">${esc(s.t)}</span>`; };
+const customNums = (s) => s.customs.map((c) => `<span style="color:${c.color}"><b>${c.n}</b> ${esc(c.t.toLowerCase())}</span>`).join('');
 const ptOrder = (p) => { const s = summary(p); return s.fix || s.wait || s.tweak ? 0 : s.parts ? 1 : 2; };
 const syncText = (at) => at ? `A Teendőim 5 percenként beolvassa a DTPS mappát. Utoljára: ${whenText(at)}.` : 'Még nem jött adat a DTPS mappából. A Teendőim küldi 5 percenként (menü → BREMAT Központ → DTPS mappa beolvasása most).';
 
@@ -1366,15 +1378,18 @@ async function loadPtIsland() {
   for (const p of products) {
     const s = summary(p);
     hwIndex.push({ t: p.sku, s: `${p.name} · ${s.wait} tesztre vár · ${s.fix} javítani`, k: 'pt', u: `#/teszt/${p.id}` });
-    visibleParts(p).forEach((x) => hwIndex.push({ t: x.name, s: `${p.sku} · ${latestOf(x).v} · ${STATE[x.status].t}`, k: 'pt', icon: 'box', u: `#/teszt/${p.id}` }));
+    visibleParts(p).forEach((x) => hwIndex.push({ t: x.name, s: `${p.sku} · ${latestOf(x).v} · ${stateOf(x).t}`, k: 'pt', icon: 'box', u: `#/teszt/${p.id}` }));
   }
-  const t = products.reduce((a, p) => { const s = summary(p); a.wait += s.wait; a.fix += s.fix; a.tweak += s.tweak; a.ok += s.ok; return a; }, { wait: 0, fix: 0, tweak: 0, ok: 0 });
-  const n = t.wait + t.fix + t.tweak + t.ok;
+  const t = { wait: 0, fix: 0, tweak: 0, ok: 0 }, cm = new Map();
+  for (const p of products) { const s = summary(p); STATES.forEach((k) => { t[k] += s[k]; }); s.customs.forEach((c) => { const key = `${c.t}|${c.c}`; cm.set(key, { ...c, n: (cm.get(key)?.n || 0) + c.n }); }); }
+  // sorrend, mint a táblában: Tesztre vár, Javítani kell, saját állapotok, Kis finomítás, Kész
+  const rows = [...['wait', 'fix'].map((k) => ({ t: STATE[k].t, color: `var(--st-${k})`, n: t[k] })), ...cm.values(), ...['tweak', 'ok'].map((k) => ({ t: STATE[k].t, color: `var(--st-${k})`, n: t[k] }))];
+  const n = rows.reduce((a, x) => a + x.n, 0);
   if (!n) { hwFill('pt', `<p class="hw-lead">Még nem jött adat a DTPS mappából.</p><p class="hw-mini">A Teendőim küldi 5 percenként.</p>`); return; }
   const r = 46, c = 2 * Math.PI * r; let acc = 0;
-  const segs = STATES.map((k) => { const v = t[k] / n; const out = v ? `<circle cx="62" cy="62" r="${r}" stroke-width="14" style="stroke:var(--st-${k})" stroke-dasharray="${Math.max(0, c * v - 3)} ${c}" stroke-dashoffset="${-c * acc}"/>` : ''; acc += v; return out; }).join('');
+  const segs = rows.map((x) => { const v = x.n / n; const out = v ? `<circle cx="62" cy="62" r="${r}" stroke-width="14" style="stroke:${x.color}" stroke-dasharray="${Math.max(0, c * v - 3)} ${c}" stroke-dashoffset="${-c * acc}"/>` : ''; acc += v; return out; }).join('');
   hwFill('pt', `<div class="hw-donut"><div class="ring"><svg viewBox="0 0 124 124" aria-hidden="true"><circle class="tr" cx="62" cy="62" r="${r}" stroke-width="14"/>${segs}</svg><div class="lab"><b>${t.ok}</b><span>kész</span></div></div>
-    <ul class="hw-legend">${STATES.map((k) => `<li style="--k:var(--st-${k})"><b class="tab">${t[k]}</b> ${STATE[k].t}</li>`).join('')}</ul></div>`, t.wait);
+    <ul class="hw-legend">${rows.map((x) => `<li style="--k:${x.color}"><b class="tab">${x.n}</b> ${esc(x.t)}</li>`).join('')}</ul></div>`, t.wait);
 }
 
 // --- ARC-EYE edző widget: a szint és az XP, a /arceye/ oldal böngészőben tárolt állapotából ---
@@ -1407,8 +1422,8 @@ async function renderPtList() {
     const s = summary(p), parts = visibleParts(p);
     return `<a class="rp-prod" href="#/teszt/${esc(p.id)}">
       <span><b>${esc(p.sku)}</b>${p.name ? `<br><span class="nm">${esc(p.name)}</span>` : ''}</span>
-      <span class="rp-bar" aria-hidden="true">${parts.map((x) => `<i style="--c:var(--st-${x.status})"></i>`).join('')}</span>
-      <span class="nums">${s.wait ? `<span class="n-wait"><b>${s.wait}</b> tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix"><b>${s.fix}</b> javítani</span>` : ''}${s.tweak ? `<span class="n-tweak"><b>${s.tweak}</b> finomítás</span>` : ''}<span class="n-ok"><b>${s.ok}</b>/${s.parts} kész</span>${s.last ? `<span>utolsó program: ${whenText(s.last)}</span>` : ''}</span></a>`;
+      <span class="rp-bar" aria-hidden="true">${parts.map((x) => `<i style="--c:${stateOf(x).color}"></i>`).join('')}</span>
+      <span class="nums">${s.wait ? `<span class="n-wait"><b>${s.wait}</b> tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix"><b>${s.fix}</b> javítani</span>` : ''}${customNums(s)}${s.tweak ? `<span class="n-tweak"><b>${s.tweak}</b> finomítás</span>` : ''}<span class="n-ok"><b>${s.ok}</b>/${s.parts} kész</span>${s.last ? `<span>utolsó program: ${whenText(s.last)}</span>` : ''}</span></a>`;
   }).join('');
 }
 
@@ -1419,7 +1434,7 @@ async function renderPtProduct(id) {
   let { products, synced_at } = await guarded(() => api.ptList());
   let p = products.find((x) => x.id === id);
   if (!p) { app.innerHTML = `<a class="backlink" href="#/teszt"><i data-lucide="arrow-left"></i>Robot programok</a><div class="card glass"><p class="muted" style="margin:0">Nincs ilyen termék (lehet, hogy eltűnt a DTPS mappából).</p></div>`; icons(); return; }
-  let cur = null, writing = false, busy = false;
+  let cur = null, writing = false, busy = false, custOpen = false, custCol = 'violet';
   const panel = document.createElement('aside'); panel.className = 'rp-panel'; panel.hidden = true; panel.setAttribute('aria-label', 'Rész');
   const scrim = document.createElement('div'); scrim.className = 'rp-scrim'; scrim.hidden = true;
   document.body.append(scrim, panel);   // a body-ban: a .page animációja ne törje a fixed helyzetet
@@ -1429,6 +1444,7 @@ async function renderPtProduct(id) {
     if (x.status === 'fix') return o.length ? `<b>${esc(o[0].text)}</b>${o.length > 1 ? ` +${o.length - 1}` : ''}` : 'Kijavítva – új verzió kell';
     if (x.status === 'tweak') return o.length ? `Finomítás · <b>${esc(o[0].text)}</b>${o.length > 1 ? ` +${o.length - 1}` : ''}` : 'Kis finomítás';
     if (x.status === 'wait') return o.length ? `Tesztelni · <b>${o.length} pont</b> ellenőrizni` : 'Tesztelni a roboton';
+    if (x.status === 'custom') return o.length ? `<b>${esc(o[0].text)}</b>${o.length > 1 ? ` +${o.length - 1}` : ''}` : '—';
     return '—';
   };
   const drawTable = () => {
@@ -1436,9 +1452,9 @@ async function renderPtProduct(id) {
     app.innerHTML = `
       <a class="backlink" href="#/teszt"><i data-lucide="arrow-left"></i>Robot programok</a>
       <div class="rp-head"><h1>${esc(p.sku)}</h1>${p.name ? `<p>${esc(p.name)}</p>` : ''}
-        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}${s.tweak ? `<span class="n-tweak">${s.tweak} finomítás</span>` : ''}<span class="n-ok">${s.ok}/${s.parts} kész</span></div></div>
+        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}${s.customs.map((c) => `<span style="color:${c.color}">${c.n} ${esc(c.t.toLowerCase())}</span>`).join('')}${s.tweak ? `<span class="n-tweak">${s.tweak} finomítás</span>` : ''}<span class="n-ok">${s.ok}/${s.parts} kész</span></div></div>
       ${parts.length ? `<table class="rp-tbl"><thead><tr><th>Rész</th><th>Legfrissebb</th><th>Állapot</th><th>Mi a teendő</th></tr></thead>
-        <tbody>${parts.map((x) => `<tr data-part="${esc(x.id)}" tabindex="0"><td class="part">${esc(x.name)}</td><td class="mono">${esc(latestOf(x).v)}</td><td class="c-st">${stHtml(x.status)}</td><td class="c-todo todo">${todo(x)}</td></tr>`).join('')}</tbody></table>`
+        <tbody>${parts.map((x) => `<tr data-part="${esc(x.id)}" tabindex="0"><td class="part">${esc(x.name)}</td><td class="mono">${esc(latestOf(x).v)}</td><td class="c-st">${stHtml(x)}</td><td class="c-todo todo">${todo(x)}</td></tr>`).join('')}</tbody></table>`
         : '<div class="card glass"><p class="muted" style="margin:0">Ebben a termékmappában még nincs program.</p></div>'}
       <p class="rp-foot">${esc(syncText(synced_at))}</p>`;
     icons();
@@ -1457,11 +1473,17 @@ async function renderPtProduct(id) {
         ${infoEdit ? `<textarea id="rpInfo" maxlength="8000" placeholder="pl. mindig 2 db-ot fogunk be, a 3-as jig kell…">${esc(x.info || '')}</textarea>
           <div class="row"><button class="btn" type="button" data-a="infocancel">Mégse</button><button class="btn rp-fix" type="button" data-a="infosave"><i data-lucide="check"></i>Mentés</button></div>`
         : `<div class="t ${x.info ? '' : 'empty'}">${x.info ? esc(x.info) : 'Még nincs. Ide az kerül, ami minden verzióra igaz.'}</div><div class="row"><button class="rp-link" type="button" data-a="infoedit">${x.info ? 'Szerkesztés' : '+ Infó írása'}</button></div>`}</div>
-      <div class="rp-cur" style="--c:var(--st-${x.status})"><small>Legfrissebb program${v.m ? ` · ${esc(whenText(v.m))}` : ''}</small><span class="v">${esc(v.v)}</span><span class="f mono">${esc(v.file)}</span></div>
+      <div class="rp-cur" style="--c:${stateOf(x).color}"><small>Legfrissebb program${v.m ? ` · ${esc(whenText(v.m))}` : ''}</small><span class="v">${esc(v.v)}</span><span class="f mono">${esc(v.file)}</span></div>
       <a class="btn rp-open" href="${esc(dtpsLink(p, v))}" target="_blank" rel="noopener"><i data-lucide="play"></i>Megnyitás DTPS-ben</a>
       <p class="rp-foot" style="margin:-10px 0 0">A programozó gépen működik, ahol a Teendőim fut.</p>
       <div class="rp-lbl">Állapot</div>
-      <div class="rp-seg" role="group" aria-label="Állapot">${STATES.map((k) => `<button type="button" data-a="status" data-v="${k}" aria-pressed="${x.status === k}" style="--c:var(--st-${k})">${STATE[k].t}</button>`).join('')}</div>
+      <div class="rp-seg" role="group" aria-label="Állapot">${STATES.map((k) => `<button type="button" data-a="status" data-v="${k}" aria-pressed="${x.status === k}" style="--c:var(--st-${k})">${STATE[k].t}</button>`).join('')}
+        <button type="button" class="cust" data-a="custom" aria-pressed="${x.status === 'custom'}" aria-expanded="${custOpen}" style="--c:${stateOf(x).color}">${x.status === 'custom' ? `${esc(stateOf(x).t)} · átírás` : '+ Saját állapot (bármi, színnel)'}</button></div>
+      ${custOpen ? `<div class="rp-custom">
+        <input id="rpCustT" maxlength="40" placeholder="pl. Jigre vár, Holnap tesztelem…" aria-label="Saját állapot" value="${x.status === 'custom' ? esc(stateOf(x).t) : ''}">
+        <div class="rp-colors" role="group" aria-label="Szín">${Object.entries(COLORS).map(([k, c]) => `<button type="button" data-a="ccol" data-v="${k}" aria-pressed="${custCol === k}" aria-label="${c.t}" title="${c.t}" style="--c:${c.hex}"></button>`).join('')}</div>
+        ${(() => { const u = usedCustoms(products.map((q) => (q.id === p.id ? p : q))); return u.length ? `<div class="rp-lbl" style="margin:0">Korábbiak</div><div class="rp-used">${u.map((c) => `<button type="button" data-a="cuse" data-t="${esc(c.t)}" data-c="${c.c}" style="--c:${COLORS[c.c].hex}">${esc(c.t)}</button>`).join('')}</div>` : ''; })()}
+        <div class="row"><button class="btn" type="button" data-a="ccancel">Mégse</button><button class="btn rp-fix" type="button" data-a="csave"><i data-lucide="check"></i>Mentés</button></div></div>` : ''}
       ${o.length ? `<div class="rp-lbl">${x.status === 'wait' ? 'Ezeket ellenőrizd a tesztnél' : 'Ezt kell javítani'}</div><div class="rp-pts">${o.map(pt).join('')}</div>` : ''}
       ${x.status === 'ok' ? `<p class="rp-good">✓ Minden tökéletes${x.ok_at ? ` (${esc(whenText(x.ok_at))})` : ''}</p>` : ''}
       ${writing ? `<div class="rp-lbl">Mi a teendő? – soronként egy pont</div><textarea id="rpObs" maxlength="6000" placeholder="pl. Kezdőpont 2 mm-t csúszik"></textarea>
@@ -1477,11 +1499,11 @@ async function renderPtProduct(id) {
       ${x.tests.length ? `<details><summary>Tesztek (${x.tests.length})</summary><div class="rp-old">${x.tests.slice().reverse().map((t) => `<div><span>${esc(whenText(t.at))} · <span class="mono">${esc(t.v || '')}</span></span><span class="${t.ok ? 'n-ok' : 'n-fix'}" style="font-weight:700">${t.ok ? 'Minden tökéletes' : `${t.n || ''} észrevétel`}</span></div>`).join('')}</div></details>` : ''}`;
     icons();
   };
-  const open = (pid) => { cur = pid; writing = false; infoEdit = false; drawPanel(); panel.hidden = false; scrim.hidden = false; panel.querySelector('.x').focus(); };
+  const open = (pid) => { cur = pid; writing = false; infoEdit = false; custOpen = false; drawPanel(); panel.hidden = false; scrim.hidden = false; panel.querySelector('.x').focus(); };
   function close() { cur = null; writing = false; panel.hidden = true; scrim.hidden = true; }
   const run = async (op, msg) => {
     if (busy) return; busy = true;
-    try { p = await guarded(() => api.ptOp(p.id, op)); writing = false; infoEdit = false; drawTable(); drawPanel(); if (msg) toast(msg); return true; }
+    try { p = await guarded(() => api.ptOp(p.id, op)); writing = false; infoEdit = false; custOpen = false; drawTable(); drawPanel(); if (msg) toast(msg); return true; }
     catch (e) { if (!(e instanceof AccessError)) toast(e.message); }
     finally { busy = false; }
   };
@@ -1495,6 +1517,11 @@ async function renderPtProduct(id) {
     if (a === 'pt') return run({ type: 'point_toggle', part: x.id, point: b.dataset.id });
     if (a === 'ok') return run({ type: 'test_ok', part: x.id }, `${x.name}: kész`);
     if (a === 'status') return run({ type: 'status', part: x.id, status: b.dataset.v }, `${x.name}: ${STATE[b.dataset.v].t}`);
+    if (a === 'custom') { custOpen = !custOpen; custCol = x.status === 'custom' ? stateOf(x).c : custCol; drawPanel(); return custOpen && $('#rpCustT').focus(); }
+    if (a === 'ccol') { custCol = b.dataset.v; const t = $('#rpCustT').value; drawPanel(); $('#rpCustT').value = t; return; }
+    if (a === 'ccancel') { custOpen = false; return drawPanel(); }
+    if (a === 'csave') { const t = $('#rpCustT').value.trim(); if (!t) return $('#rpCustT').focus(); return run({ type: 'status_custom', part: x.id, text: t, color: custCol }, `${x.name}: ${t}`); }
+    if (a === 'cuse') return run({ type: 'status_custom', part: x.id, text: b.dataset.t, color: b.dataset.c }, `${x.name}: ${b.dataset.t}`);
     if (a === 'infoedit') { infoEdit = true; drawPanel(); return $('#rpInfo').focus(); }
     if (a === 'infocancel') { infoEdit = false; return drawPanel(); }
     if (a === 'infosave') return run({ type: 'info_set', part: x.id, text: $('#rpInfo').value }, 'Összesítő infó elmentve.');
@@ -1505,6 +1532,7 @@ async function renderPtProduct(id) {
     if (a === 'save') { const t = $('#rpObs').value; if (!t.trim()) return $('#rpObs').focus(); return run({ type: 'test_fix', part: x.id, text: t }, `${x.name}: javítani kell`); }
   });
   panel.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'rpCustT') { e.preventDefault(); return panel.querySelector('[data-a="csave"]').click(); }
     if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return;
     const k = { rpObs: 'save', rpInfo: 'infosave', rpNote: 'noteadd' }[e.target.id];
     if (k) panel.querySelector(`[data-a="${k}"]`).click();
