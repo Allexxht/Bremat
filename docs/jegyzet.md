@@ -505,6 +505,9 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   (`status: 'custom'`, `custom: { t, c }`, a szín a `COLORS` kulcsa, nem színkód). Művelet: `status_custom`.
   Sorrendben a Javítani kell és a Kis finomítás közé kerül; az összesítő (`summary().customs`) szövegenként számolja.
   A panelen „+ Saját állapot” gomb, alatta a korábban használtak (`usedCustoms`) egy kattintással. Új verzió → Tesztre vár.
+- **Jelölés** a részen (az állapottól független, `mark`: `strike` | `test` | `temp` | null; művelet `mark`):
+  Kihúzva (áthúzva, halvány, a tábla aljára kerül, a számolásba nem számít – `countedParts`, `summary().struck`),
+  Csak teszt (szaggatott lila keret), Ideiglenes (pontozott narancs keret). Új verziónál megmarad.
 - Netlify keret (nov. 26.): éles deploy szünetel → Alex az előnézetet használja; ideiglenes szinkron:
   `DTPS-szinkron.bat` (projekt fájlok, `robot-programok/`), az előnézet `/api/kozpont`-jára küld. A Blobs tároló közös.
 

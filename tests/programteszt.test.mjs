@@ -161,3 +161,23 @@ test('saját állapot: bármilyen szöveg + szín, sorrend, összesítés', () =
   p = applyOp(p, { type: 'status', part: a, status: 'fix' }, ctx);
   assert.equal(stateOf(p.parts.find((x) => x.id === a)).t, 'Javítani kell');
 });
+
+test('jelölés: kihúzva / csak teszt / ideiglenes', () => {
+  const ctx = { now: new Date('2026-11-26T13:00:00Z'), newId: (() => { let i = 0; return () => `n${++i}`; })() };
+  let p = syncProduct(null, { folder: F7510, programs: progs('R001_2950_7510_A.rp4', 'R001_2950_7510_B.rp4', 'R001_2950_7510_C.rp4') }, ctx);
+  const [a, b, c] = p.parts.map((x) => x.id);
+  assert.throws(() => applyOp(p, { type: 'mark', part: a, mark: 'x' }, ctx), PtError);
+  p = applyOp(p, { type: 'mark', part: a, mark: 'strike' }, ctx);
+  p = applyOp(p, { type: 'mark', part: b, mark: 'test' }, ctx);
+  assert.equal(applyOp(p, { type: 'mark', part: b, mark: 'test' }, ctx), p);
+  assert.equal(visibleParts(p).at(-1).id, a, 'a kihúzott a végére kerül');
+  const s = summary(p);
+  assert.deepEqual([s.parts, s.wait, s.struck], [2, 2, 1], 'a kihúzott nem számít bele');
+  p = applyOp(p, { type: 'mark', part: a, mark: null }, ctx);
+  assert.equal(p.parts.find((x) => x.id === a).mark, null);
+  assert.equal(summary(p).parts, 3);
+  // új verzió: a jelölés megmarad
+  p = syncProduct(p, { folder: F7510, programs: progs('R001_2950_7510_A.rp4', 'R001_V1_2950_7510_B.rp4', 'R001_2950_7510_C.rp4') }, ctx);
+  assert.equal(p.parts.find((x) => x.id === b).mark, 'test');
+  void c;
+});

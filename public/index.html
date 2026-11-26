@@ -453,6 +453,15 @@ main {
 .rp-tbl tbody tr { cursor: pointer; }
 .rp-tbl tbody tr:hover td, .rp-tbl tbody tr:focus-visible td { background: var(--hover); }
 .rp-tbl tbody tr:focus-visible { outline: none; }
+/* Jelölt részek: más keret (kihúzva: halvány + áthúzva; csak teszt: szaggatott lila; ideiglenes: pontozott narancs) */
+.rp-tbl tbody tr[class*="mk-"] { outline: 2px solid var(--mk); outline-offset: -4px; border-radius: 14px; }
+.rp-tbl tbody tr.mk-test { outline-style: dashed; }
+.rp-tbl tbody tr.mk-temp { outline-style: dotted; outline-width: 3px; }
+.rp-tbl tbody tr.mk-strike { outline-width: 1px; outline-style: dashed; }
+.rp-tbl tbody tr.mk-strike td { opacity: .5; }
+.rp-tbl tbody tr.mk-strike .part span:first-child { text-decoration: line-through; text-decoration-thickness: 2px; }
+.rp-mk { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font: 700 11.5px/1.6 var(--body); letter-spacing: .02em; color: #fff; background: var(--mk); vertical-align: 2px; text-decoration: none; white-space: nowrap; }
+.rp-seg.mk button[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: #fff; }
 .rp-tbl .part { font-weight: 800; overflow-wrap: anywhere; }
 .mono { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 14px; }
 .rp-tbl .todo { color: var(--muted); font-size: 14.5px; }
@@ -565,7 +574,7 @@ main {
 <div id="toast" role="status"></div>
 
 <script type="module">
-import { STATES, STATE, COLORS, stateOf, usedCustoms, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink } from '/programteszt.js';
+import { STATES, STATE, COLORS, MARKS, stateOf, usedCustoms, countedParts, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink } from '/programteszt.js';
 /* =====================================================================
    0. Régi címek: a heti lap a /valk/ címre költözött (régi könyvjelzők).
    ===================================================================== */
@@ -1422,7 +1431,7 @@ async function renderPtList() {
     const s = summary(p), parts = visibleParts(p);
     return `<a class="rp-prod" href="#/teszt/${esc(p.id)}">
       <span><b>${esc(p.sku)}</b>${p.name ? `<br><span class="nm">${esc(p.name)}</span>` : ''}</span>
-      <span class="rp-bar" aria-hidden="true">${parts.map((x) => `<i style="--c:${stateOf(x).color}"></i>`).join('')}</span>
+      <span class="rp-bar" aria-hidden="true">${countedParts(p).map((x) => `<i style="--c:${stateOf(x).color}"></i>`).join('')}</span>
       <span class="nums">${s.wait ? `<span class="n-wait"><b>${s.wait}</b> tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix"><b>${s.fix}</b> javítani</span>` : ''}${customNums(s)}${s.tweak ? `<span class="n-tweak"><b>${s.tweak}</b> finomítás</span>` : ''}<span class="n-ok"><b>${s.ok}</b>/${s.parts} kész</span>${s.last ? `<span>utolsó program: ${whenText(s.last)}</span>` : ''}</span></a>`;
   }).join('');
 }
@@ -1452,9 +1461,9 @@ async function renderPtProduct(id) {
     app.innerHTML = `
       <a class="backlink" href="#/teszt"><i data-lucide="arrow-left"></i>Robot programok</a>
       <div class="rp-head"><h1>${esc(p.sku)}</h1>${p.name ? `<p>${esc(p.name)}</p>` : ''}
-        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}${s.customs.map((c) => `<span style="color:${c.color}">${c.n} ${esc(c.t.toLowerCase())}</span>`).join('')}${s.tweak ? `<span class="n-tweak">${s.tweak} finomítás</span>` : ''}<span class="n-ok">${s.ok}/${s.parts} kész</span></div></div>
+        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}${s.customs.map((c) => `<span style="color:${c.color}">${c.n} ${esc(c.t.toLowerCase())}</span>`).join('')}${s.tweak ? `<span class="n-tweak">${s.tweak} finomítás</span>` : ''}<span class="n-ok">${s.ok}/${s.parts} kész</span>${s.struck ? `<span class="muted">${s.struck} kihúzva</span>` : ''}</div></div>
       ${parts.length ? `<table class="rp-tbl"><thead><tr><th>Rész</th><th>Legfrissebb</th><th>Állapot</th><th>Mi a teendő</th></tr></thead>
-        <tbody>${parts.map((x) => `<tr data-part="${esc(x.id)}" tabindex="0"><td class="part">${esc(x.name)}</td><td class="mono">${esc(latestOf(x).v)}</td><td class="c-st">${stHtml(x)}</td><td class="c-todo todo">${todo(x)}</td></tr>`).join('')}</tbody></table>`
+        <tbody>${parts.map((x) => `<tr data-part="${esc(x.id)}" tabindex="0"${MARKS[x.mark] ? ` class="mk-${x.mark}" style="--mk:${MARKS[x.mark].hex}"` : ''}><td class="part"><span>${esc(x.name)}</span>${MARKS[x.mark] ? `<span class="rp-mk">${MARKS[x.mark].t}</span>` : ''}</td><td class="mono">${esc(latestOf(x).v)}</td><td class="c-st">${stHtml(x)}</td><td class="c-todo todo">${todo(x)}</td></tr>`).join('')}</tbody></table>`
         : '<div class="card glass"><p class="muted" style="margin:0">Ebben a termékmappában még nincs program.</p></div>'}
       <p class="rp-foot">${esc(syncText(synced_at))}</p>`;
     icons();
@@ -1484,6 +1493,8 @@ async function renderPtProduct(id) {
         <div class="rp-colors" role="group" aria-label="Szín">${Object.entries(COLORS).map(([k, c]) => `<button type="button" data-a="ccol" data-v="${k}" aria-pressed="${custCol === k}" aria-label="${c.t}" title="${c.t}" style="--c:${c.hex}"></button>`).join('')}</div>
         ${(() => { const u = usedCustoms(products.map((q) => (q.id === p.id ? p : q))); return u.length ? `<div class="rp-lbl" style="margin:0">Korábbiak</div><div class="rp-used">${u.map((c) => `<button type="button" data-a="cuse" data-t="${esc(c.t)}" data-c="${c.c}" style="--c:${COLORS[c.c].hex}">${esc(c.t)}</button>`).join('')}</div>` : ''; })()}
         <div class="row"><button class="btn" type="button" data-a="ccancel">Mégse</button><button class="btn rp-fix" type="button" data-a="csave"><i data-lucide="check"></i>Mentés</button></div></div>` : ''}
+      <div class="rp-lbl">Jelölés</div>
+      <div class="rp-seg mk" role="group" aria-label="Jelölés">${[['', 'Nincs', 'var(--muted)'], ...Object.entries(MARKS).map(([k, m]) => [k, m.t, m.hex])].map(([k, t, c]) => `<button type="button" data-a="mark" data-v="${k}" aria-pressed="${(x.mark || '') === k}" style="--c:${c}">${t}</button>`).join('')}</div>
       ${o.length ? `<div class="rp-lbl">${x.status === 'wait' ? 'Ezeket ellenőrizd a tesztnél' : 'Ezt kell javítani'}</div><div class="rp-pts">${o.map(pt).join('')}</div>` : ''}
       ${x.status === 'ok' ? `<p class="rp-good">✓ Minden tökéletes${x.ok_at ? ` (${esc(whenText(x.ok_at))})` : ''}</p>` : ''}
       ${writing ? `<div class="rp-lbl">Mi a teendő? – soronként egy pont</div><textarea id="rpObs" maxlength="6000" placeholder="pl. Kezdőpont 2 mm-t csúszik"></textarea>
@@ -1517,6 +1528,7 @@ async function renderPtProduct(id) {
     if (a === 'pt') return run({ type: 'point_toggle', part: x.id, point: b.dataset.id });
     if (a === 'ok') return run({ type: 'test_ok', part: x.id }, `${x.name}: kész`);
     if (a === 'status') return run({ type: 'status', part: x.id, status: b.dataset.v }, `${x.name}: ${STATE[b.dataset.v].t}`);
+    if (a === 'mark') return run({ type: 'mark', part: x.id, mark: b.dataset.v || null }, `${x.name}: ${MARKS[b.dataset.v]?.t || 'jelölés nélkül'}`);
     if (a === 'custom') { custOpen = !custOpen; custCol = x.status === 'custom' ? stateOf(x).c : custCol; drawPanel(); return custOpen && $('#rpCustT').focus(); }
     if (a === 'ccol') { custCol = b.dataset.v; const t = $('#rpCustT').value; drawPanel(); $('#rpCustT').value = t; return; }
     if (a === 'ccancel') { custOpen = false; return drawPanel(); }
