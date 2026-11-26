@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { handle } from '../lib/kozpont-core.mjs';
 import { memoryStore } from '../lib/km-core.mjs';
-import { parseProgram, parseFolder, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, dtpsLink, PtError } from '../public/programteszt.js';
+import { parseProgram, parseFolder, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink, PtError } from '../public/programteszt.js';
 
 const CODE = 'ABCDE-12345-FGHIJ-67890';
 const NAPLO = 'NAPLO-12345-FGHIJ-00000';
@@ -112,4 +112,28 @@ test('applyOp: hibás adat, az eredeti nem változik', () => {
   assert.equal(q.parts[0].status, 'ok');
   assert.equal(applyOp(q, { type: 'status', part: a, status: 'ok' }, ctx), q);
   assert.equal(syncProduct(q, { folder: '1 - x', programs: progs('R001_1_A.rp4') }, ctx), q, 'nincs változás → ugyanaz');
+});
+
+test('verziónkénti infó, összesítő infó, kis finomítás', async () => {
+  const ctx = { now: new Date('2026-11-26T10:00:00Z'), newId: (() => { let i = 0; return () => `n${++i}`; })() };
+  let p = syncProduct(null, { folder: F7510, programs: progs('R001_2950_7510_SZOGVAS.rp4') }, ctx);
+  const a = p.parts[0].id;
+  p = applyOp(p, { type: 'note_add', part: a, text: 'Alap: lassú' }, ctx);
+  p = applyOp(p, { type: 'info_set', part: a, text: 'Mindig 2 db-ot fogunk be.' }, ctx);
+  p = applyOp(p, { type: 'status', part: a, status: 'tweak' }, ctx);
+  assert.equal(p.parts[0].status, 'tweak');
+  // átírja V1-re: az Alap programmappa eltűnik, a V1 megjelenik → az infók megmaradnak
+  p = syncProduct(p, { folder: F7510, programs: progs('R001_V1_2950_7510_SZOGVAS.rp4') }, ctx);
+  assert.equal(p.parts[0].id, a);
+  assert.equal(p.parts[0].status, 'wait');
+  p = applyOp(p, { type: 'note_add', part: a, text: 'V1: jobb' }, ctx);
+  const g = notesByVersion(p.parts[0]);
+  assert.deepEqual(g.map((x) => [x.v, x.notes.map((n) => n.text)]), [['V1', ['V1: jobb']], ['Alap', ['Alap: lassú']]]);
+  assert.equal(p.parts[0].info, 'Mindig 2 db-ot fogunk be.');
+  p = applyOp(p, { type: 'note_delete', part: a, note: g[1].notes[0].id }, ctx);
+  assert.equal(p.parts[0].notes.length, 1);
+  assert.throws(() => applyOp(p, { type: 'note_add', part: a, text: ' ' }, ctx), PtError);
+  assert.equal(applyOp(p, { type: 'info_set', part: a, text: 'Mindig 2 db-ot fogunk be.' }, ctx), p);
+  const s = summary(applyOp(p, { type: 'status', part: a, status: 'tweak' }, ctx));
+  assert.equal(s.tweak, 1);
 });
