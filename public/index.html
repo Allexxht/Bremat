@@ -9,7 +9,7 @@
 <title>BREMAT Központ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0..1,0&display=block">
 <!-- Ikonok: Lucide (nyílt forrású ikonkészlet) -->
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 <!--
@@ -159,52 +159,169 @@ main {
 .hero .logo { transform-box: view-box; transform-origin: 0 0; }
 .hero.static { cursor: pointer; }
 
-/* Szigetek */
-.islands { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px; }
-.island {
-  --tone: var(--naplo); --tone-soft: var(--naplo-soft);
-  position: relative; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 26px; text-decoration: none;
-  animation: rise .8s var(--ease) both; animation-delay: calc(var(--i) * 90ms + 150ms);
-  transition: transform .35s var(--ease), border-color .35s var(--ease);
-}
-.island.valk { --tone: var(--valk); --tone-soft: var(--valk-soft); }
-.island.idea { --tone: var(--idea); --tone-soft: var(--idea-soft); }
-.island.proj { --tone: var(--proj); --tone-soft: var(--proj-soft); }
-.island::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(120% 70% at 0% 0%, var(--tone-soft), transparent 60%); transition: opacity .35s var(--ease); }
-.island:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--tone) 45%, var(--glass-line)); }
-.island:active { transform: translateY(-1px) scale(.99); }
-.island .head { position: relative; display: flex; align-items: center; gap: 14px; }
-.island .ico { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; background: var(--tone-soft); color: var(--tone); flex: none; }
-.island .ico svg { width: 24px; height: 24px; stroke-width: 1.8; }
-.island h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 19px; line-height: 1.2; }
-.island .sub { color: var(--muted); font-size: 14px; }
-.island .go { margin-left: auto; color: var(--muted); transition: transform .35s var(--ease), color .35s; }
-.island .go svg { width: 20px; height: 20px; }
-.island:hover .go { transform: translateX(4px); color: var(--tone); }
-.island ul { position: relative; list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 9px; font-size: 14.5px; }
-.island li { display: flex; align-items: flex-start; gap: 10px; }
-.island li svg { width: 16px; height: 16px; color: var(--muted); flex: none; stroke-width: 2; margin-top: 3px; }
-.island li.alert svg { color: var(--tone); }
-.island li.good svg { color: var(--ok); }
-.island li b { font-variant-numeric: tabular-nums; }
-.island .dim { color: var(--muted); }
-.island .foot { position: relative; font-size: 12.5px; color: var(--muted); }
 .skeleton { height: 14px; border-radius: 7px; background: var(--hover); animation: shimmer 1.4s ease-in-out infinite; }
 @keyframes shimmer { 50% { opacity: .45; } }
 
-.progress { position: relative; display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--muted); }
-.progress .track { flex: 1; height: 8px; border-radius: 99px; background: var(--hover); overflow: hidden; }
-.progress .track i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 50%, transparent), var(--tone)); transition: width 1.2s var(--ease); }
-.progress b { color: var(--text); font-variant-numeric: tabular-nums; }
+/* ---------- Kezdőlap „Színes üveg”: kereső, óra + műszak, színezett widgetek, dokk, Widgetek panel ---------- */
+.ms { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; font-size: 24px; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; direction: ltr;
+  display: inline-block; width: 1em; overflow: hidden; flex: none; font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'opsz' 24; transition: font-variation-settings .45s var(--ease); }
+.ms.fill, .hw:hover .hw-tt .ms, .hw-dock a:hover .ms { font-variation-settings: 'FILL' 1, 'wght' 600, 'opsz' 24; }
+.hw-c-naplo, .hw-naplo { --c: var(--naplo); } .hw-c-valk, .hw-valk, .hw-c-files { --c: var(--valk); } .hw-c-pt, .hw-pt { --c: var(--pt); }
+.hw-c-ae, .hw-ae { --c: var(--ae); } .hw-c-idea, .hw-idea { --c: var(--idea); } .hw-c-proj, .hw-proj, .hw-c-settings { --c: var(--proj); }
+.hw-page { width: min(1180px, 100%); display: flex; flex-direction: column; gap: 0; padding-bottom: 110px; }
+.hw-aura { position: fixed; inset: -20vmax; z-index: -1; pointer-events: none; filter: blur(50px) saturate(1.4); opacity: .75; }
+.hw-aura i { position: absolute; border-radius: 50%; animation: hwDrift 22s var(--ease) infinite alternate, hwMorph 14s ease-in-out infinite; }
+.hw-aura i:nth-child(1) { width: 46vmax; height: 46vmax; left: 8%; top: 4%; background: radial-gradient(circle, color-mix(in srgb, var(--valk) 30%, transparent), transparent 62%); }
+.hw-aura i:nth-child(2) { width: 52vmax; height: 52vmax; right: 2%; top: 12%; background: radial-gradient(circle, color-mix(in srgb, var(--naplo) 30%, transparent), transparent 62%); animation-duration: 28s, 16s; animation-delay: -8s; }
+.hw-aura i:nth-child(3) { width: 40vmax; height: 40vmax; left: 30%; bottom: 0; background: radial-gradient(circle, color-mix(in srgb, var(--proj) 30%, transparent), transparent 62%); animation-duration: 34s, 18s; animation-delay: -14s; }
+.hw-aura i:nth-child(4) { width: 30vmax; height: 30vmax; right: 24%; bottom: 10%; background: radial-gradient(circle, color-mix(in srgb, var(--idea) 30%, transparent), transparent 62%); animation-duration: 26s, 12s; animation-delay: -4s; }
+@keyframes hwDrift { to { transform: translate(6vmax, -4vmax) scale(1.12); } }
+@keyframes hwMorph { 0%, 100% { border-radius: 50%; } 33% { border-radius: 42% 58% 63% 37% / 45% 40% 60% 55%; } 66% { border-radius: 61% 39% 36% 64% / 58% 63% 37% 42%; } }
+.hw-rise, .hw { animation: hwPop .8s cubic-bezier(.34, 1.56, .64, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes hwPop { from { transform: scale(.94); filter: blur(6px); } }
 
-.badge { position: absolute; top: -8px; right: -6px; z-index: 2; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px;
-  display: grid; place-items: center; font-weight: 700; font-size: 13.5px; font-variant-numeric: tabular-nums;
-  background: var(--tone); color: var(--badge-ink); box-shadow: 0 0 0 3px var(--bg), 0 6px 16px color-mix(in srgb, var(--tone) 45%, transparent);
-  animation: pop .5s var(--ease) both; }
-.badge::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--tone); animation: ping 2.4s var(--ease) 1s infinite; }
-@keyframes pop { from { transform: scale(0); } }
-@keyframes ping { 0% { transform: scale(1); opacity: .7; } 70%, 100% { transform: scale(1.8); opacity: 0; } }
+.hw-top { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 22px; position: relative; z-index: 5; }
+.hw-search { flex: 1; position: relative; min-width: 0; }
+.hw-search label { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 12px 0 14px; border-radius: 14px; background: var(--glass-strong); border: 1px solid var(--line); cursor: text; transition: border-color .3s, box-shadow .3s; }
+.hw-search label:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent); }
+.hw-search .ms { color: var(--muted); }
+.hw-search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 15.5px; }
+.hw-search input::placeholder { color: var(--muted); }
+.hw-search kbd { font: 600 12px var(--body); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; color: var(--muted); }
+.hw-res { position: absolute; left: 0; right: 0; top: calc(100% + 8px); border-radius: 18px; padding: 6px; display: flex; flex-direction: column; gap: 2px; max-height: 60vh; overflow-y: auto; background: var(--glass-strong); animation: hwDrop .3s var(--ease); }
+@keyframes hwDrop { from { transform: translateY(-6px); opacity: 0; } }
+.hw-res button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; min-height: 48px; }
+.hw-res button:hover, .hw-res button[aria-selected="true"] { background: var(--hover); }
+.hw-res .ri { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); flex: none; }
+.hw-res .ri .ms { font-size: 21px; color: inherit; }
+.hw-res b { font: 600 15px var(--display); display: block; overflow-wrap: anywhere; }
+.hw-res small { color: var(--muted); font-size: 13px; }
+.hw-res mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+.hw-edit { flex: none; display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-strong); font-weight: 700; font-size: 14px; cursor: pointer; }
+.hw-edit .ms { font-size: 21px; }
+
+.hw-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px 24px; flex-wrap: wrap; margin: 26px 6px 22px; }
+.hw-time { font: 600 clamp(60px, 10vw, 104px)/.9 var(--display); letter-spacing: -.04em; background: linear-gradient(100deg, var(--pt), var(--proj) 35%, var(--valk) 65%, var(--idea)); background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: hwHue 9s ease-in-out infinite alternate; }
+.hw-time .colon { animation: hwBlink 2s steps(1) infinite; }
+@keyframes hwHue { to { background-position: 100% 0; } }
+@keyframes hwBlink { 50% { opacity: .25; } }
+.hw-head p { margin: 4px 0 0; font-size: 17px; color: var(--muted); }
+.hw-shift { --c: var(--naplo); border-radius: 24px; padding: 14px 20px 14px 14px; display: flex; align-items: center; gap: 14px; }
+.hw-shift .ring { width: 66px; height: 66px; }
+.hw-shift-l { font-size: 13px; color: var(--muted); display: block; }
+.hw-shift b { font: 700 22px/1.15 var(--display); display: block; }
+.hw-shift small { font-size: 13px; color: var(--muted); }
+
+.ring { position: relative; flex: none; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+.ring circle { fill: none; }
+.ring .tr { stroke: var(--hover); }
+.ring .fg { stroke: var(--c); stroke-linecap: round; transition: stroke-dashoffset 1.4s var(--ease); }
+.ring .lab { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; line-height: 1.1; }
+.ring .lab b { font: 700 28px/1 var(--display); }
+.ring .lab span { font-size: 11.5px; color: var(--muted); }
+
+.hw-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; grid-auto-flow: dense; }
+.hw { position: relative; overflow: hidden; border-radius: 34px; padding: 18px; display: flex; flex-direction: column; gap: 10px; min-height: 172px; text-decoration: none; color: inherit;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--c) 18%, var(--glass)), var(--glass) 60%); transition: transform .35s var(--ease), box-shadow .35s; }
+.hw.wide { grid-column: span 2; }
+.hw.tall { grid-row: span 2; }
+.hw:hover { transform: translateY(-4px) scale(1.01); }
+.hw:active { transform: scale(.98); }
+.hw::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .4s;
+  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, .55), transparent 45%); mix-blend-mode: soft-light; }
+.hw:hover::after { opacity: 1; }
+.hw::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px; pointer-events: none; opacity: 0; transition: opacity .4s;
+  background: conic-gradient(from var(--hw-ang, 0deg), transparent 0 60%, var(--c) 75%, #fff 80%, var(--c) 85%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+.hw:hover::before { opacity: 1; animation: hwSpin 2.4s linear infinite; }
+@property --hw-ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes hwSpin { to { --hw-ang: 360deg; } }
+.hw-tt { display: flex; align-items: center; gap: 8px; font: 600 15px var(--display); color: var(--c); }
+.hw-tt .ms { font-size: 23px; }
+.hw-badge { min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--c); color: #fff; font: 700 13px/24px var(--display); text-align: center; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 3px var(--glass-strong); }
+.hw-tt .hw-badge { margin-left: auto; }
+.hw-body { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+.hw-big { font: 700 44px/1 var(--display); letter-spacing: -.02em; background: linear-gradient(180deg, var(--text), color-mix(in srgb, var(--c) 70%, var(--text))); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hw-big small { font: 600 15px var(--body); letter-spacing: 0; color: var(--muted); -webkit-text-fill-color: var(--muted); }
+.hw-mini { margin: 0; font-size: 14px; color: var(--muted); }
+.hw-mini b { color: var(--text); }
+.hw-lead { margin: 0; font: 600 16px/1.35 var(--display); overflow-wrap: anywhere; }
+.hw-foot { margin-top: auto; }
+.hw-xp { height: 8px; border-radius: 4px; background: var(--hover); overflow: hidden; }
+.hw-xp i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--ae), color-mix(in srgb, var(--ae) 55%, #fff)); transform-origin: left; animation: hwGrow 1.3s var(--ease) both .4s; }
+@keyframes hwGrow { from { transform: scaleX(0); } }
+.hw-donut { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.hw-donut .ring { width: 112px; height: 112px; }
+.hw-list, .hw-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 15px; min-width: 0; flex: 1 1 180px; }
+.hw-list li { display: flex; align-items: center; gap: 10px; }
+.hw-list .ms { font-size: 20px; color: var(--muted); }
+.hw-list li.alert .ms { color: var(--c); }
+.hw-done { flex: none; gap: 6px; font-size: 14.5px; }
+.hw-done .ms { color: var(--ok); font-size: 19px; }
+.hw-legend { font-size: 14px; color: var(--muted); gap: 6px; }
+.hw-legend li::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 3px; background: var(--k); margin-right: 7px; }
+.hw-legend b { color: var(--text); }
+.hw-now { margin-top: auto; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 999px; background: var(--glass-strong); border: 1px solid var(--line); }
+.hw-now .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hw-now b { font-family: var(--display); }
+.hw-now .tab { margin-left: auto; font: 600 15px var(--display); white-space: nowrap; }
+.hw-now .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; animation: hwPulse 2s infinite; }
+@keyframes hwPulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 45%, transparent); } 70%, 100% { box-shadow: 0 0 0 12px transparent; } }
+.hw-empty { grid-column: 1 / -1; padding: 28px; border-radius: 34px; text-align: center; color: var(--muted); }
+
+.hw-dock { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translateX(-50%); z-index: 15; display: flex; align-items: flex-end; gap: 10px; padding: 10px 16px; border-radius: 999px; }
+.hw-dock.demo { bottom: calc(env(safe-area-inset-bottom, 0px) + 50px); }
+.hw-dock a { position: relative; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; flex: none; text-decoration: none; color: #fff;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--c) 82%, #fff), var(--c)); box-shadow: 0 6px 16px color-mix(in srgb, var(--c) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, .5);
+  transition: width .2s var(--ease), height .2s var(--ease); }
+.hw-dock a .ms { font-size: 27px; }
+.hw-dock a .hw-badge { position: absolute; top: -7px; right: -7px; transform: scale(.85); box-shadow: 0 0 0 2px #fff; background: var(--text); color: var(--bg); }
+.hw-dock a .tip { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%) translateY(4px); white-space: nowrap; font: 600 13px var(--display); padding: 6px 10px; border-radius: 10px; background: var(--text); color: var(--bg); opacity: 0; pointer-events: none; transition: .2s; }
+.hw-dock a:hover .tip, .hw-dock a:focus-visible .tip { opacity: 1; transform: translateX(-50%); }
+.hw-dock .sep { width: 1px; align-self: stretch; background: var(--line); margin: 4px 2px; }
+
+.hw-scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); opacity: 0; pointer-events: none; transition: opacity .35s; }
+.hw-scrim.on { opacity: 1; pointer-events: auto; }
+.hw-panel { position: fixed; z-index: 41; top: calc(12px + env(safe-area-inset-top, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); width: min(380px, calc(100vw - 24px));
+  border-radius: 26px; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--glass-strong); transform: translateX(calc(100% + 30px)); visibility: hidden;
+  transition: transform .5s var(--ease), visibility 0s linear .5s; }
+.hw-panel.on { transform: none; visibility: visible; transition: transform .5s var(--ease), visibility 0s; }
+.hw-panel.instant, .hw-scrim.instant { transition: none; }
+.hw-panel .ph { display: flex; align-items: center; justify-content: space-between; padding-left: 6px; }
+.hw-panel h2 { margin: 0; font: 600 20px var(--display); }
+.hw-opts { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; }
+.hw-opt { display: flex; align-items: center; gap: 12px; padding: 8px 6px; min-height: 54px; border-radius: 14px; cursor: pointer; }
+.hw-opt:hover { background: var(--hover); }
+.hw-opt .oi { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--c); flex: none; }
+.hw-opt .oi .ms { font-size: 21px; }
+.hw-opt .ot { flex: 1; min-width: 0; }
+.hw-opt .ot b { display: block; font: 600 15px var(--display); }
+.hw-opt .ot small { color: var(--muted); font-size: 13px; }
+.hw-tog { appearance: none; -webkit-appearance: none; width: 46px; height: 28px; border-radius: 14px; background: var(--active); position: relative; cursor: pointer; flex: none; margin: 0; transition: background .3s; }
+.hw-tog::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); transition: transform .35s cubic-bezier(.34, 1.56, .64, 1); }
+.hw-tog:checked { background: var(--c); }
+.hw-tog:checked::after { transform: translateX(18px); }
+.hw-panel .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); padding: 4px 4px 0; }
+
+@media (max-width: 900px) { .hw-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .hw-grid { grid-template-columns: minmax(0, 1fr); }
+  .hw.wide { grid-column: auto; } .hw.tall { grid-row: auto; }
+  .hw-search kbd, .hw-edit span:not(.ms) { display: none; }
+  .hw-edit { padding: 0 12px; }
+  .hw-dock { left: 12px; right: 12px; transform: none; overflow-x: auto; scrollbar-width: none; padding: 8px; gap: 8px; border-radius: 30px; }
+  .hw-dock::-webkit-scrollbar { display: none; }
+  .hw-dock a { width: 48px; height: 48px; }
+  .hw-dock a .hw-badge { top: -2px; right: -2px; transform: scale(.75); }
+  .hw-dock a .tip { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hw-aura i, .hw-rise, .hw, .hw-time, .hw-time .colon, .hw-xp i, .hw-now .pulse, .hw:hover::before { animation: none; }
+  .hw, .hw-panel, .hw-scrim, .ring .fg, .hw-dock a, .ms { transition: none; }
+}
 
 /* Projektek, beállítások, belépés */
 .card { border-radius: 24px; padding: 20px; animation: rise .6s var(--ease) both; }
@@ -284,8 +401,6 @@ main {
 @media (max-width: 480px) { .kbd-hint { display: none; } }
 
 /* Robot programok (3. változat, 2026. nov. 26.): a DTPS mappából; termékek → tábla (Tesztre vár → Javítani kell → Kész) + oldalpanel */
-.island.pt { --tone: var(--pt); --tone-soft: var(--pt-soft); }
-.island.ae { --tone: var(--ae); --tone-soft: var(--ae-soft); }
 :root { --st-wait: #2563c9; --st-fix: #d1342f; --st-tweak: #c27c00; --st-ok: #1f9d55; --paper: #ffffff; }
 :root[data-theme="dark"] { --st-wait: #6ea4ff; --st-fix: #ff6b63; --st-tweak: #f2b84b; --st-ok: #4ad37f; --paper: #16191e; }
 .rp-list, .rp-tbl { background: var(--glass-strong); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
@@ -380,8 +495,8 @@ main {
 .rp-ver .h { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
 
 @media (prefers-reduced-motion: reduce) {
-  .topbar, .island, .badge, .badge::after, .greet, .card, .pcard, .skeleton, .idea-row, .rp-panel { animation: none; }
-  .drawer, .scrim, .nav a, body.menu-open .nav a, .island, .island .go, .progress .track i { transition: none; }
+  .topbar, .greet, .card, .pcard, .skeleton, .idea-row, .rp-panel { animation: none; }
+  .drawer, .scrim, .nav a, body.menu-open .nav a { transition: none; }
 }
 @media (max-width: 480px) { .title { font-size: 17px; } }
 </style>
@@ -717,65 +832,198 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(fa
 $$('.nav a').forEach((a) => a.addEventListener('click', () => setTimeout(() => setMenu(false), 120)));
 
 /* =====================================================================
-   5. Kezdőlap: a két sziget
-   Jelvény = a figyelmet kérő tételek összege (alert: true, n: darab).
+   5. Kezdőlap – „Színes üveg” (2026. nov. 26., Alex választása a makettből):
+   kereső, nagy óra + a műszakból hátralévő idő, színezett widgetek, alul dokk.
+   A Widgetek panelen ki-be kapcsolható, mi látszik (csak ezen az eszközön).
    ===================================================================== */
-function islandShell(id, cls, icon, title, sub, href, i) {
-  return `<a class="island ${cls} glass" id="${id}" href="${href}" style="--i:${i}">
-    <span class="badge" hidden></span>
-    <div class="head"><span class="ico"><i data-lucide="${icon}"></i></span>
-      <div><h2>${title}</h2><span class="sub">${sub}</span></div>
-      <span class="go"><i data-lucide="arrow-right"></i></span></div>
-    <div class="progress" hidden><div class="track"><i></i></div><span></span></div>
-    <ul><li><div class="skeleton" style="width:80%"></div></li><li><div class="skeleton" style="width:60%"></div></li></ul>
-    <span class="foot"></span>
-  </a>`;
+const MSYM = { naplo: 'edit_note', valk: 'assignment_turned_in', pt: 'smart_toy', ae: 'center_focus_strong', idea: 'lightbulb', proj: 'view_kanban', files: 'folder_supervised', settings: 'settings', search: 'search', tune: 'tune', shift: 'schedule', box: 'package_2', page: 'description', lock: 'lock', close: 'close', star: 'star', timer: 'timer', check: 'task_alt' };
+const ms = (k, cls = '') => `<span class="ms ${cls}" aria-hidden="true">${MSYM[k] || k}</span>`;
+const HW_DEF = [
+  ['shift', 'Műszak', 'Mennyi van hátra, következő szünet', 'shift', 'naplo'],
+  ['naplo', 'Munkanapló', 'Futó teendő, fontosak, hátralévők', 'naplo', 'naplo'],
+  ['pt', 'Robot programok', 'Tesztre vár, javítani kell, kész', 'pt', 'pt'],
+  ['valk', 'Valk heti lap', 'E heti lap, jóváhagyás', 'valk', 'valk'],
+  ['ae', 'ARC-EYE edző', 'Szint és XP', 'ae', 'ae'],
+  ['idea', 'Ötletek', 'Ami folyamatban van', 'idea', 'idea'],
+  ['proj', 'Projektek', 'Oldalak, legutóbbi', 'proj', 'proj'],
+  ['intro', 'Nyitó animáció', 'A nap első megnyitásakor a kamion és a logó', 'page', 'proj'],
+  ['dock', 'Gyorsindító dokk', 'Az ikonsor alul', 'settings', 'proj'],
+];
+const hwVis = (() => { const v = Object.fromEntries(HW_DEF.map(([k]) => [k, k !== 'intro'])); try { Object.assign(v, JSON.parse(store.get('kozpont-widgetek') || '{}')); } catch { /* alap */ } return v; })();
+const hwSave = () => store.set('kozpont-widgetek', JSON.stringify(hwVis));
+
+/* Műszak: 7:00–15:00, szünetek 8:00–8:15, 10:15–10:30, 12:00–12:30 (ugyanaz, mint a Teendőimben). */
+const SHIFT = { from: 420, to: 900, breaks: [[480, 495], [615, 630], [720, 750]] };
+function shiftState() {
+  const d = new Date(), n = d.getHours() * 60 + d.getMinutes();
+  const left = SHIFT.to - n, pct = Math.min(1, Math.max(0, (n - SHIFT.from) / (SHIFT.to - SHIFT.from)));
+  if (n < SHIFT.from) return { pct: 0, big: `${SHIFT.from / 60}:00`, label: 'A műszak kezdete', sub: `még ${fmtMin(SHIFT.from - n)}` };
+  if (n >= SHIFT.to) return { pct: 1, big: 'Vége', label: 'A műszak véget ért', sub: 'Szép estét!' };
+  const br = SHIFT.breaks.find(([a, b]) => n >= a && n < b), nx = SHIFT.breaks.find(([a]) => n < a);
+  const sub = br ? `Szünet ${hm(br[1])}-ig` : nx ? `Következő szünet ${hm(nx[0])} (${nx[1] - nx[0]} perc)` : `Vége ${hm(SHIFT.to)}-kor`;
+  return { pct, big: fmtMin(left), label: 'Hátra a műszakból', sub };
 }
-function fillIsland(el, d) {
-  el.querySelector('ul').innerHTML = d.items.map((it) =>
-    `<li class="${it.alert ? 'alert' : it.good ? 'good' : ''}"><i data-lucide="${it.icon}"></i><span>${it.html}</span></li>`).join('');
-  const n = d.items.filter((it) => it.alert).reduce((s, it) => s + (it.n ?? 1), 0);
-  const b = el.querySelector('.badge'); b.hidden = n === 0; b.textContent = n > 9 ? '9+' : n; b.setAttribute('aria-label', `${n} értesítés`);
-  const bar = el.querySelector('.progress');
-  if (d.progress) {
-    const { done, left } = d.progress; bar.hidden = false;
-    bar.querySelector('span').innerHTML = `<b>${done}</b> kész · <b>${left}</b> hátra`;
-    requestAnimationFrame(() => { bar.querySelector('i').style.width = Math.round(done / Math.max(1, done + left) * 100) + '%'; });
-  }
-  el.querySelector('.foot').textContent = d.foot || '';
-  icons();
+const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+const fmtMin = (m) => m >= 60 ? `${Math.floor(m / 60)} ó ${m % 60} p` : `${m} p`;
+const ring = (pct, r, w, cls = '') => { const c = 2 * Math.PI * r, v = 2 * r + w + 4; return `<svg viewBox="0 0 ${v} ${v}" aria-hidden="true"><circle class="tr" cx="${v / 2}" cy="${v / 2}" r="${r}" stroke-width="${w}"/><circle class="fg ${cls}" cx="${v / 2}" cy="${v / 2}" r="${r}" stroke-width="${w}" stroke-dasharray="${c}" stroke-dashoffset="${c}" data-off="${c * (1 - pct)}"/></svg>`; };
+const ringGo = (root) => requestAnimationFrame(() => requestAnimationFrame(() => $$('circle[data-off]', root).forEach((e) => { e.style.strokeDashoffset = e.dataset.off; })));
+function hwClock() {
+  const d = new Date(), t = $('#hwTime'); if (!t) return;
+  t.innerHTML = `${String(d.getHours()).padStart(2, '0')}<span class="colon">:</span>${String(d.getMinutes()).padStart(2, '0')}`;
+  const s = $('#hwShift'); if (!s) return;
+  const st = shiftState();
+  s.querySelector('.ring').innerHTML = ring(st.pct, 27, 8);
+  s.querySelector('.hw-shift-l').textContent = st.label; s.querySelector('b').textContent = st.big; s.querySelector('small').textContent = st.sub;
+  ringGo(s);
 }
 
-let tickTimer = null;
+/* Widget-héjak: a tartalmat a betöltők töltik ki. */
+const HW_SHELL = {
+  naplo: ['wide tall', '/naplo/', 'Munkanapló'],
+  pt: ['wide', '#/teszt', 'Robot programok'],
+  valk: ['', '/valk/', 'Valk heti lap'],
+  ae: ['', '/arceye/', 'ARC-EYE edző'],
+  idea: ['wide', '#/otletek', 'Ötletek'],
+  proj: ['wide', '#/projektek', 'Projektek'],
+};
+function hwShells() {
+  const keys = Object.keys(HW_SHELL).filter((k) => hwVis[k]);
+  const singles = ['valk', 'ae'].filter((k) => hwVis[k]);
+  if (!keys.length) return `<div class="hw-empty glass">Minden widget el van rejtve. A <b>Widgetek</b> gombbal visszakapcsolhatod.</div>`;
+  return keys.map((k, i) => {
+    const [size, href, title] = HW_SHELL[k];
+    const wide = singles.length === 1 && singles[0] === k ? ' wide' : '';   // ha csak egy kicsi maradt, kitölti a sort
+    return `<a class="hw hw-${k} ${size}${wide} glass" id="hw-${k}" href="${href}" style="--i:${i + 2}">
+      <div class="hw-tt">${ms(HW_DEF.find((d) => d[0] === k)[3])}<span>${title}</span><span class="hw-badge" hidden></span></div>
+      <div class="hw-body"><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:45%"></div></div></a>`;
+  }).join('');
+}
+function hwFill(k, html, badge = 0) {
+  const d = $(`#hwd-${k} .hw-badge`); if (d) { d.hidden = !badge; d.textContent = badge > 9 ? '9+' : badge; }
+  const el = $(`#hw-${k}`); if (!el) return;
+  el.querySelector('.hw-body').innerHTML = html;
+  const b = el.querySelector('.hw-badge'); b.hidden = !badge; b.textContent = badge > 9 ? '9+' : badge;
+  ringGo(el); hwCount(el);
+}
+function hwCount(root) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  $$('[data-count]', root).forEach((e) => {
+    const to = Number(e.dataset.count); const t0 = performance.now();
+    const step = (t) => { const k = Math.min(1, (t - t0) / 1000); e.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+}
+const hwErr = (k, e) => hwFill(k, `<p class="hw-mini">${e instanceof AccessError ? 'A napló külön kóddal védett – koppints a belépéshez.' : esc(e.message)}</p>`);
+
+let hwIndex = [];   // a kereső ebből dolgozik; a betöltők töltik
 function renderHome() {
-  const t = today(), { year, week } = isoWeek(t);
+  const t = today(), { week } = isoWeek(t);
   const hour = Number(new Date().toLocaleString('en-GB', { timeZone: 'Europe/Budapest', hour: '2-digit', hour12: false }));
   const hello = hour < 10 ? 'Jó reggelt!' : hour < 18 ? 'Jó munkát!' : 'Szép estét!';
-  $('#app').innerHTML = `<div class="page">
-    <div class="hero" id="hero" role="img" aria-label="BREMAT"></div>
-    <div class="greet"><h1>${hello}</h1><p>${esc(huLong.format(toDate(t)))} · ${year}. ${week}. hét</p></div>
-    <div class="islands">
-      ${islandShell('isNaplo', 'naplo', 'notebook-pen', 'Munkanapló', 'Teendők és bejegyzések', '/naplo/', 0)}
-      ${islandShell('isValk', 'valk', 'clipboard-check', 'Valk heti lap', 'Robot karbantartás', '/valk/', 1)}
-      ${islandShell('isIdeas', 'idea', 'lightbulb', 'Ötletek', 'Amit meg akarok csinálni', '#/otletek', 2)}
-      ${islandShell('isPt', 'pt', 'bot', 'Robot programok', 'Mi vár tesztre, mit kell javítani', '#/teszt', 3)}
-      ${islandShell('isAe', 'ae', 'scan-line', 'ARC-EYE edző', 'Szenzorbeállítás játékosan', '/arceye/', 4)}
-      ${islandShell('isProj', 'proj', 'folder-kanban', 'Projektek', 'Tervek, rajzok, 3D oldalak', '#/projektek', 5)}
-      ${helyiOn() ? islandShell('isFiles', 'valk', 'folder-lock', 'Valk fájlok', 'Cellák, jigek, adapterek, termékek – csak ezen a gépen', HELYI_URL, 6) : ''}
-    </div></div>`;
-  if (helyiOn()) fillIsland($('#isFiles'), { items: [
-    { icon: 'shield-check', good: true, html: 'A fájlok a gépen maradnak, a netre nem kerülnek fel.' },
-    { icon: 'box', html: 'Rajzok, STEP 3D, jegyzetek – egy kereső mindenre.' },
-  ], foot: 'A Teendőim indítja (menü → BREMAT Központ).' });
-  icons();
-  intro($('#hero'));
-  loadNaplo().catch(() => {});
-  loadValk().catch(() => {});
-  loadIdeasIsland().catch(() => {});
-  loadPtIsland().catch(() => {});
-  loadAeIsland();
-  loadProjIsland().catch(() => {});
+  hwIndex = [
+    { t: 'Munkanapló', s: 'Teendők és bejegyzések', k: 'naplo', u: '/naplo/' },
+    { t: 'Valk heti lap', s: 'Robot karbantartás', k: 'valk', u: '/valk/' },
+    { t: 'Robot programok', s: 'Mi vár tesztre, mit kell javítani', k: 'pt', u: '#/teszt' },
+    { t: 'ARC-EYE edző', s: 'Szenzorbeállítás gyakorlás', k: 'ae', u: '/arceye/' },
+    { t: 'Ötletek', s: 'Amit meg akarok csinálni', k: 'idea', u: '#/otletek' },
+    { t: 'Projektek', s: 'Tervek, rajzok, 3D oldalak', k: 'proj', u: '#/projektek' },
+    { t: 'Beállítások', s: 'Megjelenés, név, belépés', k: 'settings', u: '#/beallitasok' },
+    ...(helyiOn() ? [{ t: 'Valk fájlok', s: 'Cellák, jigek, adapterek – csak ezen a gépen', k: 'files', u: HELYI_URL }] : []),
+  ];
+  const DOCK = [['naplo', '/naplo/', 'Munkanapló'], ['valk', '/valk/', 'Valk heti lap'], ['pt', '#/teszt', 'Robot programok'], ['ae', '/arceye/', 'ARC-EYE edző'], ['idea', '#/otletek', 'Ötletek'], ['proj', '#/projektek', 'Projektek'], 'sep',
+    ...(helyiOn() ? [['files', HELYI_URL, 'Valk fájlok']] : []), ['settings', '#/beallitasok', 'Beállítások']];
+  $('#app').innerHTML = `<div class="hw-page">
+    <div class="hw-aura" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    ${hwVis.intro ? `<div class="hero" id="hero" role="img" aria-label="BREMAT"></div>` : ''}
+    <div class="hw-top glass hw-rise">
+      <div class="hw-search" id="hwSearch">
+        <label>${ms('search')}<input id="hwQ" type="search" placeholder="Keress: cikkszám, rész, ötlet, oldal…" autocomplete="off" aria-label="Keresés a Központban" aria-controls="hwRes" aria-expanded="false"><kbd>Ctrl K</kbd></label>
+        <div class="hw-res glass" id="hwRes" role="listbox" hidden></div>
+      </div>
+      <button class="hw-edit" type="button" id="hwEdit">${ms('tune')}<span>Widgetek</span></button>
+    </div>
+    <section class="hw-head">
+      <div class="hw-rise" style="--i:1"><div class="hw-time tab" id="hwTime"></div><p>${hello} ${esc(huLong.format(toDate(t)))} · ${week}. hét</p></div>
+      ${hwVis.shift ? `<div class="hw-shift glass hw-rise" id="hwShift" style="--i:2"><div class="ring"></div><div><span class="hw-shift-l"></span><b class="tab"></b><small></small></div></div>` : ''}
+    </section>
+    <section class="hw-grid">${hwShells()}</section>
+  </div>`;
+  // a dokk és a panel a body-ba kerül (a fejléc és a menü fölé / mellé), nézetváltáskor a route() leveszi
+  let layer = $('#hwLayer'); if (!layer) { layer = document.createElement('div'); layer.id = 'hwLayer'; document.body.append(layer); }
+  layer.innerHTML = `
+    ${hwVis.dock ? `<nav class="hw-dock glass${DEMO ? ' demo' : ''}" aria-label="Gyorsindító">${DOCK.map((d) => d === 'sep' ? '<span class="sep"></span>' : `<a href="${d[1]}" id="hwd-${d[0]}" class="hw-c-${d[0]}" aria-label="${d[2]}"${d[0] === 'files' ? ' target="_blank" rel="noopener"' : ''}>${ms(d[0])}<span class="hw-badge" hidden></span><span class="tip">${d[2]}</span></a>`).join('')}</nav>` : ''}
+    <div class="hw-scrim" id="hwScrim"></div>
+    <aside class="hw-panel glass" id="hwPanel" aria-label="Widgetek" aria-hidden="true" inert>
+      <div class="ph"><h2>Mi látszódjon?</h2><button class="icon-btn" type="button" id="hwClose" aria-label="Bezárás">${ms('close')}</button></div>
+      <div class="hw-opts">${HW_DEF.map(([k, title, sub, ic, col]) => `<label class="hw-opt hw-c-${col}"><span class="oi">${ms(ic)}</span><span class="ot"><b>${title}</b><small>${sub}</small></span><input class="hw-tog" type="checkbox" data-k="${k}" ${hwVis[k] ? 'checked' : ''}></label>`).join('')}</div>
+      <div class="foot"><span>Ezen az eszközön megjegyzi.</span><button class="btn" type="button" id="hwAll">Mind látszik</button></div>
+    </aside>`;
+  hwClock();
+  clearInterval(hwTimer); hwTimer = setInterval(hwClock, 20000);
+  if (hwVis.intro) intro($('#hero'));
+  hwWire();
+  if (hwVis.naplo || hwVis.dock) loadNaplo().catch((e) => hwErr('naplo', e));
+  if (hwVis.valk || hwVis.dock) loadValk().catch((e) => hwErr('valk', e));
+  if (hwVis.idea) loadIdeasIsland().catch((e) => hwErr('idea', e));
+  loadPtIsland().catch((e) => hwErr('pt', e));   // a kereső a termékeket is ebből kapja
+  if (hwVis.proj) loadProjIsland().catch((e) => hwErr('proj', e));
+  if (hwVis.ae) loadAeIsland();
 }
+let hwTimer = null, tickTimer = null;
+
+function hwWire() {
+  const q = $('#hwQ'), res = $('#hwRes'); let sel = 0, hits = [];
+  const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const hl = (t, w) => { const i = norm(t).indexOf(w); return i < 0 || !w ? esc(t) : esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + w.length)) + '</mark>' + esc(t.slice(i + w.length)); };
+  const draw = () => {
+    const w = norm(q.value.trim());
+    if (!w) { res.hidden = true; q.setAttribute('aria-expanded', 'false'); return; }
+    const words = w.split(/\s+/);
+    hits = hwIndex.filter((x) => words.every((v) => norm(`${x.t} ${x.s}`).includes(v))).slice(0, 8);
+    sel = Math.min(sel, Math.max(0, hits.length - 1));
+    res.innerHTML = hits.length ? hits.map((x, i) => `<button type="button" role="option" class="hw-c-${x.k}" aria-selected="${i === sel}" data-i="${i}"><span class="ri">${ms(x.icon || x.k)}</span><span><b>${hl(x.t, words[0])}</b><small>${hl(x.s, words[0])}</small></span></button>`).join('')
+      : `<p class="hw-mini" style="padding:10px 12px;margin:0">Nincs találat erre: „${esc(q.value.trim())}”</p>`;
+    res.hidden = false; q.setAttribute('aria-expanded', 'true');
+  };
+  const go = (i) => { const x = hits[i]; if (!x) return; if (/^https?:/.test(x.u)) window.open(x.u, '_blank', 'noopener'); else location.href = x.u; };
+  q.addEventListener('input', () => { sel = 0; draw(); });
+  q.addEventListener('focus', draw);
+  q.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { sel = Math.min(hits.length - 1, sel + 1); draw(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { sel = Math.max(0, sel - 1); draw(); e.preventDefault(); }
+    else if (e.key === 'Enter') { e.preventDefault(); go(sel); }
+    else if (e.key === 'Escape') { q.value = ''; draw(); q.blur(); }
+  });
+  res.addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (b) go(Number(b.dataset.i)); });
+
+  const panel = $('#hwPanel');
+  $('#hwEdit').addEventListener('click', () => hwOpen(true));
+  $('#hwClose').addEventListener('click', () => hwOpen(false));
+  $('#hwScrim').addEventListener('click', () => hwOpen(false));
+  panel.addEventListener('change', (e) => { const k = e.target.dataset.k; if (!k) return; hwVis[k] = e.target.checked; hwSave(); renderHome(); hwOpen(true, k, true); });
+  $('#hwAll').addEventListener('click', () => { HW_DEF.forEach(([k]) => { hwVis[k] = k !== 'intro' || hwVis.intro; }); hwSave(); renderHome(); hwOpen(true, null, true); });
+
+  // fényfolt az egér alatt, a dokk nagyít
+  $$('.hw').forEach((el) => el.addEventListener('pointermove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', `${e.clientX - r.left}px`); el.style.setProperty('--my', `${e.clientY - r.top}px`); }));
+  const dk = $('.hw-dock'); if (!dk) return;
+  const still = () => matchMedia('(prefers-reduced-motion: reduce), (max-width: 600px)').matches;
+  dk.addEventListener('pointermove', (e) => { if (still()) return; $$('a', dk).forEach((a) => { const r = a.getBoundingClientRect(), d = Math.abs(e.clientX - (r.left + r.width / 2)), k = Math.max(0, 1 - d / 150); a.style.width = a.style.height = `${54 + 24 * k}px`; }); });
+  dk.addEventListener('pointerleave', () => $$('a', dk).forEach((a) => { a.style.width = a.style.height = ''; }));
+}
+// a Widgetek panel nyitása/zárása (újrarajzolás után is a friss elemeket keresi); focusKey: a kapcsoló, amin a fókusz marad
+function hwOpen(on, focusKey, instant = false) {
+  const panel = $('#hwPanel'); if (!panel) return;
+  const sc = $('#hwScrim');
+  if (instant) { panel.classList.add('instant'); sc.classList.add('instant'); }   // újrarajzoláskor ne csússzon be újra
+  panel.classList.toggle('on', on); sc.classList.toggle('on', on);
+  panel.setAttribute('aria-hidden', String(!on)); panel.inert = !on;
+  if (on) { requestAnimationFrame(() => requestAnimationFrame(() => { panel.classList.remove('instant'); sc.classList.remove('instant'); })); ($(`.hw-tog[data-k="${focusKey}"]`, panel) || $('.hw-tog', panel)).focus({ preventScroll: true }); }
+  else $('#hwEdit')?.focus({ preventScroll: true });
+}
+document.addEventListener('click', (e) => { if (!e.target.closest('#hwSearch') && $('#hwRes')) $('#hwRes').hidden = true; });
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#hwPanel.on')) hwOpen(false); });
+addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && $('#hwQ')) { e.preventDefault(); $('#hwQ').focus(); } });
+
 
 // --- Nyitó animáció ---
 // A napi első megnyitáskor (utána legfeljebb 2,5 óránként) lemegy a videó: a konténer felépül,
@@ -890,34 +1138,33 @@ async function intro(hero, force = false) {
   video.play().then(() => { raf = requestAnimationFrame(watch); }, startLogo);
 }
 
-// --- Munkanapló sziget: a heti „Kész:” bejegyzések + a Teendőim állapota ---
+// --- Munkanapló widget: a Teendőim állapota (futó teendő, fontosak, hátralévők) + a heti „Kész:” bejegyzések ---
 async function loadNaplo() {
-  const el = $('#isNaplo'); const t = today(), mon = mondayOf(t);
+  const t = today(), mon = mondayOf(t);
   let rows, st;
   try { [rows, st] = await Promise.all([api.week(mon, addDays(mon, 6)), api.todo()]); }
-  catch (e) {
-    fillIsland(el, { items: [{ icon: e instanceof AccessError ? 'lock' : 'wifi-off', html: e instanceof AccessError ? 'A napló külön kóddal védett – koppints a belépéshez.' : esc(e.message) }] });
-    return;
-  }
+  catch (e) { hwErr('naplo', e); return; }
   const done = rows.filter((r) => /^Kész:/.test(r.text)).length;
-  const items = [{ icon: 'circle-check-big', html: `Ezen a héten eddig <b>${done}</b> kész feladat`, good: done > 0 }];
-  if (st) {
-    items.push({ icon: 'list-todo', html: `Hátralévő feladatok: <b>${st.open}</b>` });
-    (st.doing || []).slice(0, 2).forEach((x) => items.push({ icon: 'timer', html: `Folyamatban: ${esc(x.text)} <span class="dim" data-run="${x.started_at || ''}" data-spent="${x.spent_ms}">· ${fmtDur(x.spent_ms + (x.started_at ? Date.now() - x.started_at : 0))}</span>` }));
-    if ((st.doing || []).length > 2) items.push({ icon: 'timer', html: `<span class="dim">+${st.doing.length - 2} további fut</span>` });
-    if (st.starred) items.push({ icon: 'star', html: `Fontos és még nincs kész: <b>${st.starred}</b>`, alert: true, n: st.starred });
-  } else {
-    items.push({ icon: 'info', html: '<span class="dim">A Teendőim még nem küldött állapotot. (Teendőim → menü → Munkanapló)</span>' });
-  }
-  fillIsland(el, { items, progress: st ? { done, left: st.open + (st.doing || []).length } : null, foot: st ? `Teendőim: frissítve ${hhmm(st.updated_at)}` : '' });
-  // A futó teendő ideje percenként frissül
+  if (!st) { hwFill('naplo', `<div class="hw-big" data-count="${done}">${done}</div><p class="hw-mini">kész feladat ezen a héten</p><p class="hw-mini">A Teendőim még nem küldött állapotot. (Teendőim → menü → Munkanapló)</p>`); return; }
+  const doing = st.doing || [];
+  const run = (x) => `<span class="tab" data-run="${x.started_at || ''}" data-spent="${x.spent_ms}">${fmtDur(x.spent_ms + (x.started_at ? Date.now() - x.started_at : 0))}</span>`;
+  const left = st.open + doing.length;
+  const recent = rows.filter((r) => /^Kész:/.test(r.text)).slice(-3).reverse();
+  hwFill('naplo', `
+    <div class="hw-donut"><div class="ring">${ring(done / Math.max(1, done + left), 46, 12)}<div class="lab"><b data-count="${done}">${done}</b><span>kész a héten</span></div></div>
+      <ul class="hw-list">
+        <li class="${st.starred ? 'alert' : ''}">${ms('star', st.starred ? 'fill' : '')}<span>Fontos és még nincs kész: <b>${st.starred}</b></span></li>
+        <li>${ms('naplo')}<span>Hátralévő feladatok: <b>${st.open}</b></span></li>
+        ${doing.length > 1 ? `<li>${ms('timer')}<span>Még fut: <b>${doing.length - 1}</b></span></li>` : ''}
+      </ul></div>
+    ${recent.length ? `<p class="hw-mini" style="margin-top:4px">Legutóbb kész</p><ul class="hw-list hw-done">${recent.map((r) => `<li>${ms('check', 'fill')}<span>${esc(short(r.text.replace(/^Kész:\s*/, ''), 64))}</span></li>`).join('')}</ul>` : ''}
+    ${doing[0] ? `<div class="hw-now"><span class="pulse"></span><span class="tx">Óra fut: <b>${esc(doing[0].text)}</b></span>${run(doing[0])}</div>` : `<p class="hw-mini hw-foot">Teendőim: frissítve ${hhmm(st.updated_at)}</p>`}`, st.starred);
   clearInterval(tickTimer);
-  tickTimer = setInterval(() => $$('[data-run]').forEach((s) => { if (s.dataset.run) s.textContent = '· ' + fmtDur(Number(s.dataset.spent) + Date.now() - Number(s.dataset.run)); }), 30000);
+  tickTimer = setInterval(() => $$('[data-run]').forEach((s) => { if (s.dataset.run) s.textContent = fmtDur(Number(s.dataset.spent) + Date.now() - Number(s.dataset.run)); }), 30000);
 }
 
-// --- Valk sziget: e heti lap, jóváhagyásra vár, nyitott továbbjelzés ---
+// --- Valk widget: e heti lap, jóváhagyásra vár, nyitott továbbjelzés ---
 async function loadValk() {
-  const el = $('#isValk');
   const [checks, idle] = await guarded(() => Promise.all([api.checks(), api.idle()]));
   const { year, week } = isoWeek(today());
   const mine = checks.filter((r) => r.robot === ROBOT);
@@ -925,47 +1172,39 @@ async function loadValk() {
   const idleNow = idle.find((x) => x.robot === ROBOT && x.iso_year === year && x.iso_week === week);
   const unapproved = mine.filter((r) => !r.approved_by).length;
   const openEsc = mine.filter((r) => r.escalate && !r.approved_by).length;
-  const items = [];
-  if (thisWeek) items.push({ icon: 'circle-check-big', html: `A ${week}. heti lap kitöltve – ${esc(thisWeek.inspector)}, ${huShort.format(toDate(thisWeek.check_date))}`, good: true });
-  else if (idleNow) items.push({ icon: 'pause-circle', html: `A ${week}. héten nem üzemelt` });
-  else items.push({ icon: 'circle-alert', html: `A <b>${week}.</b> heti lap még nincs kitöltve`, alert: true });
-  items.push(unapproved ? { icon: 'stamp', html: `<b>${unapproved}</b> lap jóváhagyásra vár`, alert: true, n: unapproved } : { icon: 'stamp', html: 'Minden lap jóváhagyva', good: true });
-  if (openEsc) items.push({ icon: 'triangle-alert', html: `<b>${openEsc}</b> nyitott továbbjelzés`, alert: true, n: openEsc });
-  fillIsland(el, { items, foot: `${mine.length} beküldött lap összesen` });
-  if (!thisWeek && !idleNow) el.href = '/valk/#/uj';   // ha még nincs kész, egyből a kitöltésre visz
+  const todo = !thisWeek && !idleNow;
+  const line = thisWeek ? `Kitöltve – ${esc(thisWeek.inspector)}, ${huShort.format(toDate(thisWeek.check_date))}` : idleNow ? 'Ezen a héten nem üzemelt' : 'heti lap kitöltésre vár';
+  hwFill('valk', `<div class="hw-big">${week}.</div><p class="hw-mini">${line}</p>
+    <p class="hw-mini hw-foot">${unapproved ? `<b>${unapproved}</b> jóváhagyásra vár` : 'Minden lap jóváhagyva'}${openEsc ? ` · <b>${openEsc}</b> továbbjelzés` : ''}</p>`, (todo ? 1 : 0) + unapproved + openEsc);
+  if (todo) { const el = $('#hw-valk'); if (el) el.href = '/valk/#/uj'; }   // ha még nincs kész, egyből a kitöltésre visz
+  hwIndex.push({ t: `Valk heti lap – ${week}. hét`, s: thisWeek ? 'Kitöltve' : 'Kitöltésre vár', k: 'valk', u: todo ? '/valk/#/uj' : '/valk/' });
 }
 
-// --- Ötletek sziget: ami folyamatban van, a legújabb nyitottak, és hány valósult meg ---
+// --- Ötletek widget: ami folyamatban van, különben a legújabb nyitott ---
 async function loadIdeasIsland() {
-  const el = $('#isIdeas');
   let rows;
   try { rows = await api.ideas(); }
-  catch (e) { fillIsland(el, { items: [{ icon: 'wifi-off', html: esc(e.message) }] }); return; }
+  catch (e) { hwErr('idea', e); return; }
   const by = (st) => rows.filter((r) => r.status === st);
-  const doing = by('folyamatban'), open = by('nyitott'), done = by('kesz').length, dropped = by('elvetve').length;
-  const items = [];
-  doing.slice(0, 2).forEach((r) => items.push({ icon: 'timer', html: `Folyamatban: ${esc(short(r.text))}` }));
-  open.slice(0, doing.length ? 2 : 3).forEach((r) => items.push({ icon: 'lightbulb', html: esc(short(r.text)) }));
-  const more = doing.length + open.length - items.length;
-  if (more > 0) items.push({ icon: 'more-horizontal', html: `<span class="dim">+${more} további ötlet</span>` });
-  if (!rows.length) items.push({ icon: 'pencil-line', html: '<span class="dim">Még nincs ötlet. Koppints ide, és írd le az elsőt.</span>' });
-  fillIsland(el, { items, progress: rows.length ? { done, left: doing.length + open.length } : null, foot: rows.length ? `Megvalósult: ${done} · Nem lett belőle: ${dropped}` : '' });
-  const s = el.querySelector('.progress span'); if (s && rows.length) s.innerHTML = `<b>${done}</b> megvalósult · <b>${doing.length + open.length}</b> nyitott`;
+  const doing = by('folyamatban'), open = by('nyitott'), done = by('kesz').length;
+  const top = doing[0] || open[0];
+  hwFill('idea', top ? `<p class="hw-mini">${doing[0] ? 'Folyamatban' : 'Legújabb ötlet'}</p><p class="hw-lead">${esc(short(top.text, 90))}</p>
+    <p class="hw-mini hw-foot"><b>${done}</b> megvalósult · <b>${doing.length + open.length}</b> nyitott</p>`
+    : `<p class="hw-lead">Még nincs ötlet.</p><p class="hw-mini">Koppints ide, és írd le az elsőt.</p>`);
+  rows.filter((r) => r.status !== 'elvetve').forEach((r) => hwIndex.push({ t: short(r.text, 80), s: `Ötlet · ${ISTATE[r.status]?.t || ''}`, k: 'idea', u: '#/otletek' }));
 }
 const short = (t, n = 70) => { const s = String(t).split('\n')[0]; return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 
-// --- Projektek sziget: projektenként hány oldal, és a legutóbb frissült ---
+// --- Projektek widget: hány oldal, és a legutóbb frissült ---
 async function loadProjIsland() {
-  const el = $('#isProj');
   let p;
   try { p = await loadProjects(); }
-  catch (e) { fillIsland(el, { items: [{ icon: 'wifi-off', html: esc(e.message) }] }); return; }
+  catch (e) { hwErr('proj', e); return; }
   const all = p.projects.flatMap((g) => g.items.map((it) => ({ ...it, g: g.name })));
-  const items = p.projects.slice(0, 3).map((g) => ({ icon: PICONS[g.key] || 'folder', html: `${esc(g.name)} <span class="dim">· ${g.items.length} oldal</span>` }));
-  if (p.projects.length > 3) items.push({ icon: 'more-horizontal', html: `<span class="dim">+${p.projects.length - 3} további projekt</span>` });
   const last = all.filter((x) => x.d).sort((a, b) => b.d.localeCompare(a.d))[0];
-  if (last) items.push({ icon: 'sparkles', good: true, html: `Legutóbb: ${esc(last.t)} <span class="dim">· ${huShort.format(toDate(last.d))}</span>` });
-  fillIsland(el, { items, foot: `${all.length} oldal ${p.projects.length} projektben` });
+  hwFill('proj', `<div class="hw-big"><span data-count="${all.length}">${all.length}</span><small> oldal · ${p.projects.length} projekt</small></div>
+    ${last ? `<p class="hw-mini hw-foot">Legutóbb: <b>${esc(last.t)}</b> · ${huShort.format(toDate(last.d))}</p>` : ''}`);
+  all.forEach((it) => hwIndex.push({ t: it.t, s: `Projekt · ${it.g}`, k: 'proj', icon: 'page', u: it.u }));
 }
 
 /* =====================================================================
@@ -1087,42 +1326,36 @@ const stHtml = (st) => `<span class="st ${st}">${STATE[st].t}</span>`;
 const ptOrder = (p) => { const s = summary(p); return s.fix || s.wait || s.tweak ? 0 : s.parts ? 1 : 2; };
 const syncText = (at) => at ? `A Teendőim 5 percenként beolvassa a DTPS mappát. Utoljára: ${whenText(at)}.` : 'Még nem jött adat a DTPS mappából. A Teendőim küldi 5 percenként (menü → BREMAT Központ → DTPS mappa beolvasása most).';
 
-// --- Sziget a kezdőlapon ---
+// --- Robot programok widget: összesítő gyűrű; a kereső a termékeket és a részeket is innen kapja ---
 async function loadPtIsland() {
-  const el = $('#isPt');
-  let products;
-  try { ({ products } = await api.ptList()); }
-  catch (e) { fillIsland(el, { items: [{ icon: 'wifi-off', html: esc(e.message) }] }); return; }
-  const items = [];
-  const sorted = [...products].sort((a, b) => ptOrder(a) - ptOrder(b) || (summary(b).last || '').localeCompare(summary(a).last || ''));
-  for (const p of sorted.filter((x) => ptOrder(x) === 0).slice(0, 3)) {
+  const { products } = await api.ptList();
+  for (const p of products) {
     const s = summary(p);
-    items.push({ icon: 'box', html: `<b>${esc(p.sku)}</b> <span class="dim">· ${[s.wait && `${s.wait} tesztre vár`, s.fix && `${s.fix} javítani`, s.tweak && `${s.tweak} finomítás`].filter(Boolean).join(' · ')}</span>` });
+    hwIndex.push({ t: p.sku, s: `${p.name} · ${s.wait} tesztre vár · ${s.fix} javítani`, k: 'pt', u: `#/teszt/${p.id}` });
+    visibleParts(p).forEach((x) => hwIndex.push({ t: x.name, s: `${p.sku} · ${latestOf(x).v} · ${STATE[x.status].t}`, k: 'pt', icon: 'box', u: `#/teszt/${p.id}` }));
   }
-  if (!products.length) items.push({ icon: 'folder-sync', html: '<span class="dim">Még nem jött adat a DTPS mappából. A Teendőim küldi 5 percenként.</span>' });
-  else if (!items.length) items.push({ icon: 'circle-check-big', good: true, html: 'Minden rész kész.' });
-  const parts = products.reduce((t, p) => { const s = summary(p); t.ok += s.ok; t.n += s.parts; return t; }, { ok: 0, n: 0 });
-  fillIsland(el, { items, progress: parts.n ? { done: parts.ok, left: parts.n - parts.ok } : null, foot: products.length ? `${products.length} termék` : '' });
-  const sp = el.querySelector('.progress span'); if (sp && parts.n) sp.innerHTML = `<b>${parts.ok}</b> rész kész · <b>${parts.n - parts.ok}</b> hátra`;
+  const t = products.reduce((a, p) => { const s = summary(p); a.wait += s.wait; a.fix += s.fix; a.tweak += s.tweak; a.ok += s.ok; return a; }, { wait: 0, fix: 0, tweak: 0, ok: 0 });
+  const n = t.wait + t.fix + t.tweak + t.ok;
+  if (!n) { hwFill('pt', `<p class="hw-lead">Még nem jött adat a DTPS mappából.</p><p class="hw-mini">A Teendőim küldi 5 percenként.</p>`); return; }
+  const r = 46, c = 2 * Math.PI * r; let acc = 0;
+  const segs = STATES.map((k) => { const v = t[k] / n; const out = v ? `<circle cx="62" cy="62" r="${r}" stroke-width="14" style="stroke:var(--st-${k})" stroke-dasharray="${Math.max(0, c * v - 3)} ${c}" stroke-dashoffset="${-c * acc}"/>` : ''; acc += v; return out; }).join('');
+  hwFill('pt', `<div class="hw-donut"><div class="ring"><svg viewBox="0 0 124 124" aria-hidden="true"><circle class="tr" cx="62" cy="62" r="${r}" stroke-width="14"/>${segs}</svg><div class="lab"><b>${t.ok}</b><span>kész</span></div></div>
+    <ul class="hw-legend">${STATES.map((k) => `<li style="--k:var(--st-${k})"><b class="tab">${t[k]}</b> ${STATE[k].t}</li>`).join('')}</ul></div>`, t.wait);
 }
 
-// --- ARC-EYE edző sziget: a szint és a küldetések, a /arceye/ oldal böngészőben tárolt állapotából ---
+// --- ARC-EYE edző widget: a szint és az XP, a /arceye/ oldal böngészőben tárolt állapotából ---
 const AE_LEVELS = [[0, 'Tanonc'], [100, 'Betanított'], [250, 'Beállító'], [450, 'Varratvadász'], [700, 'ARC-EYE mester'], [1000, 'Integrátor-jelölt']];
 const AE_MISSIONS = 9;
 function loadAeIsland() {
-  const el = $('#isAe');
   let p = null;
   try { p = JSON.parse(store.get('aeT_p') || 'null'); } catch { p = null; }
   const xp = Math.max(0, Number(p?.xp) || 0);
   const done = Object.keys(p?.done || {}).filter((k) => Number(k) >= 1 && Number(k) <= AE_MISSIONS).length;
-  const lvl = AE_LEVELS.filter(([min]) => xp >= min).at(-1)[1];
-  const items = xp || done
-    ? [{ icon: 'award', html: `<b>${esc(lvl)}</b> <span class="dim">· ${xp} XP</span>` },
-       done < AE_MISSIONS ? { icon: 'target', html: `Következő: <b>${done + 1}. küldetés</b>` } : { icon: 'circle-check-big', good: true, html: 'Minden küldetés megvan.' }]
-    : [{ icon: 'play', html: 'Javítsd meg a szenzort: 9 küldetés, élő grafikonnal.' },
-       { icon: 'graduation-cap', html: '<span class="dim">Beállítás-iskola, gyorskérdések, programrakó.</span>' }];
-  fillIsland(el, { items, progress: { done, left: AE_MISSIONS - done }, foot: 'Ezen a gépen tárolja, hol tartasz.' });
-  const sp = el.querySelector('.progress span'); if (sp) sp.innerHTML = `<b>${done}</b> küldetés kész · <b>${AE_MISSIONS - done}</b> hátra`;
+  const i = AE_LEVELS.filter(([min]) => xp >= min).length - 1;
+  const lo = AE_LEVELS[i][0], hi = AE_LEVELS[i + 1]?.[0] ?? lo + 300;
+  hwFill('ae', `<div class="hw-big"><span data-count="${xp}">${xp}</span><small> XP</small></div>
+    <div class="hw-xp"><i style="width:${Math.min(100, (xp - lo) / (hi - lo) * 100)}%"></i></div>
+    <p class="hw-mini"><b>${esc(AE_LEVELS[i][1])}</b> · ${done}/${AE_MISSIONS} küldetés</p>`);
 }
 
 // --- Lista: a termékek ---
@@ -1293,7 +1526,7 @@ function renderSettings() {
       <label class="field"><span>Ezzel a névvel kerülnek be a bejegyzéseid</span><input type="text" id="sName" maxlength="120" value="${esc(store.get('naplo-nev') || '')}"></label>
       <div><button class="btn primary" type="submit"><i data-lucide="check"></i>Mentés</button></div></form>
     <div class="card glass"><h2>Valk fájlok</h2>
-      <label class="switch"><input type="checkbox" id="helyiOn" ${helyiOn() ? 'checked' : ''}> Valk fájlok sziget a kezdőlapon</label>
+      <label class="switch"><input type="checkbox" id="helyiOn" ${helyiOn() ? 'checked' : ''}> Valk fájlok a kezdőlapon (dokk és kereső)</label>
       <p class="muted" style="margin:8px 0 0">Csak azon a gépen kapcsold be, ahol a helyi BREMAT Központ fut (a Teendőim mellett). A fájlok ott maradnak, a netre nem kerülnek fel.</p></div>
     <div class="card glass"><h2>Belépés</h2>
       <p class="muted" style="margin:0 0 12px">Ezen az eszközön be vagy lépve. Kilépés után a Központ, a napló és a heti lap is újra kéri a kódot.</p>
@@ -1319,7 +1552,7 @@ function route() {
   const key = VIEWS[location.hash] ? location.hash : ptm ? '#/teszt/*' : '#/';
   $$('.nav a[data-view]').forEach((a) => a.toggleAttribute('aria-current', a.dataset.view === key));
   $$('.nav a[aria-current]').forEach((a) => a.setAttribute('aria-current', 'page'));
-  clearInterval(tickTimer); window.scrollTo(0, 0);
+  clearInterval(tickTimer); clearInterval(hwTimer); $('#hwLayer')?.remove(); window.scrollTo(0, 0);
   Promise.resolve().then(ptm ? () => renderPtProduct(ptm[1]) : VIEWS[key] || renderHome).catch((e) => { if (!(e instanceof AccessError)) console.error(e); });
 }
 $('#demo').hidden = !DEMO;

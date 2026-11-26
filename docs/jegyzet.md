@@ -246,6 +246,17 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   tároló, `o/<id>` kulcs (`lib/kozpont-core.mjs`: `idea_list`, `idea_add`, `idea_update`, `idea_delete`).
   Ez az első adat, amit a Központ maga tárol. Demóban (`?demo`) memóriában, mintaötletekkel.
 
+### Kezdőlap „Színes üveg” (2026. november 26., Alex választása a makettből)
+- A szigetek helyett: **kereső** (Ctrl K; menüpontok, termékek és részek, ötletek, projektoldalak, Valk lap),
+  **nagy óra** + **Műszak** widget (7:00–15:00, a Teendőimmel azonos szünetek: hátralévő idő és a következő szünet),
+  **színezett widgetek** (Munkanapló, Robot programok, Valk heti lap, ARC-EYE edző, Ötletek, Projektek),
+  alul **dokk** (gyorsindító, jelvényekkel). Ikonok: Material Symbols Rounded (Google Fonts), ráhúzásra kitöltődnek.
+- **Widgetek** gomb → oldalpanel: mi látszódjon (widgetek, nyitó animáció, dokk). `localStorage` `kozpont-widgetek`,
+  eszközönként. A nyitó animáció alapból ki van kapcsolva (be lehet kapcsolni). Ha csak egy kicsi widget marad
+  (Valk vagy ARC-EYE), kitölti a sort.
+- A dokk és a panel a `body`-ba kerül (`#hwLayer`), hogy a fejléc fölött legyen; nézetváltáskor a `route()` leveszi.
+- Makett: https://claude.ai/artifact/EANomSp7uc64GGX6rjAgqU
+
 ## Nyitó animáció (2026. november 5–16.)
 - A Központ kezdőlapján a köszönés fölött (`#hero`, 3:1): `public/kozpont/intro.webm` (VP9 + alfa,
   1200×400, 30 kép/mp, 10 mp). Történet: a BREMAT FT3 konténer váza felépül – ahol egy vázelem a
