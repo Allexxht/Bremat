@@ -17,14 +17,23 @@
 // Egy termék = egy dokumentum; Alex lépései „műveletek” (applyOp).
 // =====================================================================
 
-export const STATES = ['wait', 'fix', 'tweak', 'ok'];
+export const STATES = ['wait', 'fix', 'tweak', 'ok', 'auto'];
 export const STATE = {
   wait:   { t: 'Tesztre vár',   order: 0 },
   fix:    { t: 'Javítani kell', order: 1 },
   custom: { t: 'Saját állapot', order: 1.5 },   // Alex bármit beírhat, színnel (2026. nov. 26.)
   tweak:  { t: 'Kis finomítás', order: 2 },
   ok:     { t: 'Kész',          order: 3 },
+  auto:   { t: 'Automatizálva', order: 4 },   // a program megy a gyártásban (2026. nov. 27., Alex)
 };
+/** A termék állapota (Alex, 2026. nov. 27.): mi van most munkában. Alap: Áll. */
+export const PSTATES = {
+  test: { t: 'Tesztelés alatt', order: 0 },   // erősen kiemelve
+  idle: { t: 'Áll',             order: 1 },   // semmi extra
+  auto: { t: 'Automatizált',    order: 2 },   // kiemelve, de kevésbé
+  off:  { t: 'Munkán kívül',    order: 3 },   // szürke, háttérben
+};
+export const pstateOf = (p) => (PSTATES[p.pstate] ? p.pstate : 'idle');
 /** A saját állapot színei (kulcs tárolódik, nem a színkód). */
 export const COLORS = {
   violet: { t: 'Lila', hex: '#7b3fe4' }, pink: { t: 'Rózsaszín', hex: '#d6337a' }, orange: { t: 'Narancs', hex: '#e8631c' },
@@ -168,6 +177,7 @@ export function markGone(src, now = new Date()) {
  *   point_toggle { part, point }     – pont kipipálása / vissza
  *   point_delete { part, point }
  *   status       { part, status }    – kézi állapot (Tesztre vár / Javítani kell / Kis finomítás / Kész)
+ *   pstate       { pstate }          – a TERMÉK állapota (nem kell part): test | idle | auto | off
  *   mark         { part, mark }      – jelölés: 'strike' | 'test' | 'temp' | null (nincs)
  *   status_custom { part, text, color } – saját állapot: bármilyen szöveg (max. 40 betű) + szín (COLORS kulcsa)
  *   note_add     { part, text }      – infó a legfrissebb verzióhoz (a verzióval együtt megmarad)
@@ -178,6 +188,12 @@ export function applyOp(src, op, { now = new Date(), newId }) {
   if (!op || typeof op !== 'object') fail('Hibás művelet');
   const ts = now.toISOString();
   const p = structuredClone(src);
+  if (op.type === 'pstate') {
+    if (!PSTATES[op.pstate]) fail('Érvénytelen termékállapot');
+    if (pstateOf(src) === op.pstate) return src;
+    p.pstate = op.pstate; p.pstate_at = ts; p.updated_at = ts; p.rev = (src.rev || 0) + 1;
+    return p;
+  }
   const part = pick(p.parts, op.part, 'rész');
   const v = latestOf(part);
 
@@ -276,13 +292,13 @@ export const countedParts = (p) => visibleParts(p).filter((x) => x.mark !== 'str
 
 export function summary(p) {
   const parts = countedParts(p), struck = visibleParts(p).length - parts.length;
-  const c = { wait: 0, fix: 0, tweak: 0, ok: 0, custom: 0 }, customs = new Map();
+  const c = { wait: 0, fix: 0, tweak: 0, ok: 0, auto: 0, custom: 0 }, customs = new Map();
   for (const x of parts) {
     c[STATE[x.status] ? x.status : 'wait']++;
     if (x.status === 'custom') { const s = stateOf(x), key = `${s.t}\u0000${s.c}`; customs.set(key, { t: s.t, c: s.c, color: s.color, n: (customs.get(key)?.n || 0) + 1 }); }
   }
   const last = parts.reduce((m, x) => { const t = latestOf(x)?.m || ''; return t > m ? t : m; }, '');
-  return { ...c, customs: [...customs.values()], struck, parts: parts.length, complete: parts.length > 0 && c.ok === parts.length, last: last || null };
+  return { ...c, customs: [...customs.values()], struck, parts: parts.length, done: c.ok + c.auto, complete: parts.length > 0 && c.ok + c.auto === parts.length, last: last || null };
 }
 export const openPoints = (part) => part.points.filter((x) => !x.done);
 

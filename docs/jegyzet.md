@@ -509,6 +509,10 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   Kihúzva (áthúzva, halvány, a tábla aljára kerül, a számolásba nem számít – `countedParts`, `summary().struck`),
   Csak teszt (szaggatott lila keret), Ideiglenes (pontozott narancs keret). Új verziónál megmarad.
 - A pontok mellett kuka gomb (`point_delete`, megerősítéssel): a véletlenül felvett pont törölhető.
+- **Automatizálva** részállapot (`status: 'auto'`, türkiz): a „kész” után, a sorrend végén. `summary().done` = ok + auto.
+- **Termékállapot** (`p.pstate`, művelet `pstate`, `PSTATES` / `pstateOf`, alap `idle`): Tesztelés alatt (lila, erős
+  kiemelés, lista elején) → Áll (semmi extra) → Automatizált (türkiz csík, halványabb) → Munkán kívül (szürke, halvány,
+  lista végén). A termék oldalán gombsor; a szinkron megtartja.
 - Netlify keret (nov. 26.): éles deploy szünetel → Alex az előnézetet használja; ideiglenes szinkron:
   `DTPS-szinkron.bat` (projekt fájlok, `robot-programok/`), az előnézet `/api/kozpont`-jára küld. A Blobs tároló közös.
 

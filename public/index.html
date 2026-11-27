@@ -427,8 +427,8 @@ main {
 @media (max-width: 480px) { .kbd-hint { display: none; } }
 
 /* Robot programok (3. változat, 2026. nov. 26.): a DTPS mappából; termékek → tábla (Tesztre vár → Javítani kell → Kész) + oldalpanel */
-:root { --st-wait: #2563c9; --st-fix: #d1342f; --st-tweak: #c27c00; --st-ok: #1f9d55; --paper: #ffffff; }
-:root[data-theme="dark"] { --st-wait: #6ea4ff; --st-fix: #ff6b63; --st-tweak: #f2b84b; --st-ok: #4ad37f; --paper: #16191e; }
+:root { --st-wait: #2563c9; --st-fix: #d1342f; --st-tweak: #c27c00; --st-ok: #1f9d55; --st-auto: #0a8fa3; --ps-test: #7b3fe4; --paper: #ffffff; }
+:root[data-theme="dark"] { --st-wait: #6ea4ff; --st-fix: #ff6b63; --st-tweak: #f2b84b; --st-ok: #4ad37f; --st-auto: #4cc7da; --ps-test: #a98bff; --paper: #16191e; }
 .rp-list, .rp-tbl { background: var(--glass-strong); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
 .rp-prod { display: grid; grid-template-columns: 1fr minmax(110px, 220px); gap: 8px 20px; align-items: center; padding: 16px 20px; border-top: 1px solid var(--line); text-decoration: none; }
 .rp-prod:first-child { border-top: 0; }
@@ -437,10 +437,30 @@ main {
 .rp-prod .nm { color: var(--muted); font-size: 14px; }
 .rp-prod .nums { grid-column: 1 / -1; display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
 .rp-prod .nums b { font-family: inherit; font-size: inherit; }
+/* Termék állapota a listában: Tesztelés alatt = erősen kiemelve; Automatizált = kiemelve, de csendesebben;
+   Áll = semmi extra; Munkán kívül = szürke, háttérbe húzódik. */
+.rp-prod { position: relative; transition: background .3s, opacity .3s, filter .3s; }
+.rp-prod .ttl { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; }
+.ps { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font: 700 12.5px/1.6 var(--body); white-space: nowrap; border: 1px solid var(--line); color: var(--muted); }
+.rp-prod.ps-test { background: linear-gradient(90deg, color-mix(in srgb, var(--ps-test) 14%, transparent), color-mix(in srgb, var(--ps-test) 4%, transparent)); box-shadow: inset 6px 0 0 var(--ps-test); }
+.rp-prod.ps-test b { font-size: 20px; }
+.rp-prod.ps-test .ps { background: var(--ps-test); border-color: var(--ps-test); color: #fff; }
+.rp-prod.ps-test .ps::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: psPulse 1.6s infinite; }
+@keyframes psPulse { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .8); } 80%, 100% { box-shadow: 0 0 0 7px rgba(255, 255, 255, 0); } }
+.rp-prod.ps-auto { box-shadow: inset 3px 0 0 var(--st-auto); background: color-mix(in srgb, var(--st-auto) 5%, transparent); }
+.rp-prod.ps-auto .ps { color: var(--st-auto); border-color: color-mix(in srgb, var(--st-auto) 45%, transparent); }
+.rp-prod.ps-auto .ps svg { width: 14px; height: 14px; }
+.rp-prod.ps-off { opacity: .5; filter: grayscale(1); }
+.rp-prod.ps-off:hover { opacity: .8; }
+.rp-psg { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.rp-psg button { min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass-strong); font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+.rp-psg button[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: #fff; }
+.rp-psg button svg { width: 16px; height: 16px; }
 .rp-bar { display: flex; gap: 3px; height: 10px; }
 .rp-bar i { flex: 1; border-radius: 3px; background: var(--c); }
 .st { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
 .st::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+.st.auto { --c: var(--st-auto); color: var(--st-auto); } .n-auto { color: var(--st-auto); }
 .st.wait { --c: var(--st-wait); } .st.fix { --c: var(--st-fix); color: var(--st-fix); } .st.tweak { --c: var(--st-tweak); color: var(--st-tweak); } .st.ok { --c: var(--st-ok); color: var(--st-ok); }
 .n-wait { color: var(--st-wait); } .n-fix { color: var(--st-fix); } .n-tweak { color: var(--st-tweak); } .n-ok { color: var(--st-ok); }
 .rp-head { display: flex; flex-direction: column; gap: 4px; }
@@ -511,7 +531,7 @@ main {
 .rp-old > div { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 10px; background: var(--hover); }
 .rp-old a { color: var(--st-wait); font-weight: 700; text-decoration: none; white-space: nowrap; }
 .rp-good { margin: 0; color: var(--st-ok); font-weight: 800; }
-.rp-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.rp-seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; }
 .rp-seg button { min-height: 44px; padding: 4px 6px; border-radius: 12px; border: 1px solid var(--line); background: none; font-weight: 700; font-size: 13.5px; color: var(--muted); cursor: pointer; line-height: 1.15; }
 .rp-seg button[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: #fff; }
 .rp-seg .cust { grid-column: 1 / -1; border-style: dashed; overflow-wrap: anywhere; }
@@ -526,6 +546,7 @@ main {
 .rp-used button::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
 .rp-custom .row { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 420px) { .rp-seg { grid-template-columns: repeat(2, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .rp-prod.ps-test .ps::before { animation: none; } }
 .rp-info { border-radius: 14px; background: var(--hover); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
 .rp-info .t { white-space: pre-wrap; overflow-wrap: anywhere; }
 .rp-info .t.empty { color: var(--muted); }
@@ -578,7 +599,7 @@ main {
 <div id="toast" role="status"></div>
 
 <script type="module">
-import { STATES, STATE, COLORS, MARKS, stateOf, usedCustoms, countedParts, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink } from '/programteszt.js';
+import { STATES, STATE, PSTATES, pstateOf, COLORS, MARKS, stateOf, usedCustoms, countedParts, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink } from '/programteszt.js';
 /* =====================================================================
    0. Régi címek: a heti lap a /valk/ címre költözött (régi könyvjelzők).
    ===================================================================== */
@@ -833,6 +854,10 @@ function demoPt(newId) {
   let k = q('3100.0120 - Kontener eleje hatulja', ['R001_3100_0120_ELEJE.rp4', 'R001_V2_3100_0120_HATULJA.rp4', 'R001_3100_0120_SAROK.rp4'], 60);
   k = applyOp(k, { type: 'test_fix', part: k.parts.find((x) => x.key === 'HATULJA').id, text: 'Nincs összerakott termék – később folytatom\nSarokvarrat kezdete 2 mm-rel elcsúszik' }, { now: at(58), newId });
   k = applyOp(k, { type: 'test_ok', part: k.parts.find((x) => x.key === 'ELEJE').id }, { now: at(58), newId });
+  m = applyOp(m, { type: 'status', part: m.parts.find((x) => x.key === 'PALAST').id, status: 'auto' }, { now: at(20), newId });
+  p = applyOp(p, { type: 'pstate', pstate: 'test' }, ctx(0));
+  m = applyOp(m, { type: 'pstate', pstate: 'auto' }, { now: at(20), newId });
+  k = applyOp(k, { type: 'pstate', pstate: 'off' }, { now: at(50), newId });
   return [p, m, k];
 }
 const api = DEMO ? demoApi() : live;
@@ -1390,18 +1415,18 @@ async function loadPtIsland() {
   const { products } = await api.ptList();
   for (const p of products) {
     const s = summary(p);
-    hwIndex.push({ t: p.sku, s: `${p.name} · ${s.wait} tesztre vár · ${s.fix} javítani`, k: 'pt', u: `#/teszt/${p.id}` });
+    hwIndex.push({ t: p.sku, s: `${p.name} · ${PSTATES[pstateOf(p)].t} · ${s.wait} tesztre vár · ${s.fix} javítani`, k: 'pt', u: `#/teszt/${p.id}` });
     visibleParts(p).forEach((x) => hwIndex.push({ t: x.name, s: `${p.sku} · ${latestOf(x).v} · ${stateOf(x).t}`, k: 'pt', icon: 'box', u: `#/teszt/${p.id}` }));
   }
-  const t = { wait: 0, fix: 0, tweak: 0, ok: 0 }, cm = new Map();
+  const t = { wait: 0, fix: 0, tweak: 0, ok: 0, auto: 0 }, cm = new Map();
   for (const p of products) { const s = summary(p); STATES.forEach((k) => { t[k] += s[k]; }); s.customs.forEach((c) => { const key = `${c.t}|${c.c}`; cm.set(key, { ...c, n: (cm.get(key)?.n || 0) + c.n }); }); }
   // sorrend, mint a táblában: Tesztre vár, Javítani kell, saját állapotok, Kis finomítás, Kész
-  const rows = [...['wait', 'fix'].map((k) => ({ t: STATE[k].t, color: `var(--st-${k})`, n: t[k] })), ...cm.values(), ...['tweak', 'ok'].map((k) => ({ t: STATE[k].t, color: `var(--st-${k})`, n: t[k] }))];
+  const rows = [...['wait', 'fix'].map((k) => ({ t: STATE[k].t, color: `var(--st-${k})`, n: t[k] })), ...cm.values(), ...['tweak', 'ok', 'auto'].map((k) => ({ t: STATE[k].t, color: `var(--st-${k})`, n: t[k] }))].filter((x) => x.n || x.color.includes('ok'));
   const n = rows.reduce((a, x) => a + x.n, 0);
   if (!n) { hwFill('pt', `<p class="hw-lead">Még nem jött adat a DTPS mappából.</p><p class="hw-mini">A Teendőim küldi 5 percenként.</p>`); return; }
   const r = 46, c = 2 * Math.PI * r; let acc = 0;
   const segs = rows.map((x) => { const v = x.n / n; const out = v ? `<circle cx="62" cy="62" r="${r}" stroke-width="14" style="stroke:${x.color}" stroke-dasharray="${Math.max(0, c * v - 3)} ${c}" stroke-dashoffset="${-c * acc}"/>` : ''; acc += v; return out; }).join('');
-  hwFill('pt', `<div class="hw-donut"><div class="ring"><svg viewBox="0 0 124 124" aria-hidden="true"><circle class="tr" cx="62" cy="62" r="${r}" stroke-width="14"/>${segs}</svg><div class="lab"><b>${t.ok}</b><span>kész</span></div></div>
+  hwFill('pt', `<div class="hw-donut"><div class="ring"><svg viewBox="0 0 124 124" aria-hidden="true"><circle class="tr" cx="62" cy="62" r="${r}" stroke-width="14"/>${segs}</svg><div class="lab"><b>${t.ok + t.auto}</b><span>kész</span></div></div>
     <ul class="hw-legend">${rows.map((x) => `<li style="--k:${x.color}"><b class="tab">${x.n}</b> ${esc(x.t)}</li>`).join('')}</ul></div>`, t.wait);
 }
 
@@ -1428,16 +1453,18 @@ async function renderPtList() {
     <p class="rp-foot" id="ptFoot"></p></div>`;
   icons();
   const { products, synced_at } = await guarded(() => api.ptList());
-  products.sort((a, b) => ptOrder(a) - ptOrder(b) || (summary(b).last || '').localeCompare(summary(a).last || ''));
+  products.sort((a, b) => PSTATES[pstateOf(a)].order - PSTATES[pstateOf(b)].order || ptOrder(a) - ptOrder(b) || (summary(b).last || '').localeCompare(summary(a).last || ''));
   $('#ptFoot').textContent = syncText(synced_at);
   if (!products.length) { $('#ptList').innerHTML = `<p class="muted" style="margin:0;padding:20px">Még nincs termék.</p>`; return; }
   $('#ptList').innerHTML = products.map((p) => {
     const s = summary(p), parts = visibleParts(p);
-    return `<a class="rp-prod" href="#/teszt/${esc(p.id)}">
-      <span><b>${esc(p.sku)}</b>${p.name ? `<br><span class="nm">${esc(p.name)}</span>` : ''}</span>
+    const ps = pstateOf(p);
+    return `<a class="rp-prod ps-${ps}" href="#/teszt/${esc(p.id)}">
+      <span><span class="ttl"><b>${esc(p.sku)}</b><span class="ps">${ps === 'auto' ? '<i data-lucide="cog"></i>' : ''}${PSTATES[ps].t}</span></span>${p.name ? `<br><span class="nm">${esc(p.name)}</span>` : ''}</span>
       <span class="rp-bar" aria-hidden="true">${countedParts(p).map((x) => `<i style="--c:${stateOf(x).color}"></i>`).join('')}</span>
-      <span class="nums">${s.wait ? `<span class="n-wait"><b>${s.wait}</b> tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix"><b>${s.fix}</b> javítani</span>` : ''}${customNums(s)}${s.tweak ? `<span class="n-tweak"><b>${s.tweak}</b> finomítás</span>` : ''}<span class="n-ok"><b>${s.ok}</b>/${s.parts} kész</span>${s.last ? `<span>utolsó program: ${whenText(s.last)}</span>` : ''}</span></a>`;
+      <span class="nums">${s.wait ? `<span class="n-wait"><b>${s.wait}</b> tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix"><b>${s.fix}</b> javítani</span>` : ''}${customNums(s)}${s.tweak ? `<span class="n-tweak"><b>${s.tweak}</b> finomítás</span>` : ''}${s.auto ? `<span class="n-auto"><b>${s.auto}</b> automatizálva</span>` : ''}<span class="n-ok"><b>${s.done}</b>/${s.parts} kész</span>${s.last ? `<span>utolsó program: ${whenText(s.last)}</span>` : ''}</span></a>`;
   }).join('');
+  icons();
 }
 
 // --- Egy termék: a részei táblában, koppintásra oldalpanel ---
@@ -1465,7 +1492,8 @@ async function renderPtProduct(id) {
     app.innerHTML = `
       <a class="backlink" href="#/teszt"><i data-lucide="arrow-left"></i>Robot programok</a>
       <div class="rp-head"><h1>${esc(p.sku)}</h1>${p.name ? `<p>${esc(p.name)}</p>` : ''}
-        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}${s.customs.map((c) => `<span style="color:${c.color}">${c.n} ${esc(c.t.toLowerCase())}</span>`).join('')}${s.tweak ? `<span class="n-tweak">${s.tweak} finomítás</span>` : ''}<span class="n-ok">${s.ok}/${s.parts} kész</span>${s.struck ? `<span class="muted">${s.struck} kihúzva</span>` : ''}</div></div>
+        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}${s.customs.map((c) => `<span style="color:${c.color}">${c.n} ${esc(c.t.toLowerCase())}</span>`).join('')}${s.tweak ? `<span class="n-tweak">${s.tweak} finomítás</span>` : ''}${s.auto ? `<span class="n-auto">${s.auto} automatizálva</span>` : ''}<span class="n-ok">${s.done}/${s.parts} kész</span>${s.struck ? `<span class="muted">${s.struck} kihúzva</span>` : ''}</div>
+        <div class="rp-psg" role="group" aria-label="A termék állapota">${Object.entries(PSTATES).map(([k, x]) => `<button type="button" data-ps="${k}" aria-pressed="${pstateOf(p) === k}" style="--c:${{ test: 'var(--ps-test)', idle: 'var(--muted)', auto: 'var(--st-auto)', off: '#8a8f98' }[k]}">${k === 'test' ? '<i data-lucide="flask-conical"></i>' : k === 'auto' ? '<i data-lucide="cog"></i>' : k === 'off' ? '<i data-lucide="moon"></i>' : '<i data-lucide="pause"></i>'}${x.t}</button>`).join('')}</div></div>
       ${parts.length ? `<table class="rp-tbl"><thead><tr><th>Rész</th><th>Legfrissebb</th><th>Állapot</th><th>Mi a teendő</th></tr></thead>
         <tbody>${parts.map((x) => `<tr data-part="${esc(x.id)}" tabindex="0"${MARKS[x.mark] ? ` class="mk-${x.mark}" style="--mk:${MARKS[x.mark].hex}"` : ''}><td class="part"><span>${esc(x.name)}</span>${MARKS[x.mark] ? `<span class="rp-mk">${MARKS[x.mark].t}</span>` : ''}</td><td class="mono">${esc(latestOf(x).v)}</td><td class="c-st">${stHtml(x)}</td><td class="c-todo todo">${todo(x)}</td></tr>`).join('')}</tbody></table>`
         : '<div class="card glass"><p class="muted" style="margin:0">Ebben a termékmappában még nincs program.</p></div>'}
@@ -1503,7 +1531,7 @@ async function renderPtProduct(id) {
       ${x.status === 'ok' ? `<p class="rp-good">✓ Minden tökéletes${x.ok_at ? ` (${esc(whenText(x.ok_at))})` : ''}</p>` : ''}
       ${writing ? `<div class="rp-lbl">Mi a teendő? – soronként egy pont</div><textarea id="rpObs" maxlength="6000" placeholder="pl. Kezdőpont 2 mm-t csúszik"></textarea>
         <div class="rp-acts"><button class="btn rp-fix" type="button" data-a="save"><i data-lucide="wrench"></i>Mentés – javítani kell</button><button class="btn" type="button" data-a="cancel">Mégse</button></div>`
-      : `<div class="rp-acts">${x.status !== 'ok' ? `<button class="btn rp-ok" type="button" data-a="ok"><i data-lucide="check"></i>Teszteltem – minden tökéletes</button>` : ''}
+      : `<div class="rp-acts">${x.status !== 'ok' && x.status !== 'auto' ? `<button class="btn rp-ok" type="button" data-a="ok"><i data-lucide="check"></i>Teszteltem – minden tökéletes</button>` : ''}
         <button class="btn" type="button" data-a="write"><i data-lucide="pencil-line"></i>Mi a teendő?</button></div>`}
       <div class="rp-lbl">Infó a ${esc(v.v)} verzióhoz</div>
       <div class="rp-notes">${curG.notes.slice().reverse().map(noteHtml).join('')}
@@ -1522,7 +1550,11 @@ async function renderPtProduct(id) {
     catch (e) { if (!(e instanceof AccessError)) toast(e.message); }
     finally { busy = false; }
   };
-  app.addEventListener('click', (e) => { const r = e.target.closest('tr[data-part]'); if (r) open(r.dataset.part); });
+  app.addEventListener('click', async (e) => {
+    const ps = e.target.closest('[data-ps]');
+    if (ps) { if (busy) return; busy = true; try { p = await guarded(() => api.ptOp(p.id, { type: 'pstate', pstate: ps.dataset.ps })); drawTable(); toast(`${p.sku}: ${PSTATES[ps.dataset.ps].t}`); } catch (er) { if (!(er instanceof AccessError)) toast(er.message); } finally { busy = false; } return; }
+    const r = e.target.closest('tr[data-part]'); if (r) open(r.dataset.part);
+  });
   app.addEventListener('keydown', (e) => { const r = e.target.closest('tr[data-part]'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(r.dataset.part); } });
   scrim.addEventListener('click', close);
   panel.addEventListener('click', (e) => {

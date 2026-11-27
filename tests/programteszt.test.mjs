@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { handle } from '../lib/kozpont-core.mjs';
 import { memoryStore } from '../lib/km-core.mjs';
-import { parseProgram, parseFolder, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink, stateOf, usedCustoms, PtError } from '../public/programteszt.js';
+import { parseProgram, parseFolder, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink, stateOf, usedCustoms, pstateOf, PtError } from '../public/programteszt.js';
 
 const CODE = 'ABCDE-12345-FGHIJ-67890';
 const NAPLO = 'NAPLO-12345-FGHIJ-00000';
@@ -180,4 +180,24 @@ test('jelölés: kihúzva / csak teszt / ideiglenes', () => {
   p = syncProduct(p, { folder: F7510, programs: progs('R001_2950_7510_A.rp4', 'R001_V1_2950_7510_B.rp4', 'R001_2950_7510_C.rp4') }, ctx);
   assert.equal(p.parts.find((x) => x.id === b).mark, 'test');
   void c;
+});
+
+test('automatizálva rész + termékállapot', () => {
+  const ctx = { now: new Date('2026-11-27T09:00:00Z'), newId: (() => { let i = 0; return () => `n${++i}`; })() };
+  let p = syncProduct(null, { folder: F7510, programs: progs('R001_2950_7510_A.rp4', 'R001_2950_7510_B.rp4') }, ctx);
+  const [a, b] = p.parts.map((x) => x.id);
+  assert.equal(pstateOf(p), 'idle', 'alapból: Áll');
+  p = applyOp(p, { type: 'status', part: a, status: 'auto' }, ctx);
+  p = applyOp(p, { type: 'test_ok', part: b }, ctx);
+  const s = summary(p);
+  assert.deepEqual([s.auto, s.ok, s.done, s.complete], [1, 1, 2, true]);
+  assert.equal(stateOf(p.parts.find((x) => x.id === a)).t, 'Automatizálva');
+  assert.throws(() => applyOp(p, { type: 'pstate', pstate: 'x' }, ctx), PtError);
+  const r = p.rev;
+  p = applyOp(p, { type: 'pstate', pstate: 'test' }, ctx);
+  assert.equal(pstateOf(p), 'test');
+  assert.equal(p.rev, r + 1);
+  assert.equal(applyOp(p, { type: 'pstate', pstate: 'test' }, ctx), p, 'ugyanaz: nincs változás');
+  p = applyOp(p, { type: 'pstate', pstate: 'off' }, ctx);
+  assert.equal(pstateOf(p), 'off');
 });
