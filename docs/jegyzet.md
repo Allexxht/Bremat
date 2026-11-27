@@ -246,6 +246,22 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   tároló, `o/<id>` kulcs (`lib/kozpont-core.mjs`: `idea_list`, `idea_add`, `idea_update`, `idea_delete`).
   Ez az első adat, amit a Központ maga tárol. Demóban (`?demo`) memóriában, mintaötletekkel.
 
+### Kezdőlap „Színes üveg” (2026. november 26., Alex választása a makettből)
+- A szigetek helyett: **kereső** (Ctrl K; menüpontok, termékek és részek, ötletek, projektoldalak, Valk lap),
+  **nagy óra** + **Műszak** widget (7:00–15:00, a Teendőimmel azonos szünetek: hátralévő idő és a következő szünet),
+  **színezett widgetek** (Munkanapló, Robot programok, Valk heti lap, ARC-EYE edző, Ötletek, Projektek),
+  alul **dokk** (gyorsindító, jelvényekkel). Ikonok: Material Symbols Rounded (Google Fonts), ráhúzásra kitöltődnek.
+- **Widgetek** gomb → oldalpanel: mi látszódjon (widgetek, nyitó animáció, dokk). `localStorage` `kozpont-widgetek`,
+  eszközönként. A nyitó animáció alapból ki van kapcsolva (be lehet kapcsolni). Ha csak egy kicsi widget marad
+  (Valk vagy ARC-EYE), kitölti a sort.
+- A dokk és a panel a `body`-ba kerül (`#hwLayer`), hogy a fejléc fölött legyen; nézetváltáskor a `route()` leveszi.
+- A kezdőlapon `html.hw-on`: a makett színei (csak világos témában), a selyemszalag-canvas és a felső fejléc
+  nem látszik (a canvas a homályos üveg mögött minden képkockán újrarajzolt – ettől akadt a dokk; most áll is:
+  `silk.pause()`). A logó a kereső sávban; ha a dokk ki van kapcsolva, ott van a menügomb is.
+- Az óra 5 mp-enként frissül, de csak a változott szöveget írja át; a Műszak gyűrű a helyén tölt tovább.
+- Nagy képernyőn `zoom` 1,1 / 1,2 / 1,32 (1400 / 1700 / 2100 px-től) – Alex kérte, hogy minden nagyobb legyen.
+- Makett: https://claude.ai/artifact/EANomSp7uc64GGX6rjAgqU
+
 ## Nyitó animáció (2026. november 5–16.)
 - A Központ kezdőlapján a köszönés fölött (`#hero`, 3:1): `public/kozpont/intro.webm` (VP9 + alfa,
   1200×400, 30 kép/mp, 10 mp). Történet: a BREMAT FT3 konténer váza felépül – ahol egy vázelem a
@@ -451,7 +467,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   átláthatatlan volt. A valódi gond: több terméket tesztel, részenként külön DTPS program, verziók
   Alap → V1 → V2…, és 2 hónap után nem tudja, hol tartott, melyik a legfrissebb, melyik rész jó.
 - **3. változat:** a termékek / részek / verziók **maguktól jönnek a DTPS mappából**. A Teendőim
-  (`DtpsPump`, a `Tick`-ből) induláskor (+30 mp) és 5 percenként beolvassa:
+  (`DtpsPump`, a `Tick`-ből) induláskor (+30 mp) és percenként (2026. nov. 27. óta, előtte 5 perc) beolvassa:
   `C:\robotinstallation\24-6521_260710_v1_MKU_Bremat Holland_C\Alex\<termékmappa>\Teaching\R001_….rp4\program.rp4`
   (más mappa: `%APPDATA%\Teendoim\beallitas.json` → `dtpsDir`), és ha változott (vagy 1 órája nem
   küldött) `pt_sync`-kel elküldi a **neveket és dátumokat** (fájl nem megy fel – Alex engedte). Kód: a
@@ -462,7 +478,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   (pl. `R001_KIVETELES TOMPA.rp4`) is rész lesz. Rész kulcsa: nagybetű, `-`/szóköz → `_`.
   Legfrissebb: verziószám, aztán UJ, aztán dátum. `parseFolder`, `parseProgram` a `public/programteszt.js`-ben.
 - Állapot részenként: **Tesztre vár** (új rész, vagy új verzió jelent meg a mappában) → **Javítani kell**
-  („Teszteltem – észrevételt írok”: soronként egy pont, a verzió jelölésével) → **Kész** („Teszteltem –
+  („Mi a teendő?”: soronként egy pont, a verzió jelölésével) → **Kész** („Teszteltem –
   minden tökéletes”: a pontok kipipálva). Pontok pipálhatók; „Újra tesztelni” (Kész → Tesztre vár).
   A nyitott pontok új verziónál is megmaradnak („ezeket ellenőrizd a tesztnél”).
 - Felület: `#/teszt` (termékek, színes sáv részenként), `#/teszt/<id>` (tábla: Rész | Legfrissebb |
@@ -485,6 +501,58 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   legfrissebb verzióhoz írt infó annál a verziónál marad; ha átírja V1-re, az Alap infói a „Korábbi verziók”
   alatt látszanak (`notesByVersion`). (3) **Összesítő infó** a részhez (`info`, verziótól független), a panel tetején,
   mindig. Műveletek: `note_add`, `note_delete`, `info_set`, `status` (tweak is).
+- **2026-11-26 délután:** **saját állapot** – Alex bármit beírhat (max. 40 betű) és színt választ hozzá
+  (`status: 'custom'`, `custom: { t, c }`, a szín a `COLORS` kulcsa, nem színkód). Művelet: `status_custom`.
+  Sorrendben a Javítani kell és a Kis finomítás közé kerül; az összesítő (`summary().customs`) szövegenként számolja.
+  A panelen „+ Saját állapot” gomb, alatta a korábban használtak (`usedCustoms`) egy kattintással. Új verzió → Tesztre vár.
+- **Jelölés** a részen (az állapottól független, `mark`: `strike` | `test` | `temp` | null; művelet `mark`):
+  Kihúzva (áthúzva, halvány, a tábla aljára kerül, a számolásba nem számít – `countedParts`, `summary().struck`),
+  Csak teszt (szaggatott lila keret), Ideiglenes (pontozott narancs keret). Új verziónál megmarad.
+- A pontok mellett kuka gomb (`point_delete`, megerősítéssel): a véletlenül felvett pont törölhető.
+- **Automatizálva** részállapot (`status: 'auto'`, türkiz): a „kész” után, a sorrend végén. `summary().done` = ok + auto.
+- **Termékállapot** (`p.pstate`, művelet `pstate`, `PSTATES` / `pstateOf`, alap `idle`): Tesztelés alatt (lila, erős
+  kiemelés, lista elején) → Áll (semmi extra) → Automatizált (türkiz csík, halványabb) → Munkán kívül (szürke, halvány,
+  lista végén). A termék oldalán gombsor; a szinkron megtartja.
 - Netlify keret (nov. 26.): éles deploy szünetel → Alex az előnézetet használja; ideiglenes szinkron:
   `DTPS-szinkron.bat` (projekt fájlok, `robot-programok/`), az előnézet `/api/kozpont`-jára küld. A Blobs tároló közös.
 
+### Rész panel (B változat) és termék-infó (2026. november 27., Alex kérése)
+- A rész jobb oldali panelje **lenyíló sorokból** áll (Alex a B makettet választotta): felül a
+  legfrissebb program (DTPS + Teszt gomb), alatta sorok: Mi a teendő / Állapot / Idő / Infó /
+  Előzmény, jobbra az értékük. A nyitott sorok (`openAcc`, alapból a teendő) részről részre
+  megmaradnak. Alul ragadós sáv: futó óra leállítása, Minden tökéletes, Mi a teendő?.
+- **Termék-infó („mi újság vele”)**: `pnote {text}` op (`p.note = {text, at}`, a régiek
+  `p.note_hist`-be, max 30). Üres szöveg = törlés. A listán és a termék oldalán is írható.
+  A listán a sor linkje egy `.rp-hit` réteg, hogy a gombok kattinthatók maradjanak.
+
+### Időmérés és statisztika (2026. november 27., Alex kérése)
+Cél: lássa, mennyi idő ment el egy részre / termékre (főleg a programozásra), és a főnöknek összkép.
+Három fajta (`TKINDS`): **prog** = programozás az irodában (a Teendőim méri), **kint** = javítás a robotnál
+(pendant), **test** = teszt a robotnál. „Programozás összesen” = iroda + kint (Alex kérése: lássa a teljeset).
+- **Iroda (magától):** a Teendőim 5 mp-enként nézi az előtérben lévő ablakot (`TeendoimFg`). Ha a DTPS
+  (`DTPS*` folyamat) és 2 percen belül nyúlt a géphez, az ablak címéből a programot a DTPS mappa
+  programneveivel egyezteti (leghosszabb egyezés; R001_ és .rp4 nélkül is), és az utolsó mozdulatig méri.
+  3 perc szünet vagy másik program = új munkamenet (`cid`). Percenként `pt_time` (Munkanapló kód is jó);
+  amit nem fogadott el a szerver, megőrzi: `%APPDATA%\Teendoim\dtps-ido.json` (14 napig). Menü → BREMAT
+  Központ: „Programozás mérése: …” sor. Windows nélkül itt nem tesztelhető – Alex gépén kell kipróbálni.
+- **Szerver:** `pt_time` → havi blob `ptt/<YYYY-MM>` ({ cid: { folder, program, from, ms } }, `mergePcTime`:
+  ugyanaz a cid → a hosszabb marad). Egyetlen író, így nem ütközik a termék-dokumentummal. A `pt_list`
+  az utolsó 13 hónapot `pctime` listában adja; a böngésző köti a részhez (`pcEntries`: mappa + programnév).
+- **Kint / teszt (óra a panelen):** `time_start` / `time_stop` (a termékben, `p.time`, futó: `ms: null`);
+  egyszerre egy óra (a másik terméké előbb leáll), 10 mp alatti = véletlen, törlődik. A teszt-órát a
+  „Minden tökéletes” / „Mi a teendő?” leállítja. 30 perc után a sáv rákérdez (Még megy / leállítás egy
+  korábbi időpontra: `time_stop { at }`). Egy óra legfeljebb 10 órát számít.
+- **Kézi javítás:** `time_fix { kind, min (±), day? }`, `time_delete` (a Teendőim mérése nem törölhető, csak
+  levonással javítható).
+- **Statisztika** (`#/teszt/stat`): Hét / Hónap / Év, lapozható; KPI, halmozott oszlop (iroda / kint / teszt,
+  színek validálva: #0a9bb0 / #e8631c / #5b3fd6), termék tábla, „Összkép a főnöknek” (másolás, nyomtatás).
+- Amíg az éles deploy szünetel (Netlify keret), a Teendőim új kódja nem jut le Alex gépére: az irodai mérés
+  a keret visszajöttével indul. A panel órái és a statisztika az előnézeten már mennek.
+
+## ARC-EYE edző (`/arceye/`)
+- Önálló, egyfájlos oldal: `public/arceye/index.html` (2026-11-19-i edző, 2026-11-26-án került a Központba).
+  Küldetések, Beállítás-iskola, Éles feladat, Képernyő, Hibakereső, Gyorskérdések, Programrakó.
+- Nincs szerver, nincs kód: az előrehaladás a böngészőben (`localStorage` `aeT_p`, `aeT_c`).
+  A Központ kezdőlapjának „ARC-EYE edző” szigete ugyanebből olvassa a szintet és a kész küldetéseket.
+- Szándékosan sötét: az ARC-EYE vezérlőképernyőjét utánozza. A Központ menüjében is ott van.
+- A kézikönyvből csak fejezet/gyakorlat hivatkozás és rövid, egyszerűsített példakód-sorok vannak benne (a repó nyilvános).

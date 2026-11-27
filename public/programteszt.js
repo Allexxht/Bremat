@@ -17,14 +17,52 @@
 // Egy termék = egy dokumentum; Alex lépései „műveletek” (applyOp).
 // =====================================================================
 
-export const STATES = ['wait', 'fix', 'tweak', 'ok'];
+export const STATES = ['wait', 'fix', 'tweak', 'ok', 'auto'];
 export const STATE = {
-  wait:  { t: 'Tesztre vár',   order: 0 },
-  fix:   { t: 'Javítani kell', order: 1 },
-  tweak: { t: 'Kis finomítás', order: 2 },
-  ok:    { t: 'Kész',          order: 3 },
+  wait:   { t: 'Tesztre vár',   order: 0 },
+  fix:    { t: 'Javítani kell', order: 1 },
+  custom: { t: 'Saját állapot', order: 1.5 },   // Alex bármit beírhat, színnel (2026. nov. 26.)
+  tweak:  { t: 'Kis finomítás', order: 2 },
+  ok:     { t: 'Kész',          order: 3 },
+  auto:   { t: 'Automatizálva', order: 4 },   // a program megy a gyártásban (2026. nov. 27., Alex)
 };
-const MAX = { parts: 200, versions: 100, points: 300, tests: 300, notes: 500, products: 300, programs: 400 };
+/** A termék állapota (Alex, 2026. nov. 27.): mi van most munkában. Alap: Áll. */
+export const PSTATES = {
+  test: { t: 'Tesztelés alatt', order: 0 },   // erősen kiemelve
+  idle: { t: 'Áll',             order: 1 },   // semmi extra
+  auto: { t: 'Automatizált',    order: 2 },   // kiemelve, de kevésbé
+  off:  { t: 'Munkán kívül',    order: 3 },   // szürke, háttérben
+};
+export const pstateOf = (p) => (PSTATES[p.pstate] ? p.pstate : 'idle');
+/** A saját állapot színei (kulcs tárolódik, nem a színkód). */
+export const COLORS = {
+  violet: { t: 'Lila', hex: '#7b3fe4' }, pink: { t: 'Rózsaszín', hex: '#d6337a' }, orange: { t: 'Narancs', hex: '#e8631c' },
+  teal: { t: 'Türkiz', hex: '#0a9bb0' }, blue: { t: 'Kék', hex: '#2563c9' }, green: { t: 'Zöld', hex: '#1f9d55' },
+  amber: { t: 'Sárga', hex: '#c27c00' }, red: { t: 'Piros', hex: '#d1342f' }, grey: { t: 'Szürke', hex: '#6b7280' },
+};
+/** Jelölés a részen (az állapottól független): kihúzva (nem kell, a lista aljára kerül, nem számít bele),
+ *  csak teszt, ideiglenes. A táblában más keretet kap. */
+export const MARKS = {
+  strike: { t: 'Kihúzva', hex: '#6b7280' },
+  test:   { t: 'Csak teszt', hex: '#7b3fe4' },
+  temp:   { t: 'Ideiglenes', hex: '#e8631c' },
+};
+/** A rész állapota megjelenítéshez: { k, t, color } – a color CSS-érték (a beépítetteknél a --st-* változó). */
+export function stateOf(part) {
+  if (part.status === 'custom') {
+    const c = COLORS[part.custom?.c] ? part.custom.c : 'grey';
+    return { k: 'custom', t: part.custom?.t || STATE.custom.t, color: COLORS[c].hex, c };
+  }
+  const k = STATE[part.status] ? part.status : 'wait';
+  return { k, t: STATE[k].t, color: `var(--st-${k})` };
+}
+/** Időmérés (Alex, 2026. nov. 27.): mire ment el az idő. A programozás = iroda + kint. */
+export const TKINDS = {
+  prog: { t: 'Programozás', s: 'iroda (DTPS)' },     // a Teendőim méri magától, amíg a DTPS elöl van
+  kint: { t: 'Javítás kint', s: 'a robotnál' },      // a robotnál, a pendanton javítva – óra a panelen
+  test: { t: 'Teszt', s: 'a robotnál' },             // óra a panelen; „Minden tökéletes” / „Mi a teendő?” leállítja
+};
+const MAX = { time: 4000, parts: 200, versions: 100, points: 300, tests: 300, notes: 500, products: 300, programs: 400 };
 
 export class PtError extends Error {}
 const fail = (m) => { throw new PtError(m); };
@@ -145,22 +183,84 @@ export function markGone(src, now = new Date()) {
  *   point_toggle { part, point }     – pont kipipálása / vissza
  *   point_delete { part, point }
  *   status       { part, status }    – kézi állapot (Tesztre vár / Javítani kell / Kis finomítás / Kész)
+ *   pstate       { pstate }          – a TERMÉK állapota (nem kell part): test | idle | auto | off
+ *   pnote        { text }            – a TERMÉK infója („mi újság vele”); üres = törlés
+ *   mark         { part, mark }      – jelölés: 'strike' | 'test' | 'temp' | null (nincs)
+ *   status_custom { part, text, color } – saját állapot: bármilyen szöveg (max. 40 betű) + szín (COLORS kulcsa)
  *   note_add     { part, text }      – infó a legfrissebb verzióhoz (a verzióval együtt megmarad)
  *   note_delete  { part, note }
  *   info_set     { part, text }      – összesítő infó a részhez (verziótól független)
+ *   time_start   { part, kind }      – óra indul (kind: TKINDS kulcsa); a futó óra (ha van) megáll
+ *   time_stop    { at? }             – a futó óra megáll (at: ha elfelejtetted, mikor hagytad abba)
+ *   time_fix     { part, kind, min, day? } – kézi javítás: + / − perc (a legfrissebb verzióhoz)
+ *   time_delete  { entry }           – időbejegyzés törlése
  */
 export function applyOp(src, op, { now = new Date(), newId }) {
   if (!op || typeof op !== 'object') fail('Hibás művelet');
   const ts = now.toISOString();
   const p = structuredClone(src);
+  if (op.type === 'time_stop') {
+    const e = runningOf(p); if (!e) return src;
+    let end = now.getTime();
+    if (op.at != null) { const t = Date.parse(op.at); if (!Number.isFinite(t) || t > end + 60000 || t < Date.parse(e.from)) fail('Érvénytelen időpont'); end = Math.min(t, end); }
+    e.ms = Math.min(RUN_CAP, Math.max(0, end - Date.parse(e.from)));
+    if (e.ms < 10000) p.time = p.time.filter((y) => y !== e);   // véletlen koppintás
+    p.updated_at = ts; p.rev = (src.rev || 0) + 1;
+    return p;
+  }
+  if (op.type === 'time_delete') {
+    const e = pick(p.time || [], op.entry, 'időbejegyzés');
+    p.time = p.time.filter((y) => y !== e);
+    p.updated_at = ts; p.rev = (src.rev || 0) + 1;
+    return p;
+  }
+  if (op.type === 'pnote') {
+    // a termékhez: „mi újság vele” (egy szöveg, felülírható; a régiek megmaradnak a note_hist-ben)
+    const text = str(op.text, 2000) || '';
+    if ((src.note?.text || '') === text) return src;
+    if (src.note?.text) { p.note_hist = [...(src.note_hist || []), src.note].slice(-30); }
+    p.note = text ? { text, at: ts } : null;
+    p.updated_at = ts; p.rev = (src.rev || 0) + 1;
+    return p;
+  }
+  if (op.type === 'pstate') {
+    if (!PSTATES[op.pstate]) fail('Érvénytelen termékállapot');
+    if (pstateOf(src) === op.pstate) return src;
+    p.pstate = op.pstate; p.pstate_at = ts; p.updated_at = ts; p.rev = (src.rev || 0) + 1;
+    return p;
+  }
   const part = pick(p.parts, op.part, 'rész');
   const v = latestOf(part);
 
   switch (op.type) {
+    case 'time_start': {
+      if (!TKINDS[op.kind]) fail('Érvénytelen időfajta');
+      const r = runningOf(p);
+      if (r && r.part === part.id && r.k === op.kind) return src;
+      if (r) r.ms = Math.min(RUN_CAP, Math.max(0, now.getTime() - Date.parse(r.from)));
+      p.time ||= [];
+      if (p.time.length >= MAX.time) fail('Túl sok időbejegyzés');
+      p.time.push({ id: newId(), part: part.id, k: op.kind, v: v?.v || null, from: ts, ms: null, src: 'ora' });
+      p.updated_at = ts; p.rev = (src.rev || 0) + 1;
+      return p;   // a rész sorrendje ne változzon
+    }
+    case 'time_fix': {
+      if (!TKINDS[op.kind]) fail('Érvénytelen időfajta');
+      const min = Math.round(Number(op.min));
+      if (!Number.isFinite(min) || min === 0 || Math.abs(min) > 720) fail('Adj meg perceket (legfeljebb 12 óra)');
+      let from = ts;
+      if (op.day) { if (!/^\d{4}-\d{2}-\d{2}$/.test(op.day) || Date.parse(op.day) > now.getTime()) fail('Érvénytelen nap'); from = `${op.day}T11:00:00.000Z`; }
+      p.time ||= [];
+      if (p.time.length >= MAX.time) fail('Túl sok időbejegyzés');
+      p.time.push({ id: newId(), part: part.id, k: op.kind, v: v?.v || null, from, ms: min * 60000, src: 'kezi' });
+      p.updated_at = ts; p.rev = (src.rev || 0) + 1;
+      return p;
+    }
     case 'test_ok': {
       for (const x of part.points) if (!x.done) { x.done = true; x.done_at = ts; }
       part.status = 'ok'; part.ok_at = ts; part.tested = v?.dir || null;
       part.tests.push({ at: ts, v: v?.v || null, ok: true });
+      stopTest(p, part, now);
       break;
     }
     case 'test_fix': {
@@ -170,6 +270,7 @@ export function applyOp(src, op, { now = new Date(), newId }) {
       for (const t of lines) part.points.push({ id: newId(), text: t, v: v?.v || null, at: ts, done: false, done_at: null });
       part.status = 'fix'; part.ok_at = null; part.tested = v?.dir || null;
       part.tests.push({ at: ts, v: v?.v || null, ok: false, n: lines.length });
+      stopTest(p, part, now);
       break;
     }
     case 'point_toggle': {
@@ -186,7 +287,21 @@ export function applyOp(src, op, { now = new Date(), newId }) {
       if (!STATES.includes(op.status)) fail('Érvénytelen állapot');
       if (part.status === op.status) return src;
       part.status = op.status;
-      part.ok_at = op.status === 'ok' ? ts : null;
+      part.ok_at = op.status === 'ok' || op.status === 'auto' ? (part.ok_at || ts) : null;
+      break;
+    }
+    case 'status_custom': {
+      const t = str(op.text, 40) || fail('Írd be az állapotot');
+      if (!COLORS[op.color]) fail('Érvénytelen szín');
+      if (part.status === 'custom' && part.custom?.t === t && part.custom?.c === op.color) return src;
+      part.status = 'custom'; part.custom = { t, c: op.color }; part.ok_at = null;
+      break;
+    }
+    case 'mark': {
+      const m = op.mark || null;
+      if (m !== null && !MARKS[m]) fail('Érvénytelen jelölés');
+      if ((part.mark || null) === m) return src;
+      part.mark = m;
       break;
     }
     case 'note_add': {
@@ -217,18 +332,103 @@ export function applyOp(src, op, { now = new Date(), newId }) {
   return p;
 }
 
+// ---------- Időmérés ----------
+
+const RUN_CAP = 10 * 3600000;   // egy elfelejtett óra legfeljebb 10 órát számít
+export const runningOf = (p) => (p.time || []).find((e) => e.ms === null) || null;
+/** A teszt-óra megáll, ha a részre teszteredmény jön. */
+function stopTest(p, part, now) {
+  const e = runningOf(p);
+  if (!e || e.part !== part.id || e.k !== 'test') return;
+  e.ms = Math.min(RUN_CAP, Math.max(0, now.getTime() - Date.parse(e.from)));
+  if (e.ms < 10000) p.time = p.time.filter((y) => y !== e);
+}
+/** Egy bejegyzés hossza (a futó óráé a mostanig). */
+export const entryMs = (e, now = Date.now()) => (e.ms ?? Math.min(RUN_CAP, Math.max(0, now - Date.parse(e.from))));
+
+/**
+ * A Teendőim által mért programozás (a pt_list „pctime” listája: { cid, folder, program, from, ms }) a termékhez:
+ * a termékmappa és a programnév alapján → { id, part, k: 'prog', v, from, ms, src: 'pc' }.
+ */
+export function pcEntries(p, pc) {
+  const f = String(p.folder || '').toLowerCase(), out = [];
+  for (const e of pc || []) {
+    if (String(e.folder || '').toLowerCase() !== f) continue;
+    const pr = parseProgram(e.program, p.sku); if (!pr) continue;
+    const part = p.parts.find((x) => x.key === pr.key); if (!part) continue;
+    out.push({ id: e.cid, part: part.id, k: 'prog', v: pr.v, from: e.from, ms: e.ms, src: 'pc' });
+  }
+  return out;
+}
+/** A termék összes időbejegyzése (a panelen kézzel / órával felvett + a Teendőim mérése). */
+export const timeOf = (p, pc) => [...(p.time || []), ...pcEntries(p, pc)];
+
+/** Összegzés: { prog, kint, test, all, coding } (ms) – coding = programozás összesen (iroda + kint). */
+export function timeSum(entries, now = Date.now()) {
+  const t = { prog: 0, kint: 0, test: 0 };
+  for (const e of entries) if (t[e.k] !== undefined) t[e.k] += entryMs(e, now);
+  for (const k of Object.keys(t)) t[k] = Math.max(0, t[k]);   // a kézi levonás nem viheti 0 alá
+  return { ...t, coding: t.prog + t.kint, all: t.prog + t.kint + t.test };
+}
+
+/** Verziónként (a legfrissebb elöl): [{ v, prog, kint, test, all }]. */
+export function timeByVersion(part, entries, now = Date.now()) {
+  const order = part.versions.map((x) => x.v), m = new Map();
+  for (const e of entries) {
+    if (e.part !== part.id) continue;
+    const v = e.v || 'Alap';
+    if (!m.has(v)) m.set(v, []);
+    m.get(v).push(e);
+  }
+  return [...m.entries()].map(([v, es]) => ({ v, ...timeSum(es, now) }))
+    .sort((a, b) => order.lastIndexOf(b.v) - order.lastIndexOf(a.v));
+}
+
+/**
+ * A Teendőim mérésének összefésülése a havi tárolóba ({ [cid]: { folder, program, from, ms } }).
+ * Ugyanaz a cid újra jöhet (a futó munkamenet nő): a hosszabb marad. Visszaadja az elfogadott cid-eket.
+ */
+export function mergePcTime(month, items, now = new Date()) {
+  const ok = [];
+  for (const it of Array.isArray(items) ? items : []) {
+    const cid = str(it?.cid, 64), folder = str(it?.folder, 200), program = str(it?.program, 200);
+    const from = isoOf(it?.from), ms = Math.round(Number(it?.ms));
+    if (!cid || !folder || !program || !from || !Number.isFinite(ms) || ms < 0) continue;
+    if (Date.parse(from) > now.getTime() + 300000) continue;
+    const cur = month[cid];
+    month[cid] = { folder, program, from: cur?.from || from, ms: Math.min(RUN_CAP, Math.max(cur?.ms || 0, ms)) };
+    ok.push(cid);
+  }
+  return ok;
+}
+
 // ---------- Megjelenítéshez ----------
 
-/** A látható részek: Tesztre vár → Javítani kell → Kész, azon belül a legutóbb változott elöl. */
+/** Az eddig használt saját állapotok (gyors választáshoz), a leggyakoribb elöl. */
+export function usedCustoms(products) {
+  const m = new Map();
+  for (const p of products) for (const x of p.parts) if (x.custom?.t && COLORS[x.custom.c]) {
+    const key = `${x.custom.t}\u0000${x.custom.c}`; m.set(key, { t: x.custom.t, c: x.custom.c, n: (m.get(key)?.n || 0) + 1 });
+  }
+  return [...m.values()].sort((a, b) => b.n - a.n).slice(0, 8);
+}
+
+/** A látható részek: Tesztre vár → Javítani kell → (saját) → Kész, a kihúzottak a végén, azon belül a legutóbb változott elöl. */
 export const visibleParts = (p) => p.parts.filter((x) => !x.gone && x.versions.length)
-  .sort((a, b) => STATE[a.status].order - STATE[b.status].order || (b.updated_at || '').localeCompare(a.updated_at || ''));
+  .sort((a, b) => Number(a.mark === 'strike') - Number(b.mark === 'strike') || (STATE[a.status]?.order ?? 0) - (STATE[b.status]?.order ?? 0) || (b.updated_at || '').localeCompare(a.updated_at || ''));
+
+/** A számolásba beleszámító részek (a kihúzottak nélkül). */
+export const countedParts = (p) => visibleParts(p).filter((x) => x.mark !== 'strike');
 
 export function summary(p) {
-  const parts = visibleParts(p);
-  const c = { wait: 0, fix: 0, tweak: 0, ok: 0 };
-  for (const x of parts) c[x.status]++;
+  const parts = countedParts(p), struck = visibleParts(p).length - parts.length;
+  const c = { wait: 0, fix: 0, tweak: 0, ok: 0, auto: 0, custom: 0 }, customs = new Map();
+  for (const x of parts) {
+    c[STATE[x.status] ? x.status : 'wait']++;
+    if (x.status === 'custom') { const s = stateOf(x), key = `${s.t}\u0000${s.c}`; customs.set(key, { t: s.t, c: s.c, color: s.color, n: (customs.get(key)?.n || 0) + 1 }); }
+  }
   const last = parts.reduce((m, x) => { const t = latestOf(x)?.m || ''; return t > m ? t : m; }, '');
-  return { ...c, parts: parts.length, complete: parts.length > 0 && c.ok === parts.length, last: last || null };
+  return { ...c, customs: [...customs.values()], struck, parts: parts.length, done: c.ok + c.auto, complete: parts.length > 0 && c.ok + c.auto === parts.length, last: last || null };
 }
 export const openPoints = (part) => part.points.filter((x) => !x.done);
 
