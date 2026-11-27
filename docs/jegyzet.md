@@ -516,6 +516,15 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Netlify keret (nov. 26.): éles deploy szünetel → Alex az előnézetet használja; ideiglenes szinkron:
   `DTPS-szinkron.bat` (projekt fájlok, `robot-programok/`), az előnézet `/api/kozpont`-jára küld. A Blobs tároló közös.
 
+### Rész panel (B változat) és termék-infó (2026. november 27., Alex kérése)
+- A rész jobb oldali panelje **lenyíló sorokból** áll (Alex a B makettet választotta): felül a
+  legfrissebb program (DTPS + Teszt gomb), alatta sorok: Mi a teendő / Állapot / Idő / Infó /
+  Előzmény, jobbra az értékük. A nyitott sorok (`openAcc`, alapból a teendő) részről részre
+  megmaradnak. Alul ragadós sáv: futó óra leállítása, Minden tökéletes, Mi a teendő?.
+- **Termék-infó („mi újság vele”)**: `pnote {text}` op (`p.note = {text, at}`, a régiek
+  `p.note_hist`-be, max 30). Üres szöveg = törlés. A listán és a termék oldalán is írható.
+  A listán a sor linkje egy `.rp-hit` réteg, hogy a gombok kattinthatók maradjanak.
+
 ### Időmérés és statisztika (2026. november 27., Alex kérése)
 Cél: lássa, mennyi idő ment el egy részre / termékre (főleg a programozásra), és a főnöknek összkép.
 Három fajta (`TKINDS`): **prog** = programozás az irodában (a Teendőim méri), **kint** = javítás a robotnál

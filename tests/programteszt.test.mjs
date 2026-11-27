@@ -257,3 +257,16 @@ test('pt_time: a Teendőim DTPS-mérése havi blobba, a listában a részhez kö
   assert.deepEqual([all[0].part, all[0].v, all[0].k], [p.parts[0].id, 'V3', 'prog']);
   await assert.rejects(c({ action: 'pt_time', items: [it] }, 'rossz'), { status: 401 });
 });
+
+test('termék-infó: mi újság vele (a régi megmarad)', () => {
+  const ctx = { now: new Date('2026-11-27T09:45:00Z'), newId: () => 'x' };
+  let p = syncProduct(null, { folder: F7510, programs: progs('R001_2950_7510_A.rp4') }, ctx);
+  p = applyOp(p, { type: 'pnote', text: '  Jig rendelve  ' }, ctx);
+  assert.equal(p.note.text, 'Jig rendelve');
+  assert.equal(applyOp(p, { type: 'pnote', text: 'Jig rendelve' }, ctx), p);
+  p = applyOp(p, { type: 'pnote', text: 'Jig megjött' }, ctx);
+  assert.deepEqual([p.note.text, p.note_hist.map((x) => x.text)], ['Jig megjött', ['Jig rendelve']]);
+  p = applyOp(p, { type: 'pnote', text: '' }, ctx);
+  assert.equal(p.note, null);
+  assert.equal(p.note_hist.length, 2);
+});

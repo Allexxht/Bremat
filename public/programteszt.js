@@ -184,6 +184,7 @@ export function markGone(src, now = new Date()) {
  *   point_delete { part, point }
  *   status       { part, status }    – kézi állapot (Tesztre vár / Javítani kell / Kis finomítás / Kész)
  *   pstate       { pstate }          – a TERMÉK állapota (nem kell part): test | idle | auto | off
+ *   pnote        { text }            – a TERMÉK infója („mi újság vele”); üres = törlés
  *   mark         { part, mark }      – jelölés: 'strike' | 'test' | 'temp' | null (nincs)
  *   status_custom { part, text, color } – saját állapot: bármilyen szöveg (max. 40 betű) + szín (COLORS kulcsa)
  *   note_add     { part, text }      – infó a legfrissebb verzióhoz (a verzióval együtt megmarad)
@@ -210,6 +211,15 @@ export function applyOp(src, op, { now = new Date(), newId }) {
   if (op.type === 'time_delete') {
     const e = pick(p.time || [], op.entry, 'időbejegyzés');
     p.time = p.time.filter((y) => y !== e);
+    p.updated_at = ts; p.rev = (src.rev || 0) + 1;
+    return p;
+  }
+  if (op.type === 'pnote') {
+    // a termékhez: „mi újság vele” (egy szöveg, felülírható; a régiek megmaradnak a note_hist-ben)
+    const text = str(op.text, 2000) || '';
+    if ((src.note?.text || '') === text) return src;
+    if (src.note?.text) { p.note_hist = [...(src.note_hist || []), src.note].slice(-30); }
+    p.note = text ? { text, at: ts } : null;
     p.updated_at = ts; p.rev = (src.rev || 0) + 1;
     return p;
   }
