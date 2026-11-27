@@ -2145,7 +2145,7 @@ function KozpontStart($browser) {
 }
 
 # ---------- Robot programok: a DTPS mappa figyelése ----------
-# Induláskor (30 mp múlva) és utána 5 percenként beolvassa a DTPS mappát:
+# Induláskor (30 mp múlva) és utána percenként beolvassa a DTPS mappát (Alex, 2026. nov. 27.):
 #   <DTPS mappa>\<termékmappa>\Teaching\R001_….rp4\program.rp4
 # és ha változott (vagy 1 órája nem küldött), a programok NEVÉT és DÁTUMÁT elküldi a
 # Központnak (pt_sync) – a Központ „Robot programok” oldala ebből tudja a legfrissebb verziót.
@@ -2175,7 +2175,7 @@ function DtpsPump {
   if ($script:dReq) {
     if (-not $script:dReq.task.IsCompleted) { return }
     $r = $script:dReq; $script:dReq = $null; $t = $r.task
-    if ($t.IsFaulted -or $t.IsCanceled) { $script:dStatus = 'Nincs kapcsolat a Központtal – 5 perc múlva újra.'; return }
+    if ($t.IsFaulted -or $t.IsCanceled) { $script:dStatus = 'Nincs kapcsolat a Központtal – 1 perc múlva újra.'; return }
     $st = [int]$t.Result.StatusCode
     if ($st -eq 200) { $script:dSent = $r.sig; $script:dSentAt = NowMs; $script:dStatus = "Elküldve: $(Get-Date -Format 'HH:mm')"; return }
     $err = ''; try { $err = [string](ConvertFrom-Json ($t.Result.Content.ReadAsStringAsync().Result)).error } catch {}
@@ -2184,7 +2184,7 @@ function DtpsPump {
   }
   $now = NowMs
   if (-not $script:nHttp -or $now -lt $script:dNext) { return }
-  $script:dNext = $now + 300000
+  $script:dNext = $now + 60000
   $list = DtpsScan
   $script:dLast = $list   # a programozás mérése ebből ismeri fel a programot az ablak címében
   if ($null -eq $list) { $script:dStatus = "Nincs meg a DTPS mappa: $(DtpsDir)"; return }

@@ -1595,7 +1595,7 @@ async function renderIdeas() {
 
 /* =====================================================================
    5c. Robot programok (#/teszt) – 3. változat (2026. nov. 26., Alex)
-   A termékek, részek, verziók a DTPS mappából jönnek (a Teendőim 5 percenként
+   A termékek, részek, verziók a DTPS mappából jönnek (a Teendőim percenként
    küldi a neveket). Itt: mi vár tesztre, mit kell javítani, mi kész – és a
    „Megnyitás DTPS-ben” gomb (a helyi Központ indítja a gépen).
    A logika a közös /programteszt.js-ben (a szerver is azt használja).
@@ -1675,7 +1675,7 @@ async function runBannerClick(ev, done) {
   catch (er) { if (!(er instanceof AccessError)) toast(er.message); }
   return true;
 }
-const syncText = (at) => at ? `A Teendőim 5 percenként beolvassa a DTPS mappát. Utoljára: ${whenText(at)}.` : 'Még nem jött adat a DTPS mappából. A Teendőim küldi 5 percenként (menü → BREMAT Központ → DTPS mappa beolvasása most).';
+const syncText = (at) => at ? `A Teendőim percenként beolvassa a DTPS mappát. Utoljára: ${whenText(at)}.` : 'Még nem jött adat a DTPS mappából. A Teendőim küldi percenként (menü → BREMAT Központ → DTPS mappa beolvasása most).';
 
 // --- Robot programok widget: összesítő gyűrű; a kereső a termékeket és a részeket is innen kapja ---
 async function loadPtIsland() {
@@ -1690,7 +1690,7 @@ async function loadPtIsland() {
   // sorrend, mint a táblában: Tesztre vár, Javítani kell, saját állapotok, Kis finomítás, Kész
   const rows = [...['wait', 'fix'].map((k) => ({ t: STATE[k].t, color: `var(--st-${k})`, n: t[k] })), ...cm.values(), ...['tweak', 'ok', 'auto'].map((k) => ({ t: STATE[k].t, color: `var(--st-${k})`, n: t[k] }))].filter((x) => x.n || x.color.includes('ok'));
   const n = rows.reduce((a, x) => a + x.n, 0);
-  if (!n) { hwFill('pt', `<p class="hw-lead">Még nem jött adat a DTPS mappából.</p><p class="hw-mini">A Teendőim küldi 5 percenként.</p>`); return; }
+  if (!n) { hwFill('pt', `<p class="hw-lead">Még nem jött adat a DTPS mappából.</p><p class="hw-mini">A Teendőim küldi percenként.</p>`); return; }
   const r = 46, c = 2 * Math.PI * r; let acc = 0;
   const segs = rows.map((x) => { const v = x.n / n; const out = v ? `<circle cx="62" cy="62" r="${r}" stroke-width="14" style="stroke:${x.color}" stroke-dasharray="${Math.max(0, c * v - 3)} ${c}" stroke-dashoffset="${-c * acc}"/>` : ''; acc += v; return out; }).join('');
   hwFill('pt', `<div class="hw-donut"><div class="ring"><svg viewBox="0 0 124 124" aria-hidden="true"><circle class="tr" cx="62" cy="62" r="${r}" stroke-width="14"/>${segs}</svg><div class="lab"><b>${t.ok + t.auto}</b><span>kész</span></div></div>

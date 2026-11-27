@@ -467,7 +467,7 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
   átláthatatlan volt. A valódi gond: több terméket tesztel, részenként külön DTPS program, verziók
   Alap → V1 → V2…, és 2 hónap után nem tudja, hol tartott, melyik a legfrissebb, melyik rész jó.
 - **3. változat:** a termékek / részek / verziók **maguktól jönnek a DTPS mappából**. A Teendőim
-  (`DtpsPump`, a `Tick`-ből) induláskor (+30 mp) és 5 percenként beolvassa:
+  (`DtpsPump`, a `Tick`-ből) induláskor (+30 mp) és percenként (2026. nov. 27. óta, előtte 5 perc) beolvassa:
   `C:\robotinstallation\24-6521_260710_v1_MKU_Bremat Holland_C\Alex\<termékmappa>\Teaching\R001_….rp4\program.rp4`
   (más mappa: `%APPDATA%\Teendoim\beallitas.json` → `dtpsDir`), és ha változott (vagy 1 órája nem
   küldött) `pt_sync`-kel elküldi a **neveket és dátumokat** (fájl nem megy fel – Alex engedte). Kód: a
