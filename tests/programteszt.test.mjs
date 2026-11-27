@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { handle } from '../lib/kozpont-core.mjs';
 import { memoryStore } from '../lib/km-core.mjs';
-import { parseProgram, parseFolder, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink, stateOf, usedCustoms, pstateOf, PtError } from '../public/programteszt.js';
+import { parseProgram, parseFolder, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink, stateOf, usedCustoms, pstateOf, runningOf, timeOf, timeSum, timeByVersion, PtError } from '../public/programteszt.js';
 
 const CODE = 'ABCDE-12345-FGHIJ-67890';
 const NAPLO = 'NAPLO-12345-FGHIJ-00000';
@@ -200,4 +200,60 @@ test('automatizálva rész + termékállapot', () => {
   assert.equal(applyOp(p, { type: 'pstate', pstate: 'test' }, ctx), p, 'ugyanaz: nincs változás');
   p = applyOp(p, { type: 'pstate', pstate: 'off' }, ctx);
   assert.equal(pstateOf(p), 'off');
+});
+
+test('időmérés: óra a panelen, kézi javítás, teszt leállítja', () => {
+  let t = Date.parse('2026-11-27T08:00:00Z');
+  const ctx = () => ({ now: new Date(t), newId: (() => { let i = 0; return () => `t${++i}-${t}`; })() });
+  let p = syncProduct(null, { folder: F7510, programs: progs('R001_2950_7510_A.rp4', 'R001_V2_2950_7510_B.rp4') }, ctx());
+  const [a, b] = p.parts.map((x) => x.id);
+  assert.throws(() => applyOp(p, { type: 'time_start', part: a, kind: 'x' }, ctx()), PtError);
+  p = applyOp(p, { type: 'time_start', part: a, kind: 'kint' }, ctx());
+  assert.equal(applyOp(p, { type: 'time_start', part: a, kind: 'kint' }, ctx()), p, 'már megy');
+  t += 20 * 60000;
+  p = applyOp(p, { type: 'time_start', part: b, kind: 'test' }, ctx());   // a kint-óra megáll
+  assert.equal(runningOf(p).k, 'test');
+  assert.equal(p.time[0].ms, 20 * 60000);
+  t += 15 * 60000;
+  p = applyOp(p, { type: 'test_fix', part: b, text: 'Kezdőpont rossz' }, ctx());
+  assert.equal(runningOf(p), null, 'a teszt eredménye leállítja');
+  assert.equal(p.time[1].ms, 15 * 60000);
+  assert.equal(p.time[1].v, 'V2');
+  p = applyOp(p, { type: 'time_fix', part: a, kind: 'prog', min: 90 }, ctx());
+  p = applyOp(p, { type: 'time_fix', part: a, kind: 'prog', min: -30 }, ctx());
+  assert.throws(() => applyOp(p, { type: 'time_fix', part: a, kind: 'prog', min: 0 }, ctx()), PtError);
+  const s = timeSum(p.time, t);
+  assert.deepEqual([s.prog, s.kint, s.test, s.coding], [60, 20, 15, 80].map((m) => m * 60000));
+  // elfelejtett óra: leállítás egy korábbi időpontra
+  p = applyOp(p, { type: 'time_start', part: a, kind: 'test' }, ctx());
+  const from = Date.parse(runningOf(p).from);
+  t += 3 * 3600000;
+  assert.throws(() => applyOp(p, { type: 'time_stop', at: new Date(from - 60000).toISOString() }, ctx()), PtError);
+  p = applyOp(p, { type: 'time_stop', at: new Date(from + 25 * 60000).toISOString() }, ctx());
+  assert.equal(p.time.at(-1).ms, 25 * 60000);
+  // véletlen koppintás (10 mp alatt) nem marad meg
+  p = applyOp(p, { type: 'time_start', part: a, kind: 'kint' }, ctx());
+  t += 3000;
+  const n = p.time.length;
+  p = applyOp(p, { type: 'time_stop' }, ctx());
+  assert.equal(p.time.length, n - 1);
+  p = applyOp(p, { type: 'time_delete', entry: p.time[0].id }, ctx());
+  assert.equal(timeSum(p.time, t).kint, 0);
+  assert.deepEqual(timeByVersion(p.parts.find((x) => x.id === a), p.time, t).map((x) => x.v), ['Alap']);
+});
+
+test('pt_time: a Teendőim DTPS-mérése havi blobba, a listában a részhez kötve', async () => {
+  const { c, store } = harness();
+  await c({ action: 'pt_sync', products: [{ folder: F7510, programs: progs('R001_2950_7510_A.rp4', 'R001_V3_2950_7510_A.rp4') }] }, NAPLO);
+  const it = { cid: 'c1', folder: F7510, program: 'R001_V3_2950_7510_A.rp4', from: '2026-11-25T09:00:00Z', ms: 5 * 60000 };
+  assert.deepEqual(await c({ action: 'pt_time', items: [it] }, NAPLO), { ok: ['c1'] });
+  // ugyanaz a munkamenet nőtt; egy rossz tétel kimarad
+  const r = await c({ action: 'pt_time', items: [{ ...it, ms: 12 * 60000 }, { cid: 'x', folder: F7510 }] }, NAPLO);
+  assert.deepEqual(r.ok, ['c1']);
+  assert.equal((await store.get('ptt/2026-11')).c1.ms, 12 * 60000);
+  const { products, pctime } = await c({ action: 'pt_list' });
+  const p = products[0], all = timeOf(p, pctime);
+  assert.equal(all.length, 1);
+  assert.deepEqual([all[0].part, all[0].v, all[0].k], [p.parts[0].id, 'V3', 'prog']);
+  await assert.rejects(c({ action: 'pt_time', items: [it] }, 'rossz'), { status: 401 });
 });

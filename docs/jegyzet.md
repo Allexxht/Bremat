@@ -516,6 +516,30 @@ oldal saját Netlify Blobs tárolójában vannak. Új külső szolgáltatást cs
 - Netlify keret (nov. 26.): éles deploy szünetel → Alex az előnézetet használja; ideiglenes szinkron:
   `DTPS-szinkron.bat` (projekt fájlok, `robot-programok/`), az előnézet `/api/kozpont`-jára küld. A Blobs tároló közös.
 
+### Időmérés és statisztika (2026. november 27., Alex kérése)
+Cél: lássa, mennyi idő ment el egy részre / termékre (főleg a programozásra), és a főnöknek összkép.
+Három fajta (`TKINDS`): **prog** = programozás az irodában (a Teendőim méri), **kint** = javítás a robotnál
+(pendant), **test** = teszt a robotnál. „Programozás összesen” = iroda + kint (Alex kérése: lássa a teljeset).
+- **Iroda (magától):** a Teendőim 5 mp-enként nézi az előtérben lévő ablakot (`TeendoimFg`). Ha a DTPS
+  (`DTPS*` folyamat) és 2 percen belül nyúlt a géphez, az ablak címéből a programot a DTPS mappa
+  programneveivel egyezteti (leghosszabb egyezés; R001_ és .rp4 nélkül is), és az utolsó mozdulatig méri.
+  3 perc szünet vagy másik program = új munkamenet (`cid`). Percenként `pt_time` (Munkanapló kód is jó);
+  amit nem fogadott el a szerver, megőrzi: `%APPDATA%\Teendoim\dtps-ido.json` (14 napig). Menü → BREMAT
+  Központ: „Programozás mérése: …” sor. Windows nélkül itt nem tesztelhető – Alex gépén kell kipróbálni.
+- **Szerver:** `pt_time` → havi blob `ptt/<YYYY-MM>` ({ cid: { folder, program, from, ms } }, `mergePcTime`:
+  ugyanaz a cid → a hosszabb marad). Egyetlen író, így nem ütközik a termék-dokumentummal. A `pt_list`
+  az utolsó 13 hónapot `pctime` listában adja; a böngésző köti a részhez (`pcEntries`: mappa + programnév).
+- **Kint / teszt (óra a panelen):** `time_start` / `time_stop` (a termékben, `p.time`, futó: `ms: null`);
+  egyszerre egy óra (a másik terméké előbb leáll), 10 mp alatti = véletlen, törlődik. A teszt-órát a
+  „Minden tökéletes” / „Mi a teendő?” leállítja. 30 perc után a sáv rákérdez (Még megy / leállítás egy
+  korábbi időpontra: `time_stop { at }`). Egy óra legfeljebb 10 órát számít.
+- **Kézi javítás:** `time_fix { kind, min (±), day? }`, `time_delete` (a Teendőim mérése nem törölhető, csak
+  levonással javítható).
+- **Statisztika** (`#/teszt/stat`): Hét / Hónap / Év, lapozható; KPI, halmozott oszlop (iroda / kint / teszt,
+  színek validálva: #0a9bb0 / #e8631c / #5b3fd6), termék tábla, „Összkép a főnöknek” (másolás, nyomtatás).
+- Amíg az éles deploy szünetel (Netlify keret), a Teendőim új kódja nem jut le Alex gépére: az irodai mérés
+  a keret visszajöttével indul. A panel órái és a statisztika az előnézeten már mennek.
+
 ## ARC-EYE edző (`/arceye/`)
 - Önálló, egyfájlos oldal: `public/arceye/index.html` (2026-11-19-i edző, 2026-11-26-án került a Központba).
   Küldetések, Beállítás-iskola, Éles feladat, Képernyő, Hibakereső, Gyorskérdések, Programrakó.

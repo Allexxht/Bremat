@@ -558,6 +558,124 @@ main {
 .rp-note time { display: block; font-size: 12px; color: var(--muted); font-weight: 700; }
 .rp-note button { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 8px; font-size: 16px; }
 .rp-note button:hover { color: var(--st-fix); background: var(--hover); }
+/* ---- Időmérés (2026. nov. 27.): iroda = Teendőim DTPS-mérés, kint = javítás a robotnál, teszt ---- */
+:root { --tm-prog: #0a9bb0; --tm-kint: #e8631c; --tm-test: #5b3fd6; }
+:root[data-theme="dark"] { --tm-prog: #4cc7da; --tm-kint: #ff8a4c; --tm-test: #a48bff; }
+.tab { font-variant-numeric: tabular-nums; }
+.tm-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--hover); align-self: center; }
+.tm-tabs a { min-height: 40px; padding: 0 18px; border-radius: 10px; display: inline-flex; align-items: center; gap: 7px; font-weight: 700; color: var(--muted); text-decoration: none; }
+.tm-tabs a[aria-current] { background: var(--paper); color: var(--text); box-shadow: 0 2px 8px rgba(40, 30, 90, .12); }
+.tm-tabs a svg { width: 16px; height: 16px; }
+.tm-run { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 12px 14px 12px 18px; border-radius: 18px; color: #fff; background: var(--c); box-shadow: 0 10px 30px color-mix(in srgb, var(--c) 35%, transparent); }
+.tm-run .dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; flex: none; animation: psPulse 1.4s infinite; }
+.tm-run .w { flex: 1; min-width: 150px; line-height: 1.3; }
+.tm-run .w small { display: block; opacity: .85; font-size: 13px; }
+.tm-run .w a { color: inherit; }
+.tm-run .t { font: 700 22px/1 var(--display); font-variant-numeric: tabular-nums; }
+.tm-run button { min-height: 42px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .6); background: rgba(255, 255, 255, .16); color: #fff; font-weight: 800; cursor: pointer; }
+.tm-run button.solid { background: #fff; color: var(--c); border-color: #fff; }
+.tm-run .ask { display: none; flex-basis: 100%; gap: 8px; flex-wrap: wrap; align-items: center; padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, .3); }
+.tm-run.long .ask { display: flex; }
+.tm-run .ask b { flex-basis: 100%; }
+.tm-run .ask input { min-height: 42px; border-radius: 12px; border: 0; padding: 0 10px; font: inherit; color: #16142a; }
+.tm-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tm-tiles > div { border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 14px; padding: 9px 11px; min-width: 0; }
+.tm-tiles b { display: block; font: 700 19px/1.2 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tm-tiles span { font-size: 12.5px; color: var(--muted); line-height: 1.25; display: block; }
+.tm-total { margin: -4px 0 0; font-size: 14px; color: var(--muted); }
+.tm-total b { color: var(--text); }
+.tm-live { display: flex; gap: 10px; align-items: center; font-size: 13.5px; color: var(--muted); padding: 9px 12px; border-radius: 14px; background: color-mix(in srgb, var(--tm-prog) 10%, transparent); }
+.tm-live i { width: 9px; height: 9px; border-radius: 50%; background: var(--tm-prog); flex: none; animation: psPulse 2s infinite; }
+.tm-go { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tm-go button { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 54px; border-radius: 16px; border: 0; padding: 0 14px; cursor: pointer; background: var(--c); color: #fff; font-weight: 800; font-size: 15.5px; }
+.tm-go button svg { width: 18px; height: 18px; }
+.tm-go .stop { grid-column: 1 / -1; background: var(--st-fix); justify-content: flex-start; }
+.tm-go .stop .dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; animation: psPulse 1.4s infinite; }
+.tm-go .stop .t { margin-left: auto; font: 700 20px/1 var(--display); font-variant-numeric: tabular-nums; }
+.tm-vers { display: flex; flex-direction: column; gap: 7px; }
+.tm-ver { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 13.5px; }
+.tm-ver b { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.tm-ver .bar { height: 10px; border-radius: 5px; background: var(--hover); display: flex; gap: 2px; overflow: hidden; }
+.tm-ver .bar i { display: block; height: 100%; background: var(--c); }
+.tm-ver span:last-child { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tm-fix { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--hover); }
+.tm-fix .in { display: flex; gap: 8px; flex-wrap: wrap; }
+.tm-fix input { min-height: 46px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); font: inherit; font-size: 16px; color: inherit; }
+.tm-fix input[type="number"] { width: 110px; }
+.tm-fix .row { display: flex; justify-content: flex-end; gap: 8px; }
+.tm-log > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 7px 10px 7px 12px; border-radius: 10px; background: var(--hover); font-size: 14px; }
+.tm-log { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.tm-log .k { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.tm-log .k::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+.tm-log small { color: var(--muted); display: block; }
+.tm-log b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tm-log button { border: 0; background: none; color: var(--muted); cursor: pointer; width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; }
+.tm-log button svg { width: 16px; height: 16px; }
+.tm-log button:hover { color: var(--st-fix); background: var(--paper); }
+.rp-tbl .c-time { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; text-align: right; }
+.rp-tbl th.c-time { text-align: right; }
+.rp-tbl .c-time .on { color: var(--st-fix); font-weight: 800; display: inline-flex; align-items: center; gap: 6px; }
+.rp-tbl .c-time .on::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--st-fix); }
+.n-tm { color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
+.n-tm svg { width: 14px; height: 14px; }
+@media (max-width: 640px) {
+  .rp-tbl .c-time { grid-column: 1 / -1; text-align: left; font-size: 13.5px; }
+  .rp-tbl .c-time:not(:empty)::before { content: "Idő: "; font-weight: 500; }
+  .rp-tbl .c-time:empty { display: none; }
+}
+@media (max-width: 420px) { .tm-tiles { grid-template-columns: 1fr; } .tm-tiles > div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; } .tm-go { grid-template-columns: 1fr; } }
+
+/* Statisztika */
+.st-card { border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+.st-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.st-seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--hover); }
+.st-seg button { border: 0; background: none; min-height: 40px; padding: 0 16px; border-radius: 10px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.st-seg button[aria-pressed="true"] { background: var(--paper); color: var(--text); box-shadow: 0 2px 8px rgba(40, 30, 90, .12); }
+.st-nav { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.st-nav button { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); cursor: pointer; display: grid; place-items: center; color: var(--text); }
+.st-nav button:disabled { opacity: .35; cursor: default; }
+.st-nav button { font-size: 22px; line-height: 1; font-weight: 700; }
+.st-kpi small span { white-space: nowrap; display: inline; }
+.st-nav span { min-width: 150px; text-align: center; }
+.st-kpi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.st-kpi > div { border-radius: 18px; padding: 14px 16px; background: var(--glass-strong); border: 1px solid var(--line); border-top: 4px solid var(--c, var(--line)); min-width: 0; }
+.st-kpi b { display: block; font: 700 28px/1.15 var(--display); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.st-kpi span { font-size: 13.5px; color: var(--muted); display: block; }
+.st-kpi small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.st-chart { border-radius: 18px; padding: 14px 14px 6px; background: var(--glass-strong); border: 1px solid var(--line); position: relative; }
+.st-legend { display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 13.5px; color: var(--muted); margin-bottom: 6px; }
+.st-legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); margin-right: 6px; vertical-align: -1px; }
+.st-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.st-chart text { fill: var(--muted); font: 600 11.5px var(--body); }
+.st-chart .gl { stroke: var(--line); }
+.st-chart rect.hit { fill: transparent; cursor: pointer; }
+.st-chart rect.hit.on { fill: var(--hover); }
+.st-tip { position: absolute; pointer-events: none; background: #16142a; color: #fff; padding: 8px 10px; border-radius: 10px; font-size: 12.5px; line-height: 1.5; white-space: nowrap; transform: translate(-50%, -100%); z-index: 2; }
+.st-tip[hidden] { display: none; }
+.st-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: var(--c); margin-right: 6px; }
+.st-empty { margin: 0; padding: 30px 10px; text-align: center; color: var(--muted); }
+.st-tw { overflow-x: auto; border-radius: 18px; border: 1px solid var(--line); background: var(--glass-strong); }
+.st-tbl { width: 100%; border-collapse: collapse; min-width: 560px; }
+.st-tbl th { text-align: left; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 800; padding: 12px 14px; }
+.st-tbl td { padding: 11px 14px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.st-tbl .r { text-align: right; white-space: nowrap; }
+.st-tbl a { color: inherit; text-decoration: none; font-family: var(--display); font-weight: 600; }
+.st-tbl small { display: block; color: var(--muted); font-size: 13px; }
+.st-tbl tbody tr:hover td { background: var(--hover); }
+.st-boss { border-radius: 24px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.st-boss h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 20px; }
+.st-boss ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.st-boss .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.print-only-h { display: none !important; }
+@media print { .print-only-h { display: block !important; } }
+@media (max-width: 760px) { .st-kpi { grid-template-columns: repeat(2, minmax(0, 1fr)); } .st-kpi b { font-size: 23px; } .st-card { padding: 14px; } }
+@media print {
+  #silk, .topbar, .drawer, .scrim, #demo, #toast, .no-print { display: none !important; }
+  body, html { background: #fff !important; }
+  .glass, .st-kpi > div, .st-chart, .st-tw { box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: #fff !important; }
+  .page { animation: none !important; }
+}
+@media (prefers-reduced-motion: reduce) { .tm-run .dot, .tm-go .stop .dot, .tm-live i { animation: none; } }
 .rp-add { display: flex; gap: 8px; align-items: flex-end; }
 .rp-add textarea { min-height: 46px; height: 46px; }
 .rp-add .btn { min-height: 46px; padding: 0 14px; }
@@ -599,7 +717,7 @@ main {
 <div id="toast" role="status"></div>
 
 <script type="module">
-import { STATES, STATE, PSTATES, pstateOf, COLORS, MARKS, stateOf, usedCustoms, countedParts, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink } from '/programteszt.js';
+import { STATES, STATE, PSTATES, pstateOf, COLORS, MARKS, TKINDS, stateOf, usedCustoms, countedParts, syncProduct, applyOp, visibleParts, summary, latestOf, openPoints, notesByVersion, dtpsLink, runningOf, entryMs, timeOf, timeSum, timeByVersion } from '/programteszt.js';
 /* =====================================================================
    0. Régi címek: a heti lap a /valk/ címre költözött (régi könyvjelzők).
    ===================================================================== */
@@ -793,9 +911,10 @@ function demoApi() {
   // Robot programok: ugyanaz a logika (syncProduct, applyOp), mint a szerveren – csak memóriában
   let ptN = 0; const ptId = () => 'demo-' + (++ptN) + '-' + Date.now().toString(36);
   let pts = demoPt(ptId);
+  const ptPc = demoPc(pts);
   const ptSynced = new Date(Date.now() - 3 * 60000).toISOString();
   return {
-    ptList: () => d({ products: pts.filter((x) => !x.gone), synced_at: ptSynced }),
+    ptList: () => d({ products: pts.filter((x) => !x.gone), synced_at: ptSynced, pctime: ptPc }),
     ptOp: (id, op) => {
       const cur = pts.find((x) => x.id === id); if (!cur) return Promise.reject(new Error('Ismeretlen termék'));
       try { const n = applyOp(cur, op, { now: new Date(), newId: ptId }); pts = pts.map((x) => (x.id === id ? n : x)); return d(n); }
@@ -859,6 +978,36 @@ function demoPt(newId) {
   m = applyOp(m, { type: 'pstate', pstate: 'auto' }, { now: at(20), newId });
   k = applyOp(k, { type: 'pstate', pstate: 'off' }, { now: at(50), newId });
   return [p, m, k];
+}
+// Demó időmérés: a Teendőim DTPS-mérése (pctime) az elmúlt hetekből + a robotnál mért teszt / kint javítás (p.time)
+function demoPc(pts) {
+  let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+  const pc = [], now = Date.now(), day = 86400000;
+  const add = (p, x, ver, t, min, k) => {
+    if (t > now) return;
+    if (k === 'prog') pc.push({ cid: `d${pc.length}`, folder: p.folder, program: ver.dir, from: new Date(t).toISOString(), ms: min * 60000 });
+    else (p.time ||= []).push({ id: `dt${p.time.length}-${k}`, part: x.id, k, v: ver.v, from: new Date(t).toISOString(), ms: min * 60000, src: 'ora' });
+  };
+  for (const p of pts) {
+    const span = p.sku === '2950.7510' ? 40 : p.sku === '2950.5750' ? 75 : 95, quiet = p.sku === '2950.7510' ? 0 : p.sku === '2950.5750' ? 25 : 55;
+    for (let d = span; d >= quiet; d--) {
+      const t0 = new Date(now - d * day); const wd = t0.getDay(); if (wd === 0 || wd === 6 || rnd() < 0.35) continue;
+      t0.setHours(7, 30, 0, 0);
+      for (const x of p.parts) {
+        if (rnd() < 0.72) continue;
+        const vs = x.versions.filter((v) => !v.m || Date.parse(v.m) <= t0.getTime() + day); const ver = vs[vs.length - 1] || x.versions[0];
+        const s0 = t0.getTime() + Math.floor(rnd() * 6) * 3600000;
+        const pm = 10 + Math.floor(rnd() * 45); if (s0 + 3 * 3600000 + 45 * 60000 > now) continue;
+        add(p, x, ver, s0, pm, 'prog');
+        if (rnd() < 0.45) add(p, x, ver, s0 + 2 * 3600000, 10 + Math.floor(rnd() * 25), 'test');
+        if (rnd() < 0.25) add(p, x, ver, s0 + 3 * 3600000, 5 + Math.floor(rnd() * 20), 'kint');
+      }
+    }
+  }
+  // most is megy: a Teendőim méri a V-FAL_K+EGYEB-et (4 perce frissült)
+  const p = pts[0], x = p.parts.find((y) => y.key === 'V_FAL_K+EGYEB');
+  if (x) pc.push({ cid: 'dlive', folder: p.folder, program: latestOf(x).dir, from: new Date(now - 22 * 60000).toISOString(), ms: 20 * 60000 });
+  return pc;
 }
 const api = DEMO ? demoApi() : live;
 
@@ -1408,6 +1557,70 @@ function whenText(iso) {
 const stHtml = (x) => { const s = stateOf(x); return `<span class="st ${s.k}" style="--c:${s.color}${s.k === 'custom' ? `;color:${s.color}` : ''}">${esc(s.t)}</span>`; };
 const customNums = (s) => s.customs.map((c) => `<span style="color:${c.color}"><b>${c.n}</b> ${esc(c.t.toLowerCase())}</span>`).join('');
 const ptOrder = (p) => { const s = summary(p); return s.fix || s.wait || s.tweak ? 0 : s.parts ? 1 : 2; };
+// --- Időmérés: közös darabok (lista, termék, statisztika) ---
+const TK_COLOR = { prog: 'var(--tm-prog)', kint: 'var(--tm-kint)', test: 'var(--tm-test)' };
+const pad2 = (n) => String(n).padStart(2, '0');
+const clockTxt = (ms) => { const x = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(x / 3600); return h ? `${h}:${pad2(Math.floor(x % 3600 / 60))}:${pad2(x % 60)}` : `${Math.floor(x / 60)}:${pad2(x % 60)}`; };
+const durTxt = (ms) => { const m = Math.round(ms / 60000); if (m < 1) return ms > 0 ? '<1 p' : '0 p'; const h = Math.floor(m / 60); return h ? `${h} ó ${pad2(m % 60)} p` : `${m} p`; };
+const LONG_RUN = 30 * 60000;   // ennyi után rákérdez, hogy megy-e még
+const runSnooze = (id) => Number(store.get('tm-ok-' + id) || 0);
+/** Az összes futó óra (egyszerre általában egy). */
+const runsOf = (products) => products.map((p) => { const e = runningOf(p); return e ? { p, e, part: p.parts.find((x) => x.id === e.part) } : null; }).filter(Boolean);
+let ptTick = null;   // másodpercenként frissíti a futó órákat ([data-since]) és a „még megy?” kérdést ([data-long])
+function startPtTick() {
+  clearInterval(ptTick);
+  ptTick = setInterval(() => {
+    const now = Date.now();
+    $$('[data-since]').forEach((el) => { el.textContent = clockTxt(now - Number(el.dataset.since)); });
+    $$('[data-long]').forEach((el) => {
+      const on = now >= Number(el.dataset.long);
+      if (on && !el.classList.contains('long')) {   // most vált át: a „mikor hagytad abba” alapból az indulás + 30 perc
+        const inp = el.querySelector('input[type="time"]');
+        if (inp && !inp.dataset.touched) inp.value = new Date(Math.min(now, Number(inp.dataset.from) + LONG_RUN)).toLocaleTimeString('hu-HU', { timeZone: 'Europe/Budapest', hour: '2-digit', minute: '2-digit' });
+      }
+      el.classList.toggle('long', on);
+    });
+  }, 1000);
+}
+/** Budapesti idő → ms (a nyári/téli időt a böngésző tudja). */
+function budaTime(ymd, h, m) {
+  const guess = Date.parse(`${ymd}T${pad2(h)}:${pad2(m)}:00Z`);
+  const d = new Date(guess), loc = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Budapest' })), utc = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
+  return guess - (loc - utc);
+}
+/** A futó óra sávja: mi megy, mióta, leállítás; 30 perc után rákérdez (elfelejtetted?). */
+function runBanner({ p, e, part }, link = true) {
+  const from = Date.parse(e.from), longAt = Math.max(from + LONG_RUN, runSnooze(e.id));
+  const hm = new Date(Math.min(Date.now(), from + LONG_RUN)).toLocaleTimeString('hu-HU', { timeZone: 'Europe/Budapest', hour: '2-digit', minute: '2-digit' });
+  return `<div class="tm-run no-print ${Date.now() >= longAt ? 'long' : ''}" style="--c:${TK_COLOR[e.k]}" data-long="${longAt}">
+    <span class="dot"></span>
+    <span class="w"><b>${TKINDS[e.k].t} megy</b> · ${esc(part?.name || '?')}<small>${link ? `<a href="#/teszt/${esc(p.id)}">${esc(p.sku)}</a>` : esc(p.sku)} · indult ${hhmm(e.from)}</small></span>
+    <b class="t" data-since="${from}">${clockTxt(Date.now() - from)}</b>
+    <button type="button" class="solid" data-tm="stop" data-pid="${esc(p.id)}">Leállítás</button>
+    <div class="ask"><b>Még megy? Régóta fut az óra.</b>
+      <button type="button" data-tm="snooze" data-eid="${esc(e.id)}">Igen, még megy</button>
+      <span>Elfelejtettem, ekkor hagytam abba:</span><input type="time" value="${hm}" aria-label="Mikor hagytad abba" data-from="${from}" oninput="this.dataset.touched=1">
+      <button type="button" data-tm="stopat" data-pid="${esc(p.id)}">Leállítás ekkor</button></div>
+  </div>`;
+}
+/** A sáv gombjai; done(pid, p) a frissített termékkel hív vissza. true, ha a kattintás a sávé volt. */
+async function runBannerClick(ev, done) {
+  const b = ev.target.closest('[data-tm]'); if (!b) return false;
+  const a = b.dataset.tm, box = b.closest('.tm-run');
+  if (a === 'snooze') { const t = Date.now() + LONG_RUN; store.set('tm-ok-' + b.dataset.eid, String(t)); box.dataset.long = String(t); box.classList.remove('long'); return true; }
+  let at;
+  if (a === 'stopat') {
+    const inp = box.querySelector('input[type="time"]'), from = Number(inp.dataset.from);
+    const [h, m] = inp.value.split(':').map(Number); if (!Number.isFinite(h) || !Number.isFinite(m)) { inp.focus(); return true; }
+    // óra:perc budapesti idő szerint, az indulás napján (ha az korábbi az indulásnál, a következő napon)
+    const day = ymdFmt.format(new Date(from)); let t = budaTime(day, h, m); if (t < from) t = budaTime(addDays(day, 1), h, m);
+    if (t > Date.now()) { toast('Ez az időpont még nem volt.'); return true; }
+    at = new Date(t).toISOString();
+  }
+  try { const p = await guarded(() => api.ptOp(b.dataset.pid, at ? { type: 'time_stop', at } : { type: 'time_stop' })); toast('Óra leállítva.'); done(b.dataset.pid, p); }
+  catch (er) { if (!(er instanceof AccessError)) toast(er.message); }
+  return true;
+}
 const syncText = (at) => at ? `A Teendőim 5 percenként beolvassa a DTPS mappát. Utoljára: ${whenText(at)}.` : 'Még nem jött adat a DTPS mappából. A Teendőim küldi 5 percenként (menü → BREMAT Központ → DTPS mappa beolvasása most).';
 
 // --- Robot programok widget: összesítő gyűrű; a kereső a termékeket és a részeket is innen kapja ---
@@ -1446,13 +1659,19 @@ function loadAeIsland() {
 }
 
 // --- Lista: a termékek ---
+const ptTabs = (cur) => `<nav class="tm-tabs no-print" aria-label="Robot programok"><a href="#/teszt"${cur === 'list' ? ' aria-current="page"' : ''}><i data-lucide="list"></i>Termékek</a><a href="#/teszt/stat"${cur === 'stat' ? ' aria-current="page"' : ''}><i data-lucide="chart-column"></i>Statisztika</a></nav>`;
 async function renderPtList() {
   $('#app').innerHTML = `<div class="page" style="max-width:820px">
     <div class="greet"><h1>Robot programok</h1><p>Koppints egy termékre.</p></div>
+    ${ptTabs('list')}
+    <div id="ptRun"></div>
     <div class="rp-list" id="ptList"><div style="padding:20px"><div class="skeleton" style="width:60%"></div></div></div>
     <p class="rp-foot" id="ptFoot"></p></div>`;
   icons();
-  const { products, synced_at } = await guarded(() => api.ptList());
+  let { products, synced_at, pctime = [] } = await guarded(() => api.ptList());
+  const drawRun = () => { $('#ptRun').innerHTML = runsOf(products).map((r) => runBanner(r)).join(''); };
+  drawRun(); startPtTick();
+  $('#ptRun').addEventListener('click', (e) => runBannerClick(e, (pid, n) => { products = products.map((q) => (q.id === pid ? n : q)); drawRun(); }));
   products.sort((a, b) => PSTATES[pstateOf(a)].order - PSTATES[pstateOf(b)].order || ptOrder(a) - ptOrder(b) || (summary(b).last || '').localeCompare(summary(a).last || ''));
   $('#ptFoot').textContent = syncText(synced_at);
   if (!products.length) { $('#ptList').innerHTML = `<p class="muted" style="margin:0;padding:20px">Még nincs termék.</p>`; return; }
@@ -1462,19 +1681,182 @@ async function renderPtList() {
     return `<a class="rp-prod ps-${ps}" href="#/teszt/${esc(p.id)}">
       <span><span class="ttl"><b>${esc(p.sku)}</b><span class="ps">${ps === 'auto' ? '<i data-lucide="cog"></i>' : ''}${PSTATES[ps].t}</span></span>${p.name ? `<br><span class="nm">${esc(p.name)}</span>` : ''}</span>
       <span class="rp-bar" aria-hidden="true">${countedParts(p).map((x) => `<i style="--c:${stateOf(x).color}"></i>`).join('')}</span>
-      <span class="nums">${s.wait ? `<span class="n-wait"><b>${s.wait}</b> tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix"><b>${s.fix}</b> javítani</span>` : ''}${customNums(s)}${s.tweak ? `<span class="n-tweak"><b>${s.tweak}</b> finomítás</span>` : ''}${s.auto ? `<span class="n-auto"><b>${s.auto}</b> automatizálva</span>` : ''}<span class="n-ok"><b>${s.done}</b>/${s.parts} kész</span>${s.last ? `<span>utolsó program: ${whenText(s.last)}</span>` : ''}</span></a>`;
+      <span class="nums">${s.wait ? `<span class="n-wait"><b>${s.wait}</b> tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix"><b>${s.fix}</b> javítani</span>` : ''}${customNums(s)}${s.tweak ? `<span class="n-tweak"><b>${s.tweak}</b> finomítás</span>` : ''}${s.auto ? `<span class="n-auto"><b>${s.auto}</b> automatizálva</span>` : ''}<span class="n-ok"><b>${s.done}</b>/${s.parts} kész</span>${(() => { const t = timeSum(timeOf(p, pctime)); return t.all ? `<span class="n-tm"><i data-lucide="timer"></i>${durTxt(t.all)}</span>` : ''; })()}${s.last ? `<span>utolsó program: ${whenText(s.last)}</span>` : ''}</span></a>`;
   }).join('');
   icons();
+}
+
+// --- Statisztika: mennyi idő ment el a robotprogramokra (hét / hónap / év), összkép a főnöknek ---
+const MONTHS = ['Jan', 'Feb', 'Már', 'Ápr', 'Máj', 'Jún', 'Júl', 'Aug', 'Szep', 'Okt', 'Nov', 'Dec'];
+const MONTHS_L = ['január', 'február', 'március', 'április', 'május', 'június', 'július', 'augusztus', 'szeptember', 'október', 'november', 'december'];
+const WDAYS = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'];
+/** Az időszak: { start, end (nem tartozik bele), label, name, b: [{ key, l }], bucket(ymd) → key }. off: 0 = most, −1 = előző… */
+function statRange(per, off) {
+  const t = today();
+  if (per === 'het') {
+    const start = addDays(mondayOf(t), 7 * off), end = addDays(start, 7), w = isoWeek(start);
+    return { start, end, label: `${w.week}. hét · ${huShort.format(toDate(start))} – ${huShort.format(toDate(addDays(end, -1)))}`, name: `A ${w.week}. héten`, prev: 'előző hét',
+      b: WDAYS.map((l, i) => ({ key: addDays(start, i), l })), bucket: (ymd) => ymd };
+  }
+  if (per === 'honap') {
+    let y = Number(t.slice(0, 4)), m = Number(t.slice(5, 7)) - 1 + off;
+    y += Math.floor(m / 12); m = ((m % 12) + 12) % 12;
+    const start = `${y}-${pad2(m + 1)}-01`, end = m === 11 ? `${y + 1}-01-01` : `${y}-${pad2(m + 2)}-01`, b = [];
+    for (let d = mondayOf(start); d < end; d = addDays(d, 7)) b.push({ key: d, l: `${isoWeek(d).week}. hét` });
+    const nm = MONTHS_L[m];
+    return { start, end, label: `${y}. ${nm}`, name: `${nm[0].toUpperCase()}${nm.slice(1)}${/szeptember|október|november|december/.test(nm) ? 'ben' : 'ban'}`, prev: 'előző hónap', b, bucket: (ymd) => mondayOf(ymd) };
+  }
+  const y = Number(t.slice(0, 4)) + off;
+  return { start: `${y}-01-01`, end: `${y + 1}-01-01`, label: `${y}`, name: `${y}. évben`, prev: 'előző év',
+    b: MONTHS.map((l, i) => ({ key: `${y}-${pad2(i + 1)}`, l })), bucket: (ymd) => ymd.slice(0, 7) };
+}
+const ymdOf = (iso) => ymdFmt.format(new Date(iso));
+/** Az időszak számai: idő fajtánként, kész részek, tesztek, termékenként és oszloponként. */
+function statAgg(products, pctime, r, now = Date.now()) {
+  const inR = (ymd) => ymd >= r.start && ymd < r.end;
+  const prodRows = new Map(), cols = new Map(r.b.map((x) => [x.key, { prog: 0, kint: 0, test: 0 }]));
+  const row = (p) => { if (!prodRows.has(p.id)) prodRows.set(p.id, { p, prog: 0, kint: 0, test: 0, tests: 0, okTests: 0, done: 0 }); return prodRows.get(p.id); };
+  const all = [];
+  for (const p of products) {
+    const ents = timeOf(p, pctime);
+    for (const e of ents) {
+      const ymd = ymdOf(e.from); if (!inR(ymd)) continue;
+      const ms = entryMs(e, now); all.push(e);
+      row(p)[e.k] += ms;
+      const c = cols.get(r.bucket(ymd)); if (c) c[e.k] += ms;
+    }
+    for (const x of countedParts(p)) {
+      for (const t of x.tests) if (inR(ymdOf(t.at))) { const q = row(p); q.tests++; if (t.ok) q.okTests++; }
+    }
+  }
+  // kész rész: ami ebben az időszakban lett Kész / Automatizálva; átlag: ezek eddigi összes ideje
+  const doneParts = [];
+  for (const p of products) {
+    const ents = timeOf(p, pctime);
+    for (const x of countedParts(p)) if ((x.status === 'ok' || x.status === 'auto') && x.ok_at && inR(ymdOf(x.ok_at))) {
+      row(p).done++; doneParts.push(timeSum(ents.filter((e) => e.part === x.id), now).all);
+    }
+  }
+  const t = timeSum(all, now);
+  const prods = [...prodRows.values()].map((q) => ({ ...q, prog: Math.max(0, q.prog), kint: Math.max(0, q.kint), test: Math.max(0, q.test) }))
+    .map((q) => ({ ...q, all: q.prog + q.kint + q.test })).filter((q) => q.all || q.tests || q.done).sort((a, b) => b.all - a.all);
+  const tests = prods.reduce((a, q) => a + q.tests, 0), okTests = prods.reduce((a, q) => a + q.okTests, 0);
+  return { t, prods, tests, okTests, done: doneParts.length, avg: doneParts.length ? doneParts.reduce((a, x) => a + x, 0) / doneParts.length : 0,
+    cols: r.b.map((x) => { const c = cols.get(x.key); return { ...x, prog: Math.max(0, c.prog), kint: Math.max(0, c.kint), test: Math.max(0, c.test) }; }) };
+}
+/** Halmozott oszlopdiagram (órák): iroda alul, kint, teszt felül; 2 px hézag; érintésre / egérre a számok. */
+function statChart(cols, W = 720) {
+  const H = 240, L = 40, R = 8, T = 10, B = 26, n = cols.length, K = ['prog', 'kint', 'test'];
+  const maxH = Math.max(...cols.map((c) => (c.prog + c.kint + c.test) / 3600000));
+  if (!(maxH > 0)) return '<p class="st-empty">Ebben az időszakban még nincs mért idő.</p>';
+  const step0 = maxH <= 2 ? 0.5 : maxH <= 5 ? 1 : maxH <= 10 ? 2 : maxH <= 25 ? 5 : maxH <= 50 ? 10 : 20;
+  const top = Math.ceil(maxH / step0) * step0, y = (h) => T + (H - T - B) * (1 - h / top);
+  const step = (W - L - R) / n, bw = Math.min(56, step * 0.6);
+  let g = '';
+  for (let v = 0; v <= top + 1e-9; v += step0) g += `<line class="gl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${String(+v.toFixed(1)).replace('.', ',')} ó</text>`;
+  cols.forEach((c, i) => {
+    const cx = L + step * i + step / 2, x = cx - bw / 2;
+    let acc = 0; const segs = K.filter((k) => c[k] > 0);
+    segs.forEach((k, j) => {
+      const h0 = acc, h1 = acc + c[k] / 3600000; acc = h1;
+      const yb = y(h0) - (j ? 2 : 0), yt = y(h1), last = j === segs.length - 1, hh = yb - yt;
+      if (hh <= 0.5) return;
+      const r = last ? Math.min(4, hh / 2, bw / 2) : 0;
+      g += `<path d="M${x},${yb} V${yt + r} Q${x},${yt} ${x + r},${yt} H${x + bw - r} Q${x + bw},${yt} ${x + bw},${yt + r} V${yb} Z" fill="${TK_COLOR[k]}"/>`;
+    });
+    g += `<text x="${cx}" y="${H - 8}" text-anchor="middle">${esc(c.l)}</text>`;
+    g += `<rect class="hit" x="${L + step * i}" y="${T}" width="${step}" height="${H - T - B}" data-i="${i}" data-top="${y(acc)}"/>`;
+  });
+  return `<div class="st-legend"><span style="--c:var(--tm-prog)">Programozás · iroda</span><span style="--c:var(--tm-kint)">Javítás kint</span><span style="--c:var(--tm-test)">Teszt</span></div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ráfordított órák időszakonként">${g}</svg><div class="st-tip" hidden></div>`;
+}
+async function renderPtStats() {
+  let per = store.get('st-per') || 'honap', off = 0;
+  if (!['het', 'honap', 'ev'].includes(per)) per = 'honap';
+  $('#app').innerHTML = `<div class="page" style="max-width:1000px" id="stRoot">
+    <div class="greet"><h1>Robot programok</h1><p>Mennyi idő ment el a programozásra és a tesztre.</p></div>
+    ${ptTabs('stat')}<div id="ptRun"></div>
+    <div class="card glass"><div class="skeleton" style="width:60%"></div></div></div>`;
+  icons();
+  let { products, pctime = [] } = await guarded(() => api.ptList());
+  const root = $('#stRoot');
+  const drawRun = () => { $('#ptRun').innerHTML = runsOf(products).map((r) => runBanner(r)).join(''); };
+  drawRun(); startPtTick();
+  let cur = null;
+  const draw = () => {
+    const r = statRange(per, off), a = statAgg(products, pctime, r), pr = statAgg(products, pctime, statRange(per, off - 1));
+    cur = { r, a };
+    const autoParts = products.reduce((n, p) => n + countedParts(p).filter((x) => x.status === 'auto').length, 0);
+    const big = a.prods[0];
+    const boss = [
+      `${r.name} <b>${a.done} rész</b> robotprogramja lett kész${a.done ? `, ${new Set(a.prods.filter((q) => q.done).map((q) => q.p.id)).size} termékből` : ''}.`,
+      `Erre összesen <b>${durTxt(a.t.all)}</b> ment el: <b>${durTxt(a.t.coding)}</b> programozás (${durTxt(a.t.prog)} az irodában, ${durTxt(a.t.kint)} kint a robotnál javítva) és <b>${durTxt(a.t.test)}</b> teszt a robotnál.`,
+      a.done ? `Egy kész rész átlagosan <b>${durTxt(a.avg)}</b> munka volt (programozás + teszt, az elejétől).` : null,
+      a.tests ? `<b>${a.tests}</b> teszt volt, ebből <b>${a.okTests}</b> (${Math.round(a.okTests / a.tests * 100)}%) lett jó, a többi után javítani kellett.` : null,
+      big?.all ? `Legtöbb idő: <b>${esc(big.p.sku)}</b>${big.p.name ? ` (${esc(big.p.name)})` : ''}: ${durTxt(big.all)}.` : null,
+      `Automatizálva (a gyártásban megy): <b>${autoParts} rész</b>.`,
+    ].filter(Boolean);
+    const cmp = (ms, pms) => `${r.prev}: ${durTxt(pms)}`;
+    root.querySelector('#stBody')?.remove(); root.querySelector('.card')?.remove();
+    root.insertAdjacentHTML('beforeend', `<div id="stBody" style="display:flex;flex-direction:column;gap:18px">
+      <section class="st-card glass">
+        <div class="st-bar no-print">
+          <div class="st-seg" role="group" aria-label="Időszak">${[['het', 'Hét'], ['honap', 'Hónap'], ['ev', 'Év']].map(([k, t]) => `<button type="button" data-per="${k}" aria-pressed="${per === k}">${t}</button>`).join('')}</div>
+          <div class="st-nav"><button type="button" data-off="-1" aria-label="Előző">‹</button><span class="tab">${esc(r.label)}</span><button type="button" data-off="1" aria-label="Következő" ${off >= 0 ? 'disabled' : ''}>›</button></div>
+        </div>
+        <h2 style="margin:0;font-family:var(--display);font-weight:600;font-size:20px" class="print-only-h">${esc(r.label)}</h2>
+        <div class="st-kpi">
+          <div style="--c:var(--tm-prog)"><b class="tab">${durTxt(a.t.coding)}</b><span>programozás összesen</span><small><span>iroda ${durTxt(a.t.prog)}</span><br><span>kint ${durTxt(a.t.kint)}</span><br><span>${cmp(a.t.coding, pr.t.coding)}</span></small></div>
+          <div style="--c:var(--tm-test)"><b class="tab">${durTxt(a.t.test)}</b><span>teszt a robotnál</span><small><span>${a.tests} teszt${a.tests ? `, ebből ${a.okTests} jó` : ''}</span><br><span>${cmp(a.t.test, pr.t.test)}</span></small></div>
+          <div style="--c:var(--st-ok)"><b class="tab">${a.done}</b><span>rész lett kész</span><small>${r.prev}: ${pr.done}</small></div>
+          <div style="--c:var(--st-auto)"><b class="tab">${a.done ? durTxt(a.avg) : '–'}</b><span>átlag idő / kész rész</span><small>programozás + teszt, az elejétől</small></div>
+        </div>
+        <div class="st-chart">${statChart(a.cols, Math.round(Math.max(340, Math.min(720, root.clientWidth - 70))))}</div>
+        ${a.prods.length ? `<div class="st-tw"><table class="st-tbl"><thead><tr><th>Termék</th><th class="r">Programozás</th><th class="r">ebből kint</th><th class="r">Teszt</th><th class="r">Összesen</th><th class="r">Tesztkör</th><th class="r">Kész rész</th></tr></thead>
+          <tbody>${a.prods.map((q) => `<tr><td><a href="#/teszt/${esc(q.p.id)}">${esc(q.p.sku)}</a>${q.p.name ? `<small>${esc(q.p.name)}</small>` : ''}</td><td class="r">${durTxt(q.prog + q.kint)}</td><td class="r">${durTxt(q.kint)}</td><td class="r">${durTxt(q.test)}</td><td class="r"><b>${durTxt(q.all)}</b></td><td class="r">${q.tests}</td><td class="r">${q.done}</td></tr>`).join('')}</tbody></table></div>` : ''}
+      </section>
+      <section class="st-boss glass"><h2>Összkép a főnöknek · ${esc(r.label)}</h2><ul id="stBoss">${boss.map((x) => `<li>${x}</li>`).join('')}</ul>
+        <div class="row no-print"><button class="btn" type="button" data-st="copy"><i data-lucide="copy"></i>Szöveg másolása</button><button class="btn" type="button" data-st="print"><i data-lucide="printer"></i>Nyomtatás / PDF</button></div></section>
+    </div>`);
+    icons();
+  };
+  root.addEventListener('click', async (e) => {
+    if (await runBannerClick(e, (pid, n) => { products = products.map((q) => (q.id === pid ? n : q)); drawRun(); draw(); })) return;
+    const b = e.target.closest('[data-per],[data-off],[data-st]');
+    if (b?.dataset.per) { per = b.dataset.per; off = 0; store.set('st-per', per); return draw(); }
+    if (b?.dataset.off) { off = Math.min(0, off + Number(b.dataset.off)); return draw(); }
+    if (b?.dataset.st === 'print') return window.print();
+    if (b?.dataset.st === 'copy') {
+      const txt = `Robot programok – ${cur.r.label}\n` + $$('#stBoss li').map((li) => `• ${li.textContent}`).join('\n');
+      try { await navigator.clipboard.writeText(txt); toast('Kimásolva – beillesztheted e-mailbe.'); } catch { toast('Nem sikerült másolni.'); }
+      return;
+    }
+    // diagram: koppintásra is látszanak a számok
+    const hit = e.target.closest('rect.hit'); if (hit) showTip(hit);
+  });
+  const showTip = (hit) => {
+    const box = hit.closest('.st-chart'), svg = box.querySelector('svg'), tip = box.querySelector('.st-tip'), c = cur.a.cols[Number(hit.dataset.i)];
+    $$('rect.hit.on', box).forEach((x) => x.classList.remove('on')); hit.classList.add('on');
+    const sb = svg.getBoundingClientRect(), bb = box.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    const cx = Number(hit.getAttribute('x')) + Number(hit.getAttribute('width')) / 2;
+    tip.innerHTML = `<b>${esc(c.l)}</b><br><i style="--c:var(--tm-prog)"></i>Iroda: ${durTxt(c.prog)}<br><i style="--c:var(--tm-kint)"></i>Kint: ${durTxt(c.kint)}<br><i style="--c:var(--tm-test)"></i>Teszt: ${durTxt(c.test)}<br>Összesen: <b>${durTxt(c.prog + c.kint + c.test)}</b>`;
+    const left = sb.left - bb.left + cx / vb.width * sb.width;
+    tip.style.left = `${Math.min(Math.max(left, 90), bb.width - 90)}px`; tip.style.top = `${sb.top - bb.top + Number(hit.dataset.top) / vb.height * sb.height - 8}px`; tip.hidden = false;
+  };
+  root.addEventListener('mousemove', (e) => { const hit = e.target.closest('rect.hit'); if (hit) showTip(hit); });
+  root.addEventListener('mouseleave', () => { const t = $('.st-tip', root); if (t) t.hidden = true; $$('rect.hit.on', root).forEach((x) => x.classList.remove('on')); }, true);
+  draw();
 }
 
 // --- Egy termék: a részei táblában, koppintásra oldalpanel ---
 async function renderPtProduct(id) {
   $('#app').innerHTML = `<div class="page" id="ptRoot" style="max-width:920px"><div class="card glass"><div class="skeleton" style="width:60%"></div></div></div>`;
   const app = $('#ptRoot');
-  let { products, synced_at } = await guarded(() => api.ptList());
+  let { products, synced_at, pctime = [] } = await guarded(() => api.ptList());
   let p = products.find((x) => x.id === id);
   if (!p) { app.innerHTML = `<a class="backlink" href="#/teszt"><i data-lucide="arrow-left"></i>Robot programok</a><div class="card glass"><p class="muted" style="margin:0">Nincs ilyen termék (lehet, hogy eltűnt a DTPS mappából).</p></div>`; icons(); return; }
-  let cur = null, writing = false, busy = false, custOpen = false, custCol = 'violet';
+  let cur = null, writing = false, busy = false, custOpen = false, custCol = 'violet', tfOpen = false, tfKind = 'prog', tfSign = 1;
+  startPtTick();
   const panel = document.createElement('aside'); panel.className = 'rp-panel'; panel.hidden = true; panel.setAttribute('aria-label', 'Rész');
   const scrim = document.createElement('div'); scrim.className = 'rp-scrim'; scrim.hidden = true;
   document.body.append(scrim, panel);   // a body-ban: a .page animációja ne törje a fixed helyzetet
@@ -1487,18 +1869,49 @@ async function renderPtProduct(id) {
     if (x.status === 'custom') return o.length ? `<b>${esc(o[0].text)}</b>${o.length > 1 ? ` +${o.length - 1}` : ''}` : '—';
     return '—';
   };
+  const partTime = (x, ents, r) => {
+    if (r && r.part === x.id) return `<span class="on">${TKINDS[r.k].t} <span data-since="${Date.parse(r.from)}">${clockTxt(Date.now() - Date.parse(r.from))}</span></span>`;
+    const t = timeSum(ents.filter((e) => e.part === x.id)).all;
+    return t ? durTxt(t) : '';
+  };
   const drawTable = () => {
-    const parts = visibleParts(p), s = summary(p);
+    const parts = visibleParts(p), s = summary(p), ents = timeOf(p, pctime), r = runningOf(p), tt = timeSum(ents);
     app.innerHTML = `
       <a class="backlink" href="#/teszt"><i data-lucide="arrow-left"></i>Robot programok</a>
+      <div id="ptRun">${runsOf(products.map((q) => (q.id === p.id ? p : q))).map((x) => runBanner(x, x.p.id !== p.id)).join('')}</div>
       <div class="rp-head"><h1>${esc(p.sku)}</h1>${p.name ? `<p>${esc(p.name)}</p>` : ''}
-        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}${s.customs.map((c) => `<span style="color:${c.color}">${c.n} ${esc(c.t.toLowerCase())}</span>`).join('')}${s.tweak ? `<span class="n-tweak">${s.tweak} finomítás</span>` : ''}${s.auto ? `<span class="n-auto">${s.auto} automatizálva</span>` : ''}<span class="n-ok">${s.done}/${s.parts} kész</span>${s.struck ? `<span class="muted">${s.struck} kihúzva</span>` : ''}</div>
+        <div class="rp-sum">${s.wait ? `<span class="n-wait">${s.wait} tesztre vár</span>` : ''}${s.fix ? `<span class="n-fix">${s.fix} javítani</span>` : ''}${s.customs.map((c) => `<span style="color:${c.color}">${c.n} ${esc(c.t.toLowerCase())}</span>`).join('')}${s.tweak ? `<span class="n-tweak">${s.tweak} finomítás</span>` : ''}${s.auto ? `<span class="n-auto">${s.auto} automatizálva</span>` : ''}<span class="n-ok">${s.done}/${s.parts} kész</span>${s.struck ? `<span class="muted">${s.struck} kihúzva</span>` : ''}${tt.all ? `<span class="n-tm"><i data-lucide="timer"></i>${durTxt(tt.all)}</span>` : ''}</div>
         <div class="rp-psg" role="group" aria-label="A termék állapota">${Object.entries(PSTATES).map(([k, x]) => `<button type="button" data-ps="${k}" aria-pressed="${pstateOf(p) === k}" style="--c:${{ test: 'var(--ps-test)', idle: 'var(--muted)', auto: 'var(--st-auto)', off: '#8a8f98' }[k]}">${k === 'test' ? '<i data-lucide="flask-conical"></i>' : k === 'auto' ? '<i data-lucide="cog"></i>' : k === 'off' ? '<i data-lucide="moon"></i>' : '<i data-lucide="pause"></i>'}${x.t}</button>`).join('')}</div></div>
-      ${parts.length ? `<table class="rp-tbl"><thead><tr><th>Rész</th><th>Legfrissebb</th><th>Állapot</th><th>Mi a teendő</th></tr></thead>
-        <tbody>${parts.map((x) => `<tr data-part="${esc(x.id)}" tabindex="0"${MARKS[x.mark] ? ` class="mk-${x.mark}" style="--mk:${MARKS[x.mark].hex}"` : ''}><td class="part"><span>${esc(x.name)}</span>${MARKS[x.mark] ? `<span class="rp-mk">${MARKS[x.mark].t}</span>` : ''}</td><td class="mono">${esc(latestOf(x).v)}</td><td class="c-st">${stHtml(x)}</td><td class="c-todo todo">${todo(x)}</td></tr>`).join('')}</tbody></table>`
+      ${parts.length ? `<table class="rp-tbl"><thead><tr><th>Rész</th><th>Legfrissebb</th><th>Állapot</th><th>Mi a teendő</th><th class="c-time">Idő</th></tr></thead>
+        <tbody>${parts.map((x) => `<tr data-part="${esc(x.id)}" tabindex="0"${MARKS[x.mark] ? ` class="mk-${x.mark}" style="--mk:${MARKS[x.mark].hex}"` : ''}><td class="part"><span>${esc(x.name)}</span>${MARKS[x.mark] ? `<span class="rp-mk">${MARKS[x.mark].t}</span>` : ''}</td><td class="mono">${esc(latestOf(x).v)}</td><td class="c-st">${stHtml(x)}</td><td class="c-todo todo">${todo(x)}</td><td class="c-time">${partTime(x, ents, r)}</td></tr>`).join('')}</tbody></table>`
         : '<div class="card glass"><p class="muted" style="margin:0">Ebben a termékmappában még nincs program.</p></div>'}
       <p class="rp-foot">${esc(syncText(synced_at))}</p>`;
     icons();
+  };
+  // --- a panel időblokkja: összesen (iroda / kint / teszt), óra indítása, verziónként, kézi javítás, bejegyzések ---
+  const TK_LABEL = { prog: 'programozás · iroda', kint: 'javítás kint', test: 'teszt' };
+  const SRC = { pc: 'Teendőim (DTPS)', ora: 'óra', kezi: 'kézi javítás' };
+  const timeHtml = (x) => {
+    const now = Date.now(), es = timeOf(p, pctime).filter((e) => e.part === x.id), t = timeSum(es, now);
+    const r = runningOf(p), mine = r && r.part === x.id ? r : null;
+    const live = es.find((e) => e.src === 'pc' && Date.parse(e.from) + e.ms > now - 180000);
+    const vers = timeByVersion(x, es, now).filter((v) => v.all > 0), mx = Math.max(1, ...vers.map((v) => v.prog + v.kint + v.test));
+    const goBtn = (k) => `<button type="button" data-a="tstart" data-k="${k}" style="--c:${TK_COLOR[k]}"><i data-lucide="${k === 'test' ? 'play' : 'wrench'}"></i>${k === 'test' ? 'Teszt indul' : 'Javítás kint'}</button>`;
+    const log = es.slice().sort((a, b) => b.from.localeCompare(a.from)).slice(0, 80);
+    return `<div class="rp-lbl">Idő erre a részre</div>
+      ${live ? '<div class="tm-live"><i></i><span>Most nyitva a DTPS-ben: a Teendőim méri.</span></div>' : ''}
+      <div class="tm-tiles">${['prog', 'kint', 'test'].map((k) => `<div style="--c:${TK_COLOR[k]}"><span>${TK_LABEL[k]}${k === 'test' ? ` · ${x.tests.length} kör` : ''}</span><b>${durTxt(t[k])}</b></div>`).join('')}</div>
+      <p class="tm-total">Programozás összesen (iroda + kint): <b>${durTxt(t.coding)}</b> · mindennel: <b>${durTxt(t.all)}</b></p>
+      <div class="tm-go">${mine ? `<button type="button" class="stop" data-a="tstop"><span class="dot"></span>${mine.k === 'test' ? 'Teszt vége' : mine.k === 'kint' ? 'Javítás vége' : 'Óra leállítása'}<span class="t" data-since="${Date.parse(mine.from)}">${clockTxt(now - Date.parse(mine.from))}</span></button>${mine.k !== 'test' ? goBtn('test') : ''}${mine.k !== 'kint' ? goBtn('kint') : ''}` : goBtn('test') + goBtn('kint')}</div>
+      <p class="rp-foot" style="margin:-8px 0 0">${mine?.k === 'test' ? 'A teszt-óra magától megáll, ha „Minden tökéletes” vagy „Mi a teendő?”.' : 'A robotnál: Teszt indul, vagy Javítás kint, ha a pendanton javítasz. A programozást az irodában a Teendőim méri.'}</p>
+      ${vers.length ? `<div class="rp-lbl">Verziónként</div><div class="tm-vers">${vers.map((v) => `<div class="tm-ver"><b title="${esc(v.v)}">${esc(v.v)}</b><span class="bar" title="${esc(v.v)}: iroda ${durTxt(v.prog)}, kint ${durTxt(v.kint)}, teszt ${durTxt(v.test)}">${['prog', 'kint', 'test'].map((k) => (v[k] > 0 ? `<i style="--c:${TK_COLOR[k]};width:${v[k] / mx * 100}%"></i>` : '')).join('')}</span><span>${durTxt(v.all)}</span></div>`).join('')}</div>` : ''}
+      ${tfOpen ? `<div class="tm-fix"><div class="rp-lbl" style="margin:0">Idő javítása – a ${esc(latestOf(x).v)} verzióhoz</div>
+        <div class="rp-seg" role="group" aria-label="Mihez">${['prog', 'kint', 'test'].map((k) => `<button type="button" data-a="tfk" data-v="${k}" aria-pressed="${tfKind === k}" style="--c:${TK_COLOR[k]}">${k === 'prog' ? 'Iroda' : k === 'kint' ? 'Kint' : 'Teszt'}</button>`).join('')}</div>
+        <div class="in"><div class="rp-seg" role="group" aria-label="Hozzáad vagy levon" style="grid-template-columns:repeat(2,56px)"><button type="button" data-a="tfs" data-v="1" aria-pressed="${tfSign > 0}" style="--c:var(--st-ok)" aria-label="Hozzáad">+</button><button type="button" data-a="tfs" data-v="-1" aria-pressed="${tfSign < 0}" style="--c:var(--st-fix)" aria-label="Levon">−</button></div>
+          <input id="tmMin" type="number" min="1" max="720" step="1" inputmode="numeric" placeholder="perc" aria-label="Perc"><input id="tmDay" type="date" value="${today()}" max="${today()}" aria-label="Melyik nap"></div>
+        <div class="row"><button class="btn" type="button" data-a="tfcancel">Mégse</button><button class="btn rp-fix" type="button" data-a="tfsave"><i data-lucide="check"></i>Mentés</button></div></div>`
+      : '<button class="rp-link" type="button" data-a="tfix" style="align-self:flex-start">Idő javítása (+ / − perc)</button>'}
+      ${log.length ? `<details><summary>Időbejegyzések (${es.length})</summary><div class="tm-log">${log.map((e) => `<div style="--c:${TK_COLOR[e.k]}"><span><span class="k">${TKINDS[e.k].t}${e.k === 'kint' ? '' : e.k === 'prog' ? ' · iroda' : ''}</span><small>${esc(whenText(e.from))}${e.v ? ` · ${esc(e.v)}` : ''} · ${SRC[e.src] || ''}</small></span><b>${e.ms === null ? `<span data-since="${Date.parse(e.from)}">${clockTxt(now - Date.parse(e.from))}</span>` : `${e.ms < 0 ? '−' : ''}${durTxt(Math.abs(e.ms))}`}</b>${e.src !== 'pc' && e.ms !== null ? `<button type="button" data-a="tdel" data-id="${esc(e.id)}" aria-label="Időbejegyzés törlése" title="Törlés"><i data-lucide="trash-2"></i></button>` : '<span></span>'}</div>`).join('')}</div></details>` : ''}`;
   };
   let infoEdit = false;
   const noteHtml = (n) => `<div class="rp-note"><div class="t"><time>${esc(whenText(n.at))}</time>${esc(n.text)}</div><button type="button" data-a="notedel" data-id="${esc(n.id)}" aria-label="Infó törlése">×</button></div>`;
@@ -1517,6 +1930,7 @@ async function renderPtProduct(id) {
       <div class="rp-cur" style="--c:${stateOf(x).color}"><small>Legfrissebb program${v.m ? ` · ${esc(whenText(v.m))}` : ''}</small><span class="v">${esc(v.v)}</span><span class="f mono">${esc(v.file)}</span></div>
       <a class="btn rp-open" href="${esc(dtpsLink(p, v))}" target="_blank" rel="noopener"><i data-lucide="play"></i>Megnyitás DTPS-ben</a>
       <p class="rp-foot" style="margin:-10px 0 0">A programozó gépen működik, ahol a Teendőim fut.</p>
+      ${timeHtml(x)}
       <div class="rp-lbl">Állapot</div>
       <div class="rp-seg" role="group" aria-label="Állapot">${STATES.map((k) => `<button type="button" data-a="status" data-v="${k}" aria-pressed="${x.status === k}" style="--c:var(--st-${k})">${STATE[k].t}</button>`).join('')}
         <button type="button" class="cust" data-a="custom" aria-pressed="${x.status === 'custom'}" aria-expanded="${custOpen}" style="--c:${stateOf(x).color}">${x.status === 'custom' ? `${esc(stateOf(x).t)} · átírás` : '+ Saját állapot (bármi, színnel)'}</button></div>
@@ -1542,25 +1956,44 @@ async function renderPtProduct(id) {
       ${x.tests.length ? `<details><summary>Tesztek (${x.tests.length})</summary><div class="rp-old">${x.tests.slice().reverse().map((t) => `<div><span>${esc(whenText(t.at))} · <span class="mono">${esc(t.v || '')}</span></span><span class="${t.ok ? 'n-ok' : 'n-fix'}" style="font-weight:700">${t.ok ? 'Minden tökéletes' : `${t.n || ''} észrevétel`}</span></div>`).join('')}</div></details>` : ''}`;
     icons();
   };
-  const open = (pid) => { cur = pid; writing = false; infoEdit = false; custOpen = false; drawPanel(); panel.hidden = false; scrim.hidden = false; panel.querySelector('.x').focus(); };
+  const open = (pid) => { cur = pid; writing = false; infoEdit = false; custOpen = false; tfOpen = false; drawPanel(); panel.hidden = false; scrim.hidden = false; panel.querySelector('.x').focus(); };
   function close() { cur = null; writing = false; panel.hidden = true; scrim.hidden = true; }
   const run = async (op, msg) => {
     if (busy) return; busy = true;
-    try { p = await guarded(() => api.ptOp(p.id, op)); writing = false; infoEdit = false; custOpen = false; drawTable(); drawPanel(); if (msg) toast(msg); return true; }
+    try { p = await guarded(() => api.ptOp(p.id, op)); products = products.map((q) => (q.id === p.id ? p : q)); writing = false; infoEdit = false; custOpen = false; tfOpen = false; drawTable(); drawPanel(); if (msg) toast(msg); return true; }
     catch (e) { if (!(e instanceof AccessError)) toast(e.message); }
     finally { busy = false; }
   };
   app.addEventListener('click', async (e) => {
+    if (await runBannerClick(e, (pid, n) => { products = products.map((q) => (q.id === pid ? n : q)); if (pid === p.id) p = n; drawTable(); if (cur) drawPanel(); })) return;
     const ps = e.target.closest('[data-ps]');
-    if (ps) { if (busy) return; busy = true; try { p = await guarded(() => api.ptOp(p.id, { type: 'pstate', pstate: ps.dataset.ps })); drawTable(); toast(`${p.sku}: ${PSTATES[ps.dataset.ps].t}`); } catch (er) { if (!(er instanceof AccessError)) toast(er.message); } finally { busy = false; } return; }
+    if (ps) { if (busy) return; busy = true; try { p = await guarded(() => api.ptOp(p.id, { type: 'pstate', pstate: ps.dataset.ps })); products = products.map((q) => (q.id === p.id ? p : q)); drawTable(); toast(`${p.sku}: ${PSTATES[ps.dataset.ps].t}`); } catch (er) { if (!(er instanceof AccessError)) toast(er.message); } finally { busy = false; } return; }
     const r = e.target.closest('tr[data-part]'); if (r) open(r.dataset.part);
   });
   app.addEventListener('keydown', (e) => { const r = e.target.closest('tr[data-part]'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(r.dataset.part); } });
   scrim.addEventListener('click', close);
-  panel.addEventListener('click', (e) => {
+  panel.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-a]'); if (!b) return;
     const a = b.dataset.a, x = p.parts.find((y) => y.id === cur);
     if (a === 'close' || !x) return close();
+    if (a === 'tstart') {
+      // egyszerre egy óra megy: a másik termékben futót előbb leállítja
+      for (const q of products) if (q.id !== p.id && runningOf(q)) {
+        try { const n = await guarded(() => api.ptOp(q.id, { type: 'time_stop' })); products = products.map((z) => (z.id === n.id ? n : z)); }
+        catch (er) { if (!(er instanceof AccessError)) toast(er.message); return; }
+      }
+      return run({ type: 'time_start', part: x.id, kind: b.dataset.k }, `${TKINDS[b.dataset.k].t}: az óra megy.`);
+    }
+    if (a === 'tstop') return run({ type: 'time_stop' }, 'Óra leállítva.');
+    if (a === 'tfix') { tfOpen = true; drawPanel(); return $('#tmMin').focus(); }
+    if (a === 'tfcancel') { tfOpen = false; return drawPanel(); }
+    if (a === 'tfk' || a === 'tfs') { const m = $('#tmMin').value, d = $('#tmDay').value; if (a === 'tfk') tfKind = b.dataset.v; else tfSign = Number(b.dataset.v); drawPanel(); $('#tmMin').value = m; $('#tmDay').value = d; return; }
+    if (a === 'tfsave') {
+      const m = Math.round(Number($('#tmMin').value)), d = $('#tmDay').value;
+      if (!(m > 0)) return $('#tmMin').focus();
+      return run({ type: 'time_fix', part: x.id, kind: tfKind, min: tfSign * m, ...(d && d !== today() ? { day: d } : {}) }, `${TKINDS[tfKind].t}: ${tfSign > 0 ? '+' : '−'}${durTxt(m * 60000)}`);
+    }
+    if (a === 'tdel') { if (!confirm('Törlöd ezt az időbejegyzést?')) return; return run({ type: 'time_delete', entry: b.dataset.id }, 'Időbejegyzés törölve.'); }
     if (a === 'pt') return run({ type: 'point_toggle', part: x.id, point: b.dataset.id });
     if (a === 'ptdel') { const y = x.points.find((z) => z.id === b.dataset.id); if (!y || !confirm(`Törlöd ezt a pontot?\n\n${y.text}`)) return; return run({ type: 'point_delete', part: x.id, point: y.id }, 'Pont törölve.'); }
     if (a === 'ok') return run({ type: 'test_ok', part: x.id }, `${x.name}: kész`);
@@ -1582,6 +2015,7 @@ async function renderPtProduct(id) {
   });
   panel.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.id === 'rpCustT') { e.preventDefault(); return panel.querySelector('[data-a="csave"]').click(); }
+    if (e.key === 'Enter' && (e.target.id === 'tmMin' || e.target.id === 'tmDay')) { e.preventDefault(); return panel.querySelector('[data-a="tfsave"]').click(); }
     if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return;
     const k = { rpObs: 'save', rpInfo: 'infosave', rpNote: 'noteadd' }[e.target.id];
     if (k) panel.querySelector(`[data-a="${k}"]`).click();
@@ -1653,7 +2087,7 @@ function renderSettings() {
 /* =====================================================================
    8. Útvonalak: a cím # utáni része dönti el, melyik nézet látszik
    ===================================================================== */
-const VIEWS = { '#/otletek': renderIdeas, '#/projektek': renderProjects, '#/beallitasok': renderSettings, '#/teszt': renderPtList };
+const VIEWS = { '#/otletek': renderIdeas, '#/projektek': renderProjects, '#/beallitasok': renderSettings, '#/teszt': renderPtList, '#/teszt/stat': renderPtStats };
 const PT_ROUTE = /^#\/teszt\/([\w-]+)$/;
 function route() {
   document.documentElement.classList.remove('hw-on'); silk.pause(false);   // a kezdőlap a renderHome-ban kapcsolja vissza
@@ -1664,7 +2098,7 @@ function route() {
   const key = VIEWS[location.hash] ? location.hash : ptm ? '#/teszt/*' : '#/';
   $$('.nav a[data-view]').forEach((a) => a.toggleAttribute('aria-current', a.dataset.view === key));
   $$('.nav a[aria-current]').forEach((a) => a.setAttribute('aria-current', 'page'));
-  clearInterval(tickTimer); clearInterval(hwTimer); $('#hwLayer')?.remove(); window.scrollTo(0, 0);
+  clearInterval(tickTimer); clearInterval(hwTimer); clearInterval(ptTick); $('#hwLayer')?.remove(); window.scrollTo(0, 0);
   Promise.resolve().then(ptm ? () => renderPtProduct(ptm[1]) : VIEWS[key] || renderHome).catch((e) => { if (!(e instanceof AccessError)) console.error(e); });
 }
 $('#demo').hidden = !DEMO;

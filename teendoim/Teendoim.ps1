@@ -1446,6 +1446,7 @@ function Tick {
   try { NaploPump } catch { NaploLog "$_" }
   try { UpdPump } catch { UpdLog "$_" }
   try { DtpsPump } catch { NaploLog "DTPS: $_" }
+  try { DtpsTimePump } catch { NaploLog "DTPS idő: $_" }
 }
 
 # ---------- Automatikus szünet tétlenségnél ----------
@@ -2185,6 +2186,7 @@ function DtpsPump {
   if (-not $script:nHttp -or $now -lt $script:dNext) { return }
   $script:dNext = $now + 300000
   $list = DtpsScan
+  $script:dLast = $list   # a programozás mérése ebből ismeri fel a programot az ablak címében
   if ($null -eq $list) { $script:dStatus = "Nincs meg a DTPS mappa: $(DtpsDir)"; return }
   $sig = ConvertTo-Json -InputObject ([ordered]@{ products = $list }) -Depth 6 -Compress
   if ($sig -eq $script:dSent -and $now - $script:dSentAt -lt 3600000) { return }
@@ -2195,6 +2197,142 @@ function DtpsPump {
     $content = New-Object System.Net.Http.StringContent($body, [Text.Encoding]::UTF8, 'application/json')
     $script:dReq = @{ task = $script:nHttp.PostAsync($kozpontApi, $content); sig = $sig }
   } catch { $script:dStatus = "Nem sikerült elküldeni: $($_.Exception.Message)" }
+}
+
+# ---------- Robot programok: a programozás ideje (DTPS ablak) ----------
+# 5 mp-enként megnézi, melyik ablak van elöl. Ha a DTPS (DTPS3.exe), és 2 percen belül nyúltál a géphez,
+# az ablak címéből kiolvassa a programot (a DTPS mappa programnevei közül a leghosszabb egyezés), és annak
+# a résznek méri az időt, az utolsó egér/billentyű mozdulatig. 3 perc szünet (vagy másik program) = új munkamenet.
+# Percenként elküldi a Központnak (pt_time: termékmappa, programnév, kezdés, hossz); ha nincs kapcsolat,
+# megőrzi (dtps-ido.json) és később küldi. A programfájl a gépen marad.
+$script:fgOk = $true
+try {
+  Add-Type -TypeDefinition @"
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+public static class TeendoimFg {
+  [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint p);
+  public static string Title() { IntPtr h = GetForegroundWindow(); if (h == IntPtr.Zero) return ""; StringBuilder sb = new StringBuilder(1024); GetWindowText(h, sb, 1024); return sb.ToString(); }
+  public static int Pid() { IntPtr h = GetForegroundWindow(); if (h == IntPtr.Zero) return 0; uint p; GetWindowThreadProcessId(h, out p); return (int)p; }
+}
+"@
+} catch { $script:fgOk = $false }
+$tmFile = Join-Path $dir 'dtps-ido.json'
+$script:tmQ = @{}; $script:tmCur = $null; $script:tmNext = [int64]0; $script:tmSendAt = [int64]((NowMs) + 20000)
+$script:tmReq = $null; $script:tmDirty = $false; $script:tmProc = @{}; $script:tmStatus = ''; $script:dLast = $null; $script:dLastAt = [int64]0
+function TmSave {
+  try { [IO.File]::WriteAllText($tmFile, (ConvertTo-Json -InputObject @($script:tmQ.Values | ForEach-Object { [ordered]@{ cid = $_.cid; folder = $_.folder; program = $_.program; from = $_.from; last = $_.last; sent = $_.sent } }) -Depth 4 -Compress), $utf8) } catch { NaploLog "DTPS idő mentés: $_" }
+}
+function TmLoad {
+  try {
+    if (-not (Test-Path -LiteralPath $tmFile)) { return }
+    $arr = ConvertFrom-Json ([IO.File]::ReadAllText($tmFile, $utf8))   # PS 5.1: a tömböt változóba, különben egyben jön
+    foreach ($o in $arr) {
+      if ($o -and $o.cid) { $script:tmQ[[string]$o.cid] = @{ cid = [string]$o.cid; folder = [string]$o.folder; program = [string]$o.program; from = [int64]$o.from; last = [int64]$o.last; sent = [int64]$o.sent } }
+    }
+  } catch { NaploLog "DTPS idő betöltés: $_" }
+}
+TmLoad
+# A címben szereplő program: R001_V8_2950_7510_X.rp4 / R001_V8_2950_7510_X / V8_2950_7510_X.rp4 / V8_2950_7510_X
+function DtpsMatch($title) {
+  if (-not $script:dLast) { $script:dLast = DtpsScan }
+  if (-not $script:dLast -or -not $title) { return $null }
+  $u = ([string]$title).ToUpperInvariant(); $best = $null; $bl = 0
+  foreach ($pr in @($script:dLast)) {
+    foreach ($g in @($pr.programs)) {
+      $n = ([string]$g.n).ToUpperInvariant(); $n2 = $n -replace '\.RP4$', ''
+      foreach ($k in @($n, $n2, ($n -replace '^R\d{1,3}_', ''), ($n2 -replace '^R\d{1,3}_', ''))) {
+        if ($k.Length -gt $bl -and $k.Length -ge 6 -and $u.Contains($k)) { $best = @{ folder = [string]$pr.folder; program = [string]$g.n }; $bl = $k.Length }
+      }
+    }
+  }
+  $best
+}
+function DtpsTimePump {
+  if (-not $script:fgOk -or -not $script:idleOk) { return }
+  $now = NowMs
+  if ($now -ge $script:tmNext) {
+    $script:tmNext = $now + 5000
+    $idle = [TeendoimIdle]::IdleMs()
+    $fp = $(if ($idle -lt 120000) { [TeendoimFg]::Pid() } else { 0 })
+    if ($fp -gt 0) {
+      if (-not $script:tmProc.ContainsKey($fp)) {
+        $nm = ''; try { $nm = [Diagnostics.Process]::GetProcessById($fp).ProcessName } catch {}
+        if ($script:tmProc.Count -gt 200) { $script:tmProc.Clear() }
+        $script:tmProc[$fp] = $nm
+      }
+      if ([string]$script:tmProc[$fp] -like 'DTPS*') {
+        $tt = [int64]($now - $idle)
+        $sess = $script:tmCur
+        $title = [TeendoimFg]::Title()
+        $hit = DtpsMatch $title
+        # új program (még nincs a legutóbbi beolvasásban): legfeljebb percenként újra beolvassa a mappát
+        if (-not $hit -and $now - $script:dLastAt -gt 60000) { $script:dLastAt = $now; $script:dLast = DtpsScan; $hit = DtpsMatch $title }
+        # a címben épp nincs program (pl. egy párbeszédablak): az előző programé marad
+        if (-not $hit -and $sess -and $tt - $sess.last -lt 180000) { $hit = @{ folder = $sess.folder; program = $sess.program } }
+        if ($hit) {
+          if ($sess -and $sess.folder -eq $hit.folder -and $sess.program -eq $hit.program -and $tt - $sess.last -lt 180000) {
+            if ($tt -gt $sess.last) { $sess.last = $tt; $script:tmDirty = $true }
+          } else {
+            $sess = @{ cid = [guid]::NewGuid().ToString('N'); folder = $hit.folder; program = $hit.program; from = $tt; last = $tt; sent = [int64]-1 }
+            $script:tmQ[$sess.cid] = $sess; $script:tmCur = $sess; $script:tmDirty = $true
+          }
+        }
+      }
+    }
+  }
+  DtpsTimeSend $now
+}
+function DtpsTimeSend($now) {
+  if ($script:tmReq) {
+    if (-not $script:tmReq.task.IsCompleted) { return }
+    $r = $script:tmReq; $script:tmReq = $null; $tk = $r.task
+    if ($tk.IsFaulted -or $tk.IsCanceled) { $script:tmStatus = 'nincs kapcsolat, később küldöm'; return }
+    $st = [int]$tk.Result.StatusCode
+    if ($st -ne 200) {
+      $err = ''; try { $err = [string](ConvertFrom-Json ($tk.Result.Content.ReadAsStringAsync().Result)).error } catch {}
+      $script:tmStatus = "a Központ nem fogadta el ($st)"; NaploLog "DTPS idő: $st $err"; return
+    }
+    $ok = @(); try { $ok = @((ConvertFrom-Json ($tk.Result.Content.ReadAsStringAsync().Result)).ok) } catch {}
+    foreach ($cid in $ok) { $q = $script:tmQ[[string]$cid]; if ($q -and $r.ms.ContainsKey([string]$cid)) { $q.sent = [int64]$r.ms[[string]$cid] } }
+    foreach ($k in @($script:tmQ.Keys)) { $q = $script:tmQ[$k]; if ($q -ne $script:tmCur -and $q.sent -ge ($q.last - $q.from)) { $script:tmQ.Remove($k) } }
+    $script:tmStatus = "elküldve $(Get-Date -Format 'HH:mm')"; $script:tmDirty = $true
+    return
+  }
+  if ($now -lt $script:tmSendAt) { return }
+  $script:tmSendAt = $now + 60000
+  # a lezárt, 10 mp-nél rövidebb vagy 14 napnál régebbi munkamenet kimarad
+  foreach ($k in @($script:tmQ.Keys)) {
+    $q = $script:tmQ[$k]
+    if ($q -ne $script:tmCur -and ($q.last - $q.from -lt 10000 -or $now - $q.last -gt 14 * 86400000)) { $script:tmQ.Remove($k); $script:tmDirty = $true }
+  }
+  if ($script:tmDirty) { TmSave; $script:tmDirty = $false }
+  if (-not $script:nHttp) { return }
+  $items = New-Object System.Collections.ArrayList; $ms = @{}
+  foreach ($q in @($script:tmQ.Values | Sort-Object { $_.from })) {
+    $d = [int64]($q.last - $q.from)
+    if ($d -ge 10000 -and $d -gt $q.sent -and $items.Count -lt 400) {
+      $iso = ([DateTimeOffset]::FromUnixTimeMilliseconds($q.from)).UtcDateTime.ToString('s', [Globalization.CultureInfo]::InvariantCulture) + 'Z'
+      [void]$items.Add([ordered]@{ cid = $q.cid; folder = $q.folder; program = $q.program; from = $iso; ms = $d }); $ms[$q.cid] = $d
+    }
+  }
+  if (-not $items.Count) { return }
+  $code = NaploCode
+  if (-not $code) { return }
+  $body = ConvertTo-Json -InputObject ([ordered]@{ action = 'pt_time'; code = $code; items = @($items) }) -Depth 5 -Compress
+  try {
+    $content = New-Object System.Net.Http.StringContent($body, [Text.Encoding]::UTF8, 'application/json')
+    $script:tmReq = @{ task = $script:nHttp.PostAsync($kozpontApi, $content); ms = $ms }
+  } catch { $script:tmStatus = "nem sikerült elküldeni: $($_.Exception.Message)" }
+}
+function DtpsTimeInfo {
+  $cur = $script:tmCur
+  if ($cur -and (NowMs) - $cur.last -lt 180000) { return "Programozás mérése: $($cur.program -replace '^R\d{1,3}_', '' -replace '\.rp4$', '') – $([math]::Floor(($cur.last - $cur.from) / 60000)) perc" }
+  $n = @($script:tmQ.Values | Where-Object { $_.last - $_.from -gt $_.sent }).Count
+  $(if ($n) { "Programozás mérése: $n munkamenet vár küldésre" } else { 'Programozás mérése: a DTPS-t figyeli' }) + $(if ($script:tmStatus) { " ($script:tmStatus)" } else { '' })
 }
 
 # ---------- Önfrissítés ----------
@@ -2432,7 +2570,8 @@ $kmPt.add_Click({ if ($kozpontPs) { KozpontStart $false }; try { Start-Process '
 $kmPtNow = New-Object Windows.Controls.MenuItem; $kmPtNow.Header = 'DTPS mappa beolvasása most'
 $kmPtNow.add_Click({ $script:dNext = 0; $script:dSent = ''; $script:dStatus = 'Beolvasom…' })
 $kmPtInfo = New-Object Windows.Controls.MenuItem; $kmPtInfo.IsEnabled = $false
-foreach ($m in $kmWeb, $kmFiles, (New-Object Windows.Controls.Separator), $kmPt, $kmPtNow, $kmPtInfo) { [void]$kozMenu.Items.Add($m) }
+$kmTmInfo = New-Object Windows.Controls.MenuItem; $kmTmInfo.IsEnabled = $false
+foreach ($m in $kmWeb, $kmFiles, (New-Object Windows.Controls.Separator), $kmPt, $kmPtNow, $kmPtInfo, $kmTmInfo) { [void]$kozMenu.Items.Add($m) }
 [void]$script:menu.Items.Add($kozMenu)
 $updMenu = New-Object Windows.Controls.MenuItem; $updMenu.Header = 'Frissítés'
 $umNow = New-Object Windows.Controls.MenuItem; $umNow.Header = 'Frissítés keresése most'
@@ -2460,6 +2599,7 @@ $script:menu.add_Opened({ param($s, $e)
   $umInfo.Header = $(if ($ust -and $ust.at) { "Utolsó frissítés: $(([datetime]$ust.at).ToString('yyyy.MM.dd. HH:mm'))" } else { 'Még nem frissült magától.' }) + $(if ($script:upd.msg) { " $($script:upd.msg)" } else { '' })
   $n = $script:nQueue.Count + $(if ($script:set.naplo) { $script:segDirty.Count } else { 0 })
   $kmPtInfo.Header = $(if ($script:dStatus) { "DTPS: $script:dStatus" } else { 'DTPS: hamarosan beolvasom.' })
+  $kmTmInfo.Header = $(try { DtpsTimeInfo } catch { 'Programozás mérése: –' })
   $nmInfo.Header = $(if (-not $script:set.naplo -and -not $n) { 'Kikapcsolva' } elseif ($n) { "$n bejegyzés vár küldésre. $script:nStatus" } elseif ($script:nStatus) { $script:nStatus } else { 'Minden elküldve.' }) })
 $U.Tab.ContextMenu = $script:menu
 $U.MenuBtn.add_MouseLeftButtonUp({ param($s, $e)
@@ -2502,5 +2642,6 @@ $clock.Start()
 Later 3000 $null { try { UpdStartup } catch { UpdLog "$_" } }
 try { [void]$win.ShowDialog() } catch { Fail "$_" }
 FlushNow
+try { TmSave } catch {}
 try { $mutex.ReleaseMutex() } catch {}
 if ($script:updRestart) { UpdRelaunch }
